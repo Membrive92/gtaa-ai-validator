@@ -1,0 +1,8 @@
+# Core dependencies for gTAA AI Validator
+# FASE 1: CLI interface
+click>=8.0.0
+
+# Additional dependencies will be added in later phases:
+# FASE 4: jinja2>=3.0.0  (HTML reports)
+# FASE 5: pytest>=7.0.0  (Testing)
+# FASE 7: anthropic>=0.18.0  (LLM analysis - optional)
