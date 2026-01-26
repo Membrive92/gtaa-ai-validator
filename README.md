@@ -5,15 +5,15 @@
 [![Python Version](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status](https://img.shields.io/badge/status-in%20development-yellow)](https://github.com/yourusername/gtaa-ai-validator)
-[![Phase](https://img.shields.io/badge/phase-1%2F6%20complete-blue)](https://github.com/yourusername/gtaa-ai-validator)
-[![Progress](https://img.shields.io/badge/progress-15%25-orange)](https://github.com/yourusername/gtaa-ai-validator)
+[![Phase](https://img.shields.io/badge/phase-2%2F6%20complete-blue)](https://github.com/yourusername/gtaa-ai-validator)
+[![Progress](https://img.shields.io/badge/progress-35%25-orange)](https://github.com/yourusername/gtaa-ai-validator)
 
 > **📌 TRABAJO DE FIN DE MÁSTER - EN DESARROLLO INCREMENTAL**
 >
 > Autor: Jose Antonio Membrive Guillen
 > Universidad: [Tu Universidad]
 > Año: 2025
-> **Estado:** Fase 1/6 Completa | Última actualización: 26 Enero 2025
+> **Estado:** Fase 2/6 Completa | Última actualización: 26 Enero 2025
 
 ---
 
@@ -28,7 +28,7 @@
 | Fase | Componente | Estado | Fecha Completada |
 |------|-----------|--------|------------------|
 | **✅ Fase 1** | **CLI básico y descubrimiento de archivos** | **COMPLETO** | **26/01/2025** |
-| ⏳ Fase 2 | Análisis estático con AST y detección de violaciones | Pendiente | - |
+| **✅ Fase 2** | **Análisis estático con AST y detección de violaciones** | **COMPLETO** | **26/01/2025** |
 | ⏳ Fase 3 | Cobertura completa (9 tipos de violaciones) | Pendiente | - |
 | ⏳ Fase 4 | Reportes HTML/JSON profesionales | Pendiente | - |
 | ⏳ Fase 5 | Tests unitarios y proyectos de ejemplo | Pendiente | - |
@@ -41,9 +41,10 @@
 | ✅ CLI con Click | Implementado | Acepta ruta de proyecto y opción --verbose |
 | ✅ Descubrimiento de archivos test | Implementado | Soporta patrones test_*.py y *_test.py |
 | ✅ Validación de entrada | Implementado | Verifica existencia de directorio |
-| ⏳ Análisis AST de código Python | Pendiente | Fase 2 |
-| ⏳ Detección de violaciones gTAA | Pendiente | Fase 2-3 |
-| ⏳ Sistema de scoring (0-100) | Pendiente | Fase 2-3 |
+| ✅ Análisis AST de código Python | Implementado | Fase 2 - Visitor Pattern |
+| ✅ Detección de violaciones gTAA | Implementado | Fase 2 - ADAPTATION_IN_DEFINITION |
+| ✅ Sistema de scoring (0-100) | Implementado | Fase 2 - Penalización por severidad |
+| ✅ Proyectos de ejemplo (bueno/malo) | Implementado | Fase 2 - En directorio examples/ |
 | ⏳ Reportes HTML interactivos | Pendiente | Fase 4 |
 | ⏳ Reportes JSON para CI/CD | Pendiente | Fase 4 |
 | ⏳ Tests unitarios con pytest | Pendiente | Fase 5 |
@@ -157,43 +158,114 @@ pip install -e .
 
 ---
 
-### ✅ Funcionalidad ACTUAL (Fase 1)
+### ✅ Funcionalidad ACTUAL (Fase 2)
 
 **Lo que puedes hacer AHORA:**
 
 ```bash
-# Descubrimiento básico de archivos de test
+# Análisis estático con detección de violaciones
 python -m gtaa_validator /path/to/your/selenium-project
 
-# Modo verbose para ver detalles
+# Modo verbose para ver detalles de cada violación
 python -m gtaa_validator /path/to/project --verbose
+
+# Probar con ejemplos incluidos
+python -m gtaa_validator examples/bad_project
+python -m gtaa_validator examples/good_project
 ```
 
-**Output actual:**
-- Cuenta archivos test_*.py y *_test.py encontrados
-- Muestra lista de archivos en modo verbose
-- Valida que el directorio existe
+**Capacidades implementadas:**
+- ✅ Análisis AST (Abstract Syntax Tree) de código Python
+- ✅ Detección de violación `ADAPTATION_IN_DEFINITION` (Selenium/Playwright en tests)
+- ✅ Sistema de scoring 0-100 basado en severidad de violaciones
+- ✅ Resumen de violaciones por severidad (CRITICAL, HIGH, MEDIUM, LOW)
+- ✅ Modo verbose con detalles: archivo, línea, código, mensaje
+- ✅ Exit code 1 si hay violaciones críticas (útil para CI/CD)
+- ✅ Proyectos de ejemplo documentados en `examples/`
 
 **Ejemplo de salida:**
 ```
-=== gTAA AI Validator - Fase 1 MVP ===
-Analyzing project: ./mi-proyecto
+=== gTAA AI Validator - Phase 2 ===
+Analyzing project: examples/bad_project
 
-[OK] Found 5 test file(s)
+Running static analysis...
 
 ============================================================
-Analysis complete!
-Phase 1 MVP: Basic file discovery working!
+ANALYSIS RESULTS
+============================================================
+
+Files analyzed: 2
+Total violations: 15
+
+Violations by severity:
+  CRITICAL: 15
+  HIGH:     0
+  MEDIUM:   0
+  LOW:      0
+
+Compliance Score: 0.0/100
+Status: CRITICAL ISSUES
+
+============================================================
+Analysis completed in 0.00s
 ============================================================
 ```
 
 ---
 
-### ⏳ Funcionalidad FUTURA (Fases 2-6)
+## 📚 Proyectos de Ejemplo
+
+El proyecto incluye ejemplos completamente documentados en el directorio [examples/](examples/).
+
+### Estructura
+
+```
+examples/
+├── README.md           # Documentación detallada de cada ejemplo
+├── bad_project/        # Proyecto con 15 violaciones CRITICAL
+│   ├── test_login.py   # 8 violaciones (Selenium directo)
+│   └── test_search.py  # 7 violaciones (Playwright directo)
+└── good_project/       # Proyecto con arquitectura gTAA correcta
+    ├── tests/
+    │   └── test_login.py   # Tests usando Page Objects
+    └── pages/
+        └── login_page.py   # Page Object que encapsula Selenium
+```
+
+### Uso rápido
+
+```bash
+# Analizar proyecto con violaciones (score esperado: 0/100)
+python -m gtaa_validator examples/bad_project --verbose
+
+# Analizar proyecto correcto (score esperado: 100/100)
+python -m gtaa_validator examples/good_project
+```
+
+### Documentación detallada
+
+El archivo [examples/README.md](examples/README.md) incluye:
+
+- ✅ **Tabla de violaciones esperadas**: Cada violación con línea exacta y razón
+- ✅ **Comparación lado a lado**: Código MAL vs código BIEN estructurado
+- ✅ **Checklist de validación**: Para evaluadores y profesores
+- ✅ **Métricas calculables**: Precisión, recall, exactitud de línea
+- ✅ **Ground truth etiquetado**: Dataset para validación empírica del TFM
+
+**Propósito académico:**
+Estos ejemplos permiten a evaluadores del TFM:
+1. Ejecutar el validador inmediatamente sin preparación
+2. Verificar que detecta exactamente las 15 violaciones documentadas
+3. Cruzar resultados con el ground truth etiquetado
+4. Reproducir resultados de forma determinística
+
+---
+
+### ⏳ Funcionalidad FUTURA (Fases 3-6)
 
 **Las siguientes funcionalidades están PENDIENTES de implementación:**
 
-#### Fase 2-3: Análisis estático completo
+#### Fase 3: Cobertura completa de violaciones
 ```bash
 # ⏳ PRÓXIMAMENTE - Detectar violaciones arquitectónicas
 python -m gtaa_validator /path/to/project
@@ -419,10 +491,10 @@ docker run -v $(pwd):/project gtaa-validator /project
 ## 🎓 Contexto Académico (TFM)
 
 ### Objetivos del TFM
-1. 🎯 Desarrollar sistema de IA para validación arquitectónica (en progreso - Fase 1/6)
+1. 🎯 Desarrollar sistema de IA para validación arquitectónica (en progreso - Fase 2/6 completa)
 2. 🎯 Comparar análisis estático vs semántico (LLM) (pendiente - Fase 6)
 3. 🎯 Demostrar viabilidad de LLMs en code analysis (pendiente - Fase 6)
-4. 🎯 Crear dataset etiquetado para la comunidad (pendiente - Fase 5)
+4. 🎯 Crear dataset etiquetado para la comunidad (implementado parcialmente - ejemplos en Fase 2)
 
 ### Contribuciones Científicas Planificadas
 - Primera herramienta de validación automática de gTAA
@@ -439,9 +511,10 @@ docker run -v $(pwd):/project gtaa-validator /project
 ### Metodología
 **Desarrollo Incremental:**
 - ✅ Fase 1: Fundación (CLI básico) - **COMPLETA**
-- 🚧 Fase 2-3: Análisis estático completo - En progreso
-- ⏳ Fase 4: Reportes y visualización
-- ⏳ Fase 5: Validación empírica con proyectos reales
+- ✅ Fase 2: Motor de análisis estático con AST - **COMPLETA**
+- ⏳ Fase 3: Cobertura completa de violaciones (9 tipos)
+- ⏳ Fase 4: Reportes HTML/JSON profesionales
+- ⏳ Fase 5: Tests unitarios y validación empírica
 - ⏳ Fase 6: Integración LLM y comparativa
 - ⏳ Fase 7: (Opcional) Clasificador ML
 
@@ -521,12 +594,56 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 
 ---
 
+### Versión 0.2.0 - Fase 2 (26 Enero 2025) ✅
+
+**Implementado:**
+- ✅ Modelos de datos (Violation, Report, Severity, ViolationType)
+- ✅ Sistema de checkers con Strategy Pattern
+- ✅ Análisis AST con Visitor Pattern
+- ✅ DefinitionChecker: Detecta llamadas directas a Selenium/Playwright en tests
+- ✅ StaticAnalyzer: Orquesta múltiples checkers
+- ✅ Sistema de scoring 0-100 con penalización por severidad
+- ✅ CLI actualizado con resumen de violaciones
+- ✅ Modo verbose con detalles completos de violaciones
+- ✅ Exit code 1 si hay violaciones críticas
+- ✅ Proyectos de ejemplo documentados (bad_project, good_project)
+
+**Archivos creados:**
+- `gtaa_validator/models.py` (280 líneas)
+- `gtaa_validator/checkers/base.py` (Strategy Pattern)
+- `gtaa_validator/checkers/definition_checker.py` (AST Visitor - 250 líneas)
+- `gtaa_validator/analyzers/static_analyzer.py` (Facade Pattern - 200 líneas)
+- `examples/bad_project/` (2 archivos con 15 violaciones documentadas)
+- `examples/good_project/` (2 archivos con score 100/100)
+- `examples/README.md` (Documentación completa de ejemplos)
+
+**Violaciones detectadas:**
+- `ADAPTATION_IN_DEFINITION` (CRITICAL): Tests llamando directamente a Selenium/Playwright
+
+**Métricas:**
+- Detección: 15/15 violaciones en bad_project (100% recall)
+- Score bad_project: 0.0/100
+- Score good_project: 100.0/100
+- Tiempo de análisis: <0.1s para 2 archivos
+
+**Conceptos aprendidos:**
+- AST (Abstract Syntax Tree) parsing
+- Visitor Pattern para recorrer árboles
+- Strategy Pattern para checkers intercambiables
+- Facade Pattern para simplificar subsistemas
+- Dataclasses y Enums en Python
+- Exit codes en CLI
+
+**Próximos pasos:** Fase 3 - Añadir 8 tipos de violaciones adicionales
+
+---
+
 <div align="center">
 
 **⭐ Si este proyecto te resulta interesante, síguelo para ver su evolución ⭐**
 
 [🐛 Reportar Bug](https://github.com/tu-usuario/gtaa-ai-validator/issues) · [✨ Solicitar Feature](https://github.com/tu-usuario/gtaa-ai-validator/issues) · [📖 Plan de Desarrollo](.claude/plans/)
 
-**Estado del proyecto:** 🚧 En desarrollo activo | Fase 1/6 completa
+**Estado del proyecto:** 🚧 En desarrollo activo | Fase 2/6 completa
 
 </div>
