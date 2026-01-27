@@ -567,8 +567,15 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 
 ## 📚 Referencias
 
+### Estándares y Normativa
 - [ISTQB CT-TAE Syllabus v2016](https://www.istqb.org/)
 - [Generic Test Automation Architecture (gTAA)](docs/gtaa_reference.md) (⏳ pendiente)
+
+### Documentación Técnica del Proyecto
+- **[Diagramas de Flujo - Fase 2](docs/PHASE2_FLOW_DIAGRAMS.md)** ✅ - Explicación detallada del motor de análisis estático
+- [Documentación completa](docs/README.md) ✅ - Índice de toda la documentación técnica
+
+### Documentos Académicos (TFM)
 - [Memoria del TFM](docs/memoria_tfm.pdf) (⏳ pendiente)
 - [Presentación](docs/presentacion.pdf) (⏳ pendiente)
 

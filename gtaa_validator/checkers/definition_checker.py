@@ -98,7 +98,7 @@ class DefinitionChecker(BaseChecker):
         is_test_file = (
             filename.startswith("test_") or
             filename.endswith("_test.py") or
-            "test" in file_path.parts  # File is in a 'test' or 'tests' directory
+            any(part in ("test", "tests") for part in file_path.parts)
         )
         return is_test_file
 
@@ -131,7 +131,7 @@ class DefinitionChecker(BaseChecker):
             tree = ast.parse(source_code, filename=str(file_path))
 
             # Create visitor and walk the AST
-            visitor = SeleniumCallVisitor(self)
+            visitor = BrowserAPICallVisitor(self)
             visitor.visit(tree)
 
         except SyntaxError as e:
@@ -178,9 +178,12 @@ class DefinitionChecker(BaseChecker):
         self.violations.append(violation)
 
 
-class SeleniumCallVisitor(ast.NodeVisitor):
+class BrowserAPICallVisitor(ast.NodeVisitor):
     """
-    AST Visitor that detects direct Selenium/Playwright calls in test functions.
+    AST Visitor that detects direct browser automation API calls in test functions.
+
+    Detects calls to both Selenium and Playwright (and any future framework)
+    when used directly inside test functions instead of through Page Objects.
 
     The Visitor Pattern allows us to traverse the AST and react to specific
     node types without modifying the AST itself.
