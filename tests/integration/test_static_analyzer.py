@@ -2,7 +2,7 @@
 Tests for gtaa_validator.analyzers.static_analyzer
 
 Covers:
-- Checker initialization
+- Checker initialization (Phase 3: 4 checkers)
 - File discovery and exclusion
 - End-to-end analysis using examples/bad_project and examples/good_project
 - Report metadata correctness
@@ -13,6 +13,10 @@ from pathlib import Path
 
 from gtaa_validator.analyzers.static_analyzer import StaticAnalyzer
 from gtaa_validator.checkers.definition_checker import DefinitionChecker
+from gtaa_validator.checkers.structure_checker import StructureChecker
+from gtaa_validator.checkers.adaptation_checker import AdaptationChecker
+from gtaa_validator.checkers.quality_checker import QualityChecker
+from gtaa_validator.models import Severity
 
 
 # =========================================================================
@@ -22,11 +26,16 @@ from gtaa_validator.checkers.definition_checker import DefinitionChecker
 class TestInitialization:
     """Tests for StaticAnalyzer construction."""
 
-    def test_initializes_with_definition_checker(self, bad_project_path):
-        """Phase 2 creates exactly one checker: DefinitionChecker."""
+    def test_initializes_four_checkers(self, bad_project_path):
+        """Phase 3 creates 4 checkers."""
         analyzer = StaticAnalyzer(bad_project_path)
-        assert len(analyzer.checkers) == 1
-        assert isinstance(analyzer.checkers[0], DefinitionChecker)
+        assert len(analyzer.checkers) == 4
+
+    def test_checker_types(self, bad_project_path):
+        """All expected checker types are present."""
+        analyzer = StaticAnalyzer(bad_project_path)
+        types = {type(c) for c in analyzer.checkers}
+        assert types == {DefinitionChecker, StructureChecker, AdaptationChecker, QualityChecker}
 
     def test_resolves_path(self, bad_project_path):
         """project_path is resolved to absolute."""
@@ -37,8 +46,9 @@ class TestInitialization:
         """get_summary() returns analyzer configuration."""
         analyzer = StaticAnalyzer(bad_project_path)
         summary = analyzer.get_summary()
-        assert summary["checker_count"] == 1
+        assert summary["checker_count"] == 4
         assert "DefinitionChecker" in summary["checkers"]
+        assert "StructureChecker" in summary["checkers"]
 
 
 # =========================================================================
@@ -57,7 +67,6 @@ class TestFileDiscovery:
 
     def test_excludes_venv(self, tmp_path):
         """Files inside venv/ are excluded."""
-        # Create a fake project with a venv
         (tmp_path / "test_real.py").write_text("pass", encoding="utf-8")
         venv_dir = tmp_path / "venv"
         venv_dir.mkdir()
@@ -100,22 +109,25 @@ class TestFileDiscovery:
 class TestAnalyzeBadProject:
     """Integration tests using examples/bad_project."""
 
-    def test_detects_15_violations(self, bad_project_path):
-        """bad_project should produce exactly 15 violations."""
+    def test_detects_violations(self, bad_project_path):
+        """bad_project produces many violations across all severity levels."""
         analyzer = StaticAnalyzer(bad_project_path)
         report = analyzer.analyze()
-        assert len(report.violations) == 15
+        # Phase 3: 15 ADAPTATION_IN_DEFINITION + structure + adaptation + quality
+        assert len(report.violations) >= 25
 
-    def test_all_violations_are_critical(self, bad_project_path):
-        """All violations in bad_project are CRITICAL severity."""
+    def test_has_multiple_severity_levels(self, bad_project_path):
+        """Violations span all severity levels."""
         analyzer = StaticAnalyzer(bad_project_path)
         report = analyzer.analyze()
-        from gtaa_validator.models import Severity
-        for v in report.violations:
-            assert v.severity == Severity.CRITICAL
+        counts = report.get_violation_count_by_severity()
+        assert counts["CRITICAL"] >= 15
+        assert counts["HIGH"] >= 1
+        assert counts["MEDIUM"] >= 1
+        assert counts["LOW"] >= 1
 
     def test_score_is_zero(self, bad_project_path):
-        """bad_project score should be 0.0 (15 × 10 = 150 penalty)."""
+        """bad_project score should be 0.0 (massive penalty)."""
         analyzer = StaticAnalyzer(bad_project_path)
         report = analyzer.analyze()
         assert report.score == 0.0
@@ -124,7 +136,7 @@ class TestAnalyzeBadProject:
         """Report tracks how many files were analyzed."""
         analyzer = StaticAnalyzer(bad_project_path)
         report = analyzer.analyze()
-        assert report.files_analyzed >= 2
+        assert report.files_analyzed >= 4
 
 
 # =========================================================================
@@ -178,5 +190,5 @@ class TestReportMetadata:
         report = analyzer.analyze()
         d = report.to_dict()
         assert isinstance(d, dict)
-        assert d["summary"]["total_violations"] == 15
+        assert d["summary"]["total_violations"] >= 25
         assert d["summary"]["score"] == 0.0
