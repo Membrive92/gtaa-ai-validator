@@ -18,7 +18,7 @@ According to gTAA architecture:
 
 import ast
 from pathlib import Path
-from typing import List, Set
+from typing import List, Optional, Set
 
 from gtaa_validator.checkers.base import BaseChecker
 from gtaa_validator.models import Violation, ViolationType, Severity
@@ -102,18 +102,18 @@ class DefinitionChecker(BaseChecker):
         )
         return is_test_file
 
-    def check(self, file_path: Path) -> List[Violation]:
+    def check(self, file_path: Path, tree: Optional[ast.Module] = None) -> List[Violation]:
         """
         Check a test file for ADAPTATION_IN_DEFINITION violations.
 
         This method:
-        1. Reads the file content
-        2. Parses it into an AST (Abstract Syntax Tree)
-        3. Uses a visitor to find violations
-        4. Returns list of violations found
+        1. Uses the pre-parsed AST if provided, otherwise reads and parses the file
+        2. Uses a visitor to find violations
+        3. Returns list of violations found
 
         Args:
             file_path: Path to the test file to check
+            tree: Pre-parsed AST tree (optional)
 
         Returns:
             List of Violation objects (empty if no violations)
@@ -122,25 +122,18 @@ class DefinitionChecker(BaseChecker):
         self.current_file = file_path
 
         try:
-            # Read file content
-            with open(file_path, "r", encoding="utf-8") as f:
-                source_code = f.read()
-
-            # Parse source code into AST
-            # ast.parse() converts Python source code into a tree structure
-            tree = ast.parse(source_code, filename=str(file_path))
+            if tree is None:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    source_code = f.read()
+                tree = ast.parse(source_code, filename=str(file_path))
 
             # Create visitor and walk the AST
             visitor = BrowserAPICallVisitor(self)
             visitor.visit(tree)
 
-        except SyntaxError as e:
-            # If file has syntax errors, we can't parse it
-            # Don't create a violation - it's not our job to check syntax
+        except SyntaxError:
             pass
-        except Exception as e:
-            # Log other errors but don't crash
-            # In production, this would use proper logging
+        except Exception:
             pass
 
         return self.violations

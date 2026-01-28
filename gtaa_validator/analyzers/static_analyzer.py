@@ -20,18 +20,18 @@ Usage:
     print(f"Score: {report.score}")
 """
 
+import ast
 import time
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from gtaa_validator.models import Report, Violation
 from gtaa_validator.checkers.base import BaseChecker
 from gtaa_validator.checkers.definition_checker import DefinitionChecker
 
-# Phase 3: Additional checkers will be imported
-# from gtaa_validator.checkers.structure_checker import StructureChecker
-# from gtaa_validator.checkers.adaptation_checker import AdaptationChecker
-# from gtaa_validator.checkers.quality_checker import QualityChecker
+from gtaa_validator.checkers.structure_checker import StructureChecker
+from gtaa_validator.checkers.adaptation_checker import AdaptationChecker
+from gtaa_validator.checkers.quality_checker import QualityChecker
 
 
 class StaticAnalyzer:
@@ -76,9 +76,9 @@ class StaticAnalyzer:
         """
         checkers = [
             DefinitionChecker(),
-            # StructureChecker(),      # Phase 3
-            # AdaptationChecker(),     # Phase 3
-            # QualityChecker(),        # Phase 3
+            StructureChecker(),
+            AdaptationChecker(),
+            QualityChecker(),
         ]
 
         if self.verbose:
@@ -115,6 +115,18 @@ class StaticAnalyzer:
             violations=[],
             files_analyzed=0
         )
+
+        # Run project-level checks (e.g., directory structure)
+        for checker in self.checkers:
+            try:
+                project_violations = checker.check_project(self.project_path)
+                if project_violations:
+                    report.violations.extend(project_violations)
+                    if self.verbose:
+                        print(f"  [{checker.name}] Found {len(project_violations)} project-level violation(s)")
+            except Exception as e:
+                if self.verbose:
+                    print(f"  [{checker.name}] Error in project check: {str(e)}")
 
         # Discover all Python files
         python_files = self._discover_python_files()
@@ -189,8 +201,8 @@ class StaticAnalyzer:
         """
         Run all applicable checkers on a single file.
 
-        For each checker, first check if it can analyze this file type,
-        then run the checker if applicable.
+        Parses the AST once and passes it to all applicable checkers,
+        avoiding redundant parsing of the same file.
 
         Args:
             file_path: Path to the file to check
@@ -200,21 +212,33 @@ class StaticAnalyzer:
         """
         violations = []
 
-        for checker in self.checkers:
-            # Check if this checker can analyze this file
-            if checker.can_check(file_path):
-                try:
-                    # Run the checker
-                    checker_violations = checker.check(file_path)
-                    violations.extend(checker_violations)
+        # Determine which checkers apply to this file
+        applicable = [c for c in self.checkers if c.can_check(file_path)]
+        if not applicable:
+            return violations
 
-                    if self.verbose and checker_violations:
-                        print(f"    [{checker.name}] Found {len(checker_violations)} violation(s)")
+        # Parse AST once for all checkers
+        tree: Optional[ast.Module] = None
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                source_code = f.read()
+            tree = ast.parse(source_code, filename=str(file_path))
+        except (SyntaxError, Exception):
+            # If parsing fails, let individual checkers handle it
+            pass
 
-                except Exception as e:
-                    # Don't crash if a single checker fails
-                    if self.verbose:
-                        print(f"    [{checker.name}] Error: {str(e)}")
+        for checker in applicable:
+            try:
+                checker_violations = checker.check(file_path, tree)
+                violations.extend(checker_violations)
+
+                if self.verbose and checker_violations:
+                    print(f"    [{checker.name}] Found {len(checker_violations)} violation(s)")
+
+            except Exception as e:
+                # Don't crash if a single checker fails
+                if self.verbose:
+                    print(f"    [{checker.name}] Error: {str(e)}")
 
         return violations
 

@@ -11,9 +11,10 @@ Key concepts:
 - Template Method: Defines the skeleton of check() that subclasses implement
 """
 
+import ast
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from gtaa_validator.models import Violation
 
@@ -43,7 +44,7 @@ class BaseChecker(ABC):
         self.name = self.__class__.__name__
 
     @abstractmethod
-    def check(self, file_path: Path) -> List[Violation]:
+    def check(self, file_path: Path, tree: Optional[ast.Module] = None) -> List[Violation]:
         """
         Check a file for gTAA violations.
 
@@ -52,6 +53,8 @@ class BaseChecker(ABC):
 
         Args:
             file_path: Path to the file to check
+            tree: Pre-parsed AST tree (optional). If provided, the checker
+                  should use it instead of parsing the file again.
 
         Returns:
             List of Violation objects found in the file (empty list if no violations)
@@ -60,6 +63,21 @@ class BaseChecker(ABC):
             NotImplementedError: If subclass doesn't implement this method
         """
         pass
+
+    def check_project(self, project_path: Path) -> List[Violation]:
+        """
+        Check project-level violations (e.g., missing directory structure).
+
+        Override this method for checkers that analyze the entire project
+        rather than individual files. Default returns empty list.
+
+        Args:
+            project_path: Root directory of the project
+
+        Returns:
+            List of Violation objects (empty by default)
+        """
+        return []
 
     def can_check(self, file_path: Path) -> bool:
         """
