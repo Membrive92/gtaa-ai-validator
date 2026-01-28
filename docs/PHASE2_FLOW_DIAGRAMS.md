@@ -12,7 +12,7 @@ Este documento contiene todos los diagramas de flujo que explican el funcionamie
 
 1. [Diagrama de Flujo Principal - Vista General](#1-diagrama-de-flujo-principal---vista-general)
 2. [Subdiagrama 1: DefinitionChecker.check()](#2-subdiagrama-1-definitioncheckercheck---el-corazón-del-análisis)
-3. [Subdiagrama 2: SeleniumCallVisitor](#3-subdiagrama-2-seleniumcallvisitor---recorrido-del-ast)
+3. [Subdiagrama 2: BrowserAPICallVisitor](#3-subdiagrama-2-seleniumcallvisitor---recorrido-del-ast)
 4. [Subdiagrama 3: _get_object_name()](#4-subdiagrama-3-_get_object_name---extraer-nombre-del-objeto)
 5. [Subdiagrama 4: Creación de Violation](#5-subdiagrama-4-creación-de-violation)
 6. [Subdiagrama 5: Cálculo de Score](#6-subdiagrama-5-cálculo-de-score)
@@ -110,20 +110,14 @@ Este diagrama muestra el flujo completo desde que el usuario ejecuta el comando 
    ┌─────────────────────────────────────────┐
    │    _check_file(file_path)               │
    │                                         │
-   │    Para cada checker en self.checkers:  │
+   │    1. Filtrar checkers aplicables        │
+   │    2. Parsear AST una sola vez:         │
+   │       tree = ast.parse(source_code)     │
    │                                         │
-   │    ┌───────────────────────────────┐   │
-   │    │ ¿checker.can_check(file)?     │   │
-   │    └───────┬─────────────┬─────────┘   │
-   │            │             │              │
-   │           No            Sí              │
-   │            │             │              │
-   │          Skip           ▼               │
-   │                ┌──────────────────┐     │
-   │                │ checker.check()  │     │
-   │                └────────┬─────────┘     │
-   │                         │               │
-   │                         ▼               │
+   │    Para cada checker aplicable:         │
+   │       checker.check(file, tree)         │
+   │       └─► checker reutiliza el tree     │
+   │                                         │
    │                  [violations]           │
    └─────────────────────────┬───────────────┘
                              │
@@ -210,7 +204,7 @@ Este diagrama detalla cómo funciona el método `check()` del `DefinitionChecker
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│         DefinitionChecker.check(file_path)                      │
+│         DefinitionChecker.check(file_path, tree=None)            │
 │                                                                 │
 │  Entrada: Path("examples/bad_project/test_login.py")           │
 └────────────┬────────────────────────────────────────────────────┘
@@ -224,25 +218,15 @@ Este diagrama detalla cómo funciona el método `check()` del `DefinitionChecker
              │
              ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  2. Leer archivo completo                                       │
+│  2. Obtener AST                                                  │
 │                                                                 │
-│     with open(file_path, "r") as f:                            │
-│         source_code = f.read()                                  │
+│     Si tree fue proporcionado (pre-parseado por StaticAnalyzer):│
+│       → Usar directamente, sin leer ni parsear                  │
 │                                                                 │
-│  source_code = """                                              │
-│  from selenium import webdriver                                 │
-│  ...                                                            │
-│  def test_login_with_valid_credentials():                      │
-│      driver = webdriver.Chrome()                               │
-│      driver.find_element(By.ID, "username")...                 │
-│  """                                                            │
-└────────────┬────────────────────────────────────────────────────┘
-             │
-             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  3. Parsear a AST                                               │
-│                                                                 │
-│     tree = ast.parse(source_code)                              │
+│     Si tree es None (llamada standalone):                       │
+│       → Leer archivo y parsear:                                 │
+│         source_code = open(file_path).read()                    │
+│         tree = ast.parse(source_code)                           │
 │                                                                 │
 │  Convierte código Python en árbol:                              │
 │                                                                 │
@@ -262,12 +246,12 @@ Este diagrama detalla cómo funciona el método `check()` del `DefinitionChecker
 ┌─────────────────────────────────────────────────────────────────┐
 │  4. Crear Visitor y recorrer AST                                │
 │                                                                 │
-│     visitor = SeleniumCallVisitor(self)                        │
+│     visitor = BrowserAPICallVisitor(self)                        │
 │     visitor.visit(tree)  ◄─ Comienza recorrido recursivo       │
 └────────────┬────────────────────────────────────────────────────┘
              │
              ▼
-        [Ver siguiente diagrama: SeleniumCallVisitor]
+        [Ver siguiente diagrama: BrowserAPICallVisitor]
              │
              ▼
 ┌─────────────────────────────────────────────────────────────────┐
@@ -297,7 +281,7 @@ Este diagrama detalla cómo funciona el método `check()` del `DefinitionChecker
 
 ---
 
-## 3. Subdiagrama 2: SeleniumCallVisitor - Recorrido del AST
+## 3. Subdiagrama 2: BrowserAPICallVisitor - Recorrido del AST
 
 Este diagrama muestra cómo el Visitor Pattern recorre el árbol AST y detecta violaciones.
 
@@ -723,13 +707,13 @@ Este diagrama muestra cómo interactúan las diferentes clases del sistema.
        │
        │ implementa
        ▼
-┌─────────────────────┐        usa        ┌──────────────────────┐
-│ DefinitionChecker   │◄──────────────────│SeleniumCallVisitor   │
-│                     │                   │                      │
-│  + can_check()      │                   │  + visit_FunctionDef()│
-│  + check()          │                   │  + visit_Call()      │
-│  + add_violation()  │                   │  + _get_object_name()│
-└──────┬──────────────┘                   └──────────────────────┘
+┌─────────────────────┐        usa        ┌────────────────────────┐
+│ DefinitionChecker   │◄─────────────────│ BrowserAPICallVisitor  │
+│                     │                   │                        │
+│  + can_check()      │                   │  + visit_FunctionDef() │
+│  + check(file,tree) │                   │  + visit_Call()        │
+│  + add_violation()  │                   │  + _get_object_name()  │
+└──────┬──────────────┘                   └────────────────────────┘
        │
        │ crea
        ▼
@@ -773,14 +757,14 @@ Este diagrama muestra cómo interactúan las diferentes clases del sistema.
 **Relaciones**:
 - __main__ → StaticAnalyzer: **crea y usa**
 - StaticAnalyzer → BaseChecker: **composición (tiene)**
-- DefinitionChecker → SeleniumCallVisitor: **usa**
+- DefinitionChecker → BrowserAPICallVisitor: **usa**
 - DefinitionChecker → Violation: **crea**
 - StaticAnalyzer → Report: **crea y gestiona**
 - Report → Violation: **composición (lista)**
 
 **Patrones de diseño**:
 - **Strategy Pattern**: BaseChecker define interfaz, DefinitionChecker implementa
-- **Visitor Pattern**: SeleniumCallVisitor recorre AST
+- **Visitor Pattern**: BrowserAPICallVisitor recorre AST
 - **Facade Pattern**: StaticAnalyzer simplifica acceso al subsistema
 - **Builder/Factory**: Violations se crean con valores por defecto inteligentes
 
@@ -898,8 +882,9 @@ Patrón que define una familia de algoritmos (checkers) con una interfaz común 
 
 ```python
 checkers = [DefinitionChecker(), StructureChecker(), ...]
+tree = ast.parse(source_code)
 for checker in checkers:
-    violations = checker.check(file)  # Misma interfaz, diferentes implementaciones
+    violations = checker.check(file, tree)  # Misma interfaz, AST compartido
 ```
 
 ### Facade Pattern
