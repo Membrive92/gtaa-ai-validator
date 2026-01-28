@@ -2,11 +2,11 @@
 
 **Sistema Híbrido de IA para Validación Automática de Arquitectura de Test Automation: Análisis Estático y Semántico con LLMs**
 
-[![Python Version](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Status](https://img.shields.io/badge/status-in%20development-yellow)](https://github.com/yourusername/gtaa-ai-validator)
-[![Phase](https://img.shields.io/badge/phase-3%2F6%20complete-blue)](https://github.com/yourusername/gtaa-ai-validator)
-[![Progress](https://img.shields.io/badge/progress-50%25-orange)](https://github.com/yourusername/gtaa-ai-validator)
+[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Estado](https://img.shields.io/badge/estado-en%20desarrollo-yellow)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Fase](https://img.shields.io/badge/fase-3%2F6%20completa-blue)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Progreso](https://img.shields.io/badge/progreso-50%25-orange)](https://github.com/Membrive92/gtaa-ai-validator)
 
 > **📌 TRABAJO DE FIN DE MÁSTER - EN DESARROLLO INCREMENTAL**
 >
@@ -96,16 +96,12 @@ Sistema híbrido que combina **3 técnicas de IA** para detectar automáticament
 
 ### Librerías principales
 ```python
-click>=8.0             # CLI interface
-pytest>=7.0            # Testing framework
+click>=8.0             # Interfaz CLI
+pytest>=7.0            # Framework de testing
 # Futuro:
-# jinja2>=3.0          # HTML reports (Fase 4)
-# anthropic>=0.18.0    # Claude API (Fase 5)
+# jinja2>=3.0          # Reportes HTML (Fase 4)
+# anthropic>=0.18.0    # API de Claude (Fase 5)
 ```
-
-### Herramientas de desarrollo
-- **Git/GitHub** - Control de versiones
-- **pytest** - Tests unitarios e integración
 
 ### Arquitectura del sistema
 ```
@@ -189,29 +185,29 @@ pytest tests/integration/   # Solo integración (18 tests)
 
 **Ejemplo de salida:**
 ```
-=== gTAA AI Validator - Phase 2 ===
-Analyzing project: examples/bad_project
+=== gTAA AI Validator - Fase 3 ===
+Analizando proyecto: examples/bad_project
 
-Running static analysis...
-
-============================================================
-ANALYSIS RESULTS
-============================================================
-
-Files analyzed: 6
-Total violations: 35
-
-Violations by severity:
-  CRITICAL: 16
-  HIGH:     9
-  MEDIUM:   8
-  LOW:      2
-
-Compliance Score: 0.0/100
-Status: CRITICAL ISSUES
+Ejecutando análisis estático...
 
 ============================================================
-Analysis completed in 0.00s
+RESULTADOS DEL ANÁLISIS
+============================================================
+
+Archivos analizados: 6
+Violaciones totales: 35
+
+Violaciones por severidad:
+  CRÍTICA: 16
+  ALTA:    13
+  MEDIA:   4
+  BAJA:    2
+
+Puntuación de cumplimiento: 0.0/100
+Estado: PROBLEMAS CRÍTICOS
+
+============================================================
+Análisis completado en 0.00s
 ============================================================
 ```
 
@@ -347,12 +343,12 @@ gtaa-ai-validator/
 | Severidad | Tipo | Checker | Técnica |
 |-----------|------|---------|---------|
 | 🔴 CRÍTICA | `ADAPTATION_IN_DEFINITION` | DefinitionChecker | AST Visitor (BrowserAPICallVisitor) |
-| 🔴 CRÍTICA | `MISSING_LAYER_STRUCTURE` | StructureChecker | Filesystem (iterdir) |
+| 🔴 CRÍTICA | `MISSING_LAYER_STRUCTURE` | StructureChecker | Sistema de archivos (iterdir) |
 | 🟡 ALTA | `HARDCODED_TEST_DATA` | QualityChecker | AST Visitor + Regex |
 | 🟡 ALTA | `ASSERTION_IN_POM` | AdaptationChecker | AST Visitor |
 | 🟡 ALTA | `FORBIDDEN_IMPORT` | AdaptationChecker | ast.walk |
 | 🟠 MEDIA | `BUSINESS_LOGIC_IN_POM` | AdaptationChecker | AST Visitor |
-| 🟠 MEDIA | `DUPLICATE_LOCATOR` | AdaptationChecker | Regex + Cross-file registry |
+| 🟠 MEDIA | `DUPLICATE_LOCATOR` | AdaptationChecker | Regex + Registro cross-file |
 | 🟠 MEDIA | `LONG_TEST_FUNCTION` | QualityChecker | ast.walk + lineno |
 | 🟢 BAJA | `POOR_TEST_NAMING` | QualityChecker | ast.walk + Regex |
 
@@ -365,17 +361,17 @@ gtaa-ai-validator/
 | MEDIUM | -2 puntos |
 | LOW | -1 punto |
 
-Score = max(0, 100 - suma de penalizaciones)
+Puntuación = max(0, 100 - suma de penalizaciones)
 
 ### 3. 📈 Reportes Visuales (⏳ Fase 4)
 
-#### HTML Report
+#### Reporte HTML
 - Dashboard interactivo
 - Violaciones agrupadas por severidad
-- Snippets de código con highlights
+- Fragmentos de código resaltados
 - Recomendaciones de corrección
 
-#### JSON Report
+#### Reporte JSON
 - Formato estructurado para CI/CD
 - Integración con pipelines
 
@@ -481,8 +477,8 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 | Checker | Violaciones | Técnica |
 |---------|-------------|---------|
 | DefinitionChecker | ADAPTATION_IN_DEFINITION | BrowserAPICallVisitor (AST) |
-| StructureChecker | MISSING_LAYER_STRUCTURE | Filesystem check |
-| AdaptationChecker | ASSERTION_IN_POM, FORBIDDEN_IMPORT, BUSINESS_LOGIC_IN_POM, DUPLICATE_LOCATOR | AST Visitors + Regex + Cross-file state |
+| StructureChecker | MISSING_LAYER_STRUCTURE | Verificación de sistema de archivos |
+| AdaptationChecker | ASSERTION_IN_POM, FORBIDDEN_IMPORT, BUSINESS_LOGIC_IN_POM, DUPLICATE_LOCATOR | AST Visitors + Regex + Estado cross-file |
 | QualityChecker | HARDCODED_TEST_DATA, LONG_TEST_FUNCTION, POOR_TEST_NAMING | AST Visitor + Regex |
 
 **Próximos pasos:** Fase 4 - Reportes HTML/JSON profesionales

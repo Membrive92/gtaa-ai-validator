@@ -1,20 +1,20 @@
 """
-gTAA AI Validator - Automated Test Automation Architecture Compliance Checker
+gTAA AI Validator - Validador Automático de Cumplimiento Arquitectónico de Test Automation
 
-This package validates compliance with the Generic Test Automation Architecture (gTAA)
-defined in the ISTQB CT-TAE syllabus.
+Este paquete valida el cumplimiento con la Arquitectura Genérica de Test Automation (gTAA)
+definida en el syllabus ISTQB CT-TAE.
 
-The validator combines static analysis and AI-powered semantic analysis to detect
-architectural violations in test automation projects (Selenium, Playwright, etc.).
+El validador combina análisis estático y análisis semántico con IA para detectar
+violaciones arquitectónicas en proyectos de test automation (Selenium, Playwright, etc.).
 
-Main components:
-- analyzers: Static and AI-powered code analyzers
-- checkers: Violation detection for different gTAA layers
-- reporters: HTML and JSON report generators
-- models: Data structures for violations and reports
+Componentes principales:
+- analyzers: Analizadores estáticos y con IA
+- checkers: Detección de violaciones para las diferentes capas gTAA
+- reporters: Generadores de informes HTML y JSON
+- models: Estructuras de datos para violaciones e informes
 """
 
-__version__ = "0.1.0"
+__version__ = "0.3.0"
 __author__ = "Jose Antonio Membrive Guillen"
 __license__ = "MIT"
 __all__ = ["__version__", "__author__", "__license__"]

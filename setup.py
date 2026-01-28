@@ -1,29 +1,29 @@
 """
-Setup configuration for gTAA AI Validator.
+Configuración de instalación para gTAA AI Validator.
 
-This file makes the project installable with pip.
+Este archivo permite instalar el proyecto con pip.
 """
 
 from setuptools import setup, find_packages
 from pathlib import Path
 
-# Read README for long description
+# Leer README para la descripción larga
 readme_file = Path(__file__).parent / "README.md"
 if readme_file.exists():
     with open(readme_file, "r", encoding="utf-8") as fh:
         long_description = fh.read()
 else:
-    long_description = "AI-powered validator for gTAA test automation architecture compliance"
+    long_description = "Validador de cumplimiento arquitectónico gTAA para proyectos de test automation"
 
 setup(
     name="gtaa-ai-validator",
-    version="0.1.0",
+    version="0.3.0",
     author="Jose Antonio Membrive Guillen",
     author_email="membri_2@hotmail.com",
-    description="AI-powered validator for gTAA test automation architecture compliance",
+    description="Validador de cumplimiento arquitectónico gTAA para proyectos de test automation",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/gtaa-ai-validator",
+    url="https://github.com/Membrive92/gtaa-ai-validator",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 3 - Alpha",

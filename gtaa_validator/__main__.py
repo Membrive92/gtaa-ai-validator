@@ -1,13 +1,13 @@
 """
-Command-line interface for gTAA Validator.
+Interfaz de línea de comandos para gTAA Validator.
 
-This is the entry point when running: python -m gtaa_validator
+Punto de entrada al ejecutar: python -m gtaa_validator
 
-FASE 2: Static analysis with AST
-- Detect gTAA architectural violations
-- Calculate compliance score (0-100)
-- Display violations by severity
-- Support --verbose flag for detailed violation info
+Análisis estático con AST:
+- Detectar violaciones arquitectónicas gTAA
+- Calcular puntuación de cumplimiento (0-100)
+- Mostrar violaciones por severidad
+- Soporte de flag --verbose para información detallada
 """
 
 import click
@@ -19,85 +19,82 @@ from gtaa_validator.analyzers.static_analyzer import StaticAnalyzer
 
 @click.command()
 @click.argument('project_path', type=click.Path(exists=True))
-@click.option('--verbose', '-v', is_flag=True, help='Enable verbose output')
+@click.option('--verbose', '-v', is_flag=True, help='Activar salida detallada')
 def main(project_path: str, verbose: bool):
     """
-    Validate gTAA architecture compliance for a test automation project.
+    Valida el cumplimiento de la arquitectura gTAA en un proyecto de test automation.
 
-    PROJECT_PATH: Path to the root directory of the test project to analyze.
+    PROJECT_PATH: Ruta al directorio raíz del proyecto de test a analizar.
 
-    Example:
-        python -m gtaa_validator ./my-selenium-project
-        python -m gtaa_validator ./my-selenium-project --verbose
+    Ejemplo:
+        python -m gtaa_validator ./mi-proyecto-selenium
+        python -m gtaa_validator ./mi-proyecto-selenium --verbose
     """
-    # Display header
-    click.echo("=== gTAA AI Validator - Phase 2 ===")
-    click.echo(f"Analyzing project: {project_path}\n")
+    # Mostrar cabecera
+    click.echo("=== gTAA AI Validator - Fase 3 ===")
+    click.echo(f"Analizando proyecto: {project_path}\n")
 
-    # Convert to Path object and resolve to absolute path
+    # Convertir a objeto Path y resolver a ruta absoluta
     project_path = Path(project_path).resolve()
 
-    # Validate that path is a directory
+    # Validar que la ruta es un directorio
     if not project_path.is_dir():
-        click.echo(f"ERROR: {project_path} is not a directory", err=True)
+        click.echo(f"ERROR: {project_path} no es un directorio", err=True)
         sys.exit(1)
 
-    # Create analyzer and run analysis
-    # Pass verbose flag so analyzer can print detailed progress
+    # Crear analizador y ejecutar análisis
     analyzer = StaticAnalyzer(project_path, verbose=verbose)
 
     if not verbose:
-        # Show progress message if not in verbose mode
-        click.echo("Running static analysis...")
+        click.echo("Ejecutando análisis estático...")
 
     report = analyzer.analyze()
 
-    # Display results
+    # Mostrar resultados
     if not verbose:
-        # In non-verbose mode, show summary
-        click.echo()  # Blank line
+        click.echo()
 
     click.echo("="*60)
-    click.echo("ANALYSIS RESULTS")
+    click.echo("RESULTADOS DEL ANÁLISIS")
     click.echo("="*60)
 
-    # Show file statistics
-    click.echo(f"\nFiles analyzed: {report.files_analyzed}")
-    click.echo(f"Total violations: {len(report.violations)}")
+    # Estadísticas de archivos
+    click.echo(f"\nArchivos analizados: {report.files_analyzed}")
+    click.echo(f"Violaciones totales: {len(report.violations)}")
 
-    # Show violations by severity
+    # Violaciones por severidad
     severity_counts = report.get_violation_count_by_severity()
-    click.echo("\nViolations by severity:")
-    click.echo(f"  CRITICAL: {severity_counts['CRITICAL']}")
-    click.echo(f"  HIGH:     {severity_counts['HIGH']}")
-    click.echo(f"  MEDIUM:   {severity_counts['MEDIUM']}")
-    click.echo(f"  LOW:      {severity_counts['LOW']}")
+    click.echo("\nViolaciones por severidad:")
+    click.echo(f"  CRÍTICA: {severity_counts['CRITICAL']}")
+    click.echo(f"  ALTA:    {severity_counts['HIGH']}")
+    click.echo(f"  MEDIA:   {severity_counts['MEDIUM']}")
+    click.echo(f"  BAJA:    {severity_counts['LOW']}")
 
-    # Show compliance score
-    click.echo(f"\nCompliance Score: {report.score:.1f}/100")
+    # Puntuación de cumplimiento
+    click.echo(f"\nPuntuación de cumplimiento: {report.score:.1f}/100")
 
-    # Score interpretation
+    # Interpretación del score
     if report.score >= 90:
-        score_label = "EXCELLENT"
+        score_label = "EXCELENTE"
     elif report.score >= 75:
-        score_label = "GOOD"
+        score_label = "BUENO"
     elif report.score >= 50:
-        score_label = "NEEDS IMPROVEMENT"
+        score_label = "NECESITA MEJORAS"
     else:
-        score_label = "CRITICAL ISSUES"
+        score_label = "PROBLEMAS CRÍTICOS"
 
-    click.echo(f"Status: {score_label}")
+    click.echo(f"Estado: {score_label}")
 
-    # In verbose mode, show detailed violation information
+    # En modo verbose, mostrar información detallada de violaciones
     if verbose and report.violations:
         click.echo("\n" + "="*60)
-        click.echo("DETAILED VIOLATIONS")
+        click.echo("VIOLACIONES DETALLADAS")
         click.echo("="*60)
 
         for i, violation in enumerate(report.violations, 1):
             click.echo(f"\n[{i}] {violation.severity.value} - {violation.violation_type.name}")
 
-            # Show file and line number
+            # Mostrar archivo y número de línea
             try:
                 relative_path = violation.file_path.relative_to(project_path)
             except ValueError:
@@ -106,22 +103,21 @@ def main(project_path: str, verbose: bool):
             location = f"{relative_path}"
             if violation.line_number:
                 location += f":{violation.line_number}"
-            click.echo(f"    Location: {location}")
+            click.echo(f"    Ubicación: {location}")
 
-            # Show message
-            click.echo(f"    Message: {violation.message}")
+            # Mostrar mensaje
+            click.echo(f"    Mensaje: {violation.message}")
 
-            # Show code snippet if available
+            # Mostrar fragmento de código si está disponible
             if violation.code_snippet:
-                click.echo(f"    Code: {violation.code_snippet}")
+                click.echo(f"    Código: {violation.code_snippet}")
 
-    # Final summary
+    # Resumen final
     click.echo("\n" + "="*60)
-    click.echo(f"Analysis completed in {report.execution_time_seconds:.2f}s")
+    click.echo(f"Análisis completado en {report.execution_time_seconds:.2f}s")
     click.echo("="*60)
 
-    # Exit with appropriate code
-    # Exit code 1 if critical violations found
+    # Código de salida 1 si hay violaciones críticas
     if severity_counts['CRITICAL'] > 0:
         return 1
     else:

@@ -1,23 +1,23 @@
 """
-Static Analyzer for gTAA Validator.
+Analizador Estático para gTAA Validator.
 
-This module orchestrates static analysis of test automation projects.
-It coordinates multiple checkers, aggregates results, and produces a Report.
+Este módulo orquesta el análisis estático de proyectos de test automation.
+Coordina múltiples checkers, agrega resultados y produce un Report.
 
-The StaticAnalyzer implements the Facade Pattern: it provides a simple
-interface (analyze() method) to a complex subsystem of checkers.
+El StaticAnalyzer implementa el Patrón Facade: proporciona una interfaz simple
+(método analyze()) a un subsistema complejo de checkers.
 
-Key responsibilities:
-- Discover Python files in the project
-- Run appropriate checkers on each file
-- Aggregate violations from all checkers
-- Calculate compliance score
-- Generate final Report
+Responsabilidades principales:
+- Descubrir archivos Python en el proyecto
+- Ejecutar los checkers apropiados en cada archivo
+- Agregar violaciones de todos los checkers
+- Calcular la puntuación de cumplimiento
+- Generar el Report final
 
-Usage:
+Uso:
     analyzer = StaticAnalyzer(project_path)
     report = analyzer.analyze()
-    print(f"Score: {report.score}")
+    print(f"Puntuación: {report.score}")
 """
 
 import ast
@@ -36,29 +36,29 @@ from gtaa_validator.checkers.quality_checker import QualityChecker
 
 class StaticAnalyzer:
     """
-    Orchestrates static analysis of a test automation project.
+    Orquesta el análisis estático de un proyecto de test automation.
 
-    The analyzer:
-    1. Discovers all Python files in the project
-    2. Filters files based on checker capabilities
-    3. Runs each checker on applicable files
-    4. Aggregates all violations
-    5. Calculates compliance score
-    6. Returns a complete Report
+    El analizador:
+    1. Descubre todos los archivos Python del proyecto
+    2. Filtra archivos según las capacidades de cada checker
+    3. Ejecuta cada checker sobre los archivos aplicables
+    4. Agrega todas las violaciones
+    5. Calcula la puntuación de cumplimiento
+    6. Devuelve un Report completo
 
-    Attributes:
-        project_path: Root directory of the project to analyze
-        checkers: List of checker instances to run
-        verbose: Whether to print detailed progress information
+    Atributos:
+        project_path: Directorio raíz del proyecto a analizar
+        checkers: Lista de instancias de checkers a ejecutar
+        verbose: Si se debe imprimir información detallada del progreso
     """
 
     def __init__(self, project_path: Path, verbose: bool = False):
         """
-        Initialize the StaticAnalyzer.
+        Inicializar el StaticAnalyzer.
 
         Args:
-            project_path: Path to the project root directory
-            verbose: If True, print detailed analysis progress
+            project_path: Ruta al directorio raíz del proyecto
+            verbose: Si es True, imprimir progreso detallado del análisis
         """
         self.project_path = Path(project_path).resolve()
         self.verbose = verbose
@@ -66,13 +66,13 @@ class StaticAnalyzer:
 
     def _initialize_checkers(self) -> List[BaseChecker]:
         """
-        Initialize all available checkers.
+        Inicializar todos los checkers disponibles.
 
-        Phase 2: Only DefinitionChecker
-        Phase 3: Will add StructureChecker, AdaptationChecker, QualityChecker
+        Fase 2: Solo DefinitionChecker
+        Fase 3: Se añaden StructureChecker, AdaptationChecker, QualityChecker
 
         Returns:
-            List of initialized checker instances
+            Lista de instancias de checkers inicializados
         """
         checkers = [
             DefinitionChecker(),
@@ -83,107 +83,107 @@ class StaticAnalyzer:
 
         if self.verbose:
             checker_names = [c.name for c in checkers]
-            print(f"Initialized {len(checkers)} checkers: {', '.join(checker_names)}")
+            print(f"Inicializados {len(checkers)} checkers: {', '.join(checker_names)}")
 
         return checkers
 
     def analyze(self) -> Report:
         """
-        Perform complete static analysis of the project.
+        Realizar el análisis estático completo del proyecto.
 
-        This is the main entry point for static analysis.
-        It orchestrates the entire checking process and returns a Report.
+        Este es el punto de entrada principal para el análisis estático.
+        Orquesta todo el proceso de verificación y devuelve un Report.
 
         Returns:
-            Report object containing all violations and metadata
+            Objeto Report conteniendo todas las violaciones y metadatos
 
-        Example:
-            analyzer = StaticAnalyzer(Path("./my-project"))
+        Ejemplo:
+            analyzer = StaticAnalyzer(Path("./mi-proyecto"))
             report = analyzer.analyze()
-            print(f"Found {len(report.violations)} violations")
-            print(f"Score: {report.score}/100")
+            print(f"Encontradas {len(report.violations)} violaciones")
+            print(f"Puntuación: {report.score}/100")
         """
         start_time = time.time()
 
         if self.verbose:
-            print(f"\nStarting static analysis of: {self.project_path}")
+            print(f"\nIniciando análisis estático de: {self.project_path}")
             print("="*60)
 
-        # Initialize report
+        # Inicializar informe
         report = Report(
             project_path=self.project_path,
             violations=[],
             files_analyzed=0
         )
 
-        # Run project-level checks (e.g., directory structure)
+        # Ejecutar verificaciones a nivel de proyecto (ej. estructura de directorios)
         for checker in self.checkers:
             try:
                 project_violations = checker.check_project(self.project_path)
                 if project_violations:
                     report.violations.extend(project_violations)
                     if self.verbose:
-                        print(f"  [{checker.name}] Found {len(project_violations)} project-level violation(s)")
+                        print(f"  [{checker.name}] Encontrada(s) {len(project_violations)} violación(es) a nivel de proyecto")
             except Exception as e:
                 if self.verbose:
-                    print(f"  [{checker.name}] Error in project check: {str(e)}")
+                    print(f"  [{checker.name}] Error en verificación de proyecto: {str(e)}")
 
-        # Discover all Python files
+        # Descubrir todos los archivos Python
         python_files = self._discover_python_files()
 
         if self.verbose:
-            print(f"\nFound {len(python_files)} Python files")
+            print(f"\nEncontrados {len(python_files)} archivos Python")
 
-        # Analyze each file with applicable checkers
+        # Analizar cada archivo con los checkers aplicables
         for file_path in python_files:
             if self.verbose:
                 relative_path = self._get_relative_path(file_path)
-                print(f"  Checking: {relative_path}")
+                print(f"  Verificando: {relative_path}")
 
             file_violations = self._check_file(file_path)
             report.violations.extend(file_violations)
             report.files_analyzed += 1
 
-        # Calculate score based on violations
+        # Calcular puntuación basada en violaciones
         report.calculate_score()
 
-        # Record execution time
+        # Registrar tiempo de ejecución
         report.execution_time_seconds = time.time() - start_time
 
         if self.verbose:
             print("\n" + "="*60)
-            print("Analysis complete!")
-            print(f"Files analyzed: {report.files_analyzed}")
-            print(f"Violations found: {len(report.violations)}")
-            print(f"Score: {report.score:.1f}/100")
-            print(f"Time: {report.execution_time_seconds:.2f}s")
+            print("¡Análisis completado!")
+            print(f"Archivos analizados: {report.files_analyzed}")
+            print(f"Violaciones encontradas: {len(report.violations)}")
+            print(f"Puntuación: {report.score:.1f}/100")
+            print(f"Tiempo: {report.execution_time_seconds:.2f}s")
 
         return report
 
     def _discover_python_files(self) -> List[Path]:
         """
-        Discover all Python files in the project.
+        Descubrir todos los archivos Python en el proyecto.
 
-        Uses recursive glob to find all .py files, excluding common
-        directories that should not be analyzed (venv, .git, etc.)
+        Usa glob recursivo para encontrar todos los archivos .py, excluyendo
+        directorios comunes que no deben analizarse (venv, .git, etc.)
 
         Returns:
-            List of Path objects for all Python files
+            Lista de objetos Path para todos los archivos Python
         """
-        # Directories to exclude from analysis
+        # Directorios a excluir del análisis
         exclude_dirs = {
-            "venv", "env", "ENV", ".venv",  # Virtual environments
-            ".git", ".hg", ".svn",           # Version control
-            "__pycache__",                    # Python cache
-            "node_modules",                   # JavaScript dependencies
-            ".pytest_cache", ".tox",         # Testing artifacts
-            "build", "dist", "*.egg-info",   # Build artifacts
+            "venv", "env", "ENV", ".venv",  # Entornos virtuales
+            ".git", ".hg", ".svn",           # Control de versiones
+            "__pycache__",                    # Caché de Python
+            "node_modules",                   # Dependencias de JavaScript
+            ".pytest_cache", ".tox",         # Artefactos de testing
+            "build", "dist", "*.egg-info",   # Artefactos de build
         }
 
         python_files = []
 
         for py_file in self.project_path.rglob("*.py"):
-            # Check if file is in an excluded directory
+            # Verificar si el archivo está en un directorio excluido
             should_exclude = any(
                 excluded in py_file.parts
                 for excluded in exclude_dirs
@@ -192,39 +192,39 @@ class StaticAnalyzer:
             if not should_exclude:
                 python_files.append(py_file)
 
-        # Sort for consistent ordering
+        # Ordenar para un orden consistente
         python_files.sort()
 
         return python_files
 
     def _check_file(self, file_path: Path) -> List[Violation]:
         """
-        Run all applicable checkers on a single file.
+        Ejecutar todos los checkers aplicables sobre un único archivo.
 
-        Parses the AST once and passes it to all applicable checkers,
-        avoiding redundant parsing of the same file.
+        Parsea el AST una sola vez y lo pasa a todos los checkers aplicables,
+        evitando el parseo redundante del mismo archivo.
 
         Args:
-            file_path: Path to the file to check
+            file_path: Ruta al archivo a verificar
 
         Returns:
-            List of all violations found by all checkers
+            Lista de todas las violaciones encontradas por todos los checkers
         """
         violations = []
 
-        # Determine which checkers apply to this file
+        # Determinar qué checkers aplican a este archivo
         applicable = [c for c in self.checkers if c.can_check(file_path)]
         if not applicable:
             return violations
 
-        # Parse AST once for all checkers
+        # Parsear AST una sola vez para todos los checkers
         tree: Optional[ast.Module] = None
         try:
             with open(file_path, "r", encoding="utf-8") as f:
                 source_code = f.read()
             tree = ast.parse(source_code, filename=str(file_path))
         except (SyntaxError, Exception):
-            # If parsing fails, let individual checkers handle it
+            # Si el parseo falla, dejar que los checkers individuales lo manejen
             pass
 
         for checker in applicable:
@@ -233,10 +233,10 @@ class StaticAnalyzer:
                 violations.extend(checker_violations)
 
                 if self.verbose and checker_violations:
-                    print(f"    [{checker.name}] Found {len(checker_violations)} violation(s)")
+                    print(f"    [{checker.name}] Encontrada(s) {len(checker_violations)} violación(es)")
 
             except Exception as e:
-                # Don't crash if a single checker fails
+                # No fallar si un checker individual falla
                 if self.verbose:
                     print(f"    [{checker.name}] Error: {str(e)}")
 
@@ -244,13 +244,13 @@ class StaticAnalyzer:
 
     def _get_relative_path(self, file_path: Path) -> Path:
         """
-        Get path relative to project root.
+        Obtener la ruta relativa al directorio raíz del proyecto.
 
         Args:
-            file_path: Absolute path to file
+            file_path: Ruta absoluta al archivo
 
         Returns:
-            Path relative to project root
+            Ruta relativa al directorio raíz del proyecto
         """
         try:
             return file_path.relative_to(self.project_path)
@@ -259,10 +259,10 @@ class StaticAnalyzer:
 
     def get_summary(self) -> dict:
         """
-        Get a summary of the analyzer configuration.
+        Obtener un resumen de la configuración del analizador.
 
         Returns:
-            Dictionary with analyzer information
+            Diccionario con información del analizador
         """
         return {
             "project_path": str(self.project_path),

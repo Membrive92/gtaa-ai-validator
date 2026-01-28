@@ -1,13 +1,13 @@
 """
-Data models for gTAA Validator.
+Modelos de datos para gTAA Validator.
 
-This module defines the core data structures used throughout the validation process:
-- Violation: Represents a single architectural violation found in the code
-- Report: Aggregates all violations and metadata for a project analysis
-- Severity: Enumeration of violation severity levels
-- ViolationType: Enumeration of gTAA violation types
+Este módulo define las estructuras de datos principales usadas en el proceso de validación:
+- Violation: Representa una única violación arquitectónica encontrada en el código
+- Report: Agrega todas las violaciones y metadatos de un análisis de proyecto
+- Severity: Enumeración de niveles de severidad de violaciones
+- ViolationType: Enumeración de tipos de violación gTAA
 
-These models are used by analyzers, checkers, and reporters.
+Estos modelos son utilizados por analizadores, checkers y reportadores.
 """
 
 from dataclasses import dataclass, field
@@ -19,12 +19,12 @@ from datetime import datetime
 
 class Severity(Enum):
     """
-    Severity levels for gTAA architectural violations.
+    Niveles de severidad para violaciones arquitectónicas gTAA.
 
-    CRITICAL: Violates core gTAA principles (e.g., direct Selenium calls in tests)
-    HIGH: Significant architectural issue (e.g., hardcoded test data)
-    MEDIUM: Moderate quality issue (e.g., business logic in page objects)
-    LOW: Minor code quality issue (e.g., poor naming conventions)
+    CRITICAL: Viola principios fundamentales de gTAA (ej. llamadas directas a Selenium en tests)
+    HIGH: Problema arquitectónico significativo (ej. datos de test hardcodeados)
+    MEDIUM: Problema de calidad moderado (ej. lógica de negocio en page objects)
+    LOW: Problema menor de calidad de código (ej. convenciones de nomenclatura pobres)
     """
     CRITICAL = "CRITICAL"
     HIGH = "HIGH"
@@ -33,8 +33,8 @@ class Severity(Enum):
 
     def get_score_penalty(self) -> int:
         """
-        Return the score penalty for this severity level.
-        Used to calculate the overall compliance score (0-100).
+        Devuelve la penalización de puntuación para este nivel de severidad.
+        Se usa para calcular la puntuación general de cumplimiento (0-100).
         """
         penalties = {
             Severity.CRITICAL: 10,
@@ -45,7 +45,7 @@ class Severity(Enum):
         return penalties[self]
 
     def __lt__(self, other):
-        """Enable sorting by severity (CRITICAL > HIGH > MEDIUM > LOW)."""
+        """Habilitar ordenación por severidad (CRITICAL > HIGH > MEDIUM > LOW)."""
         if not isinstance(other, Severity):
             return NotImplemented
         severity_order = {
@@ -59,110 +59,110 @@ class Severity(Enum):
 
 class ViolationType(Enum):
     """
-    Types of gTAA architectural violations.
+    Tipos de violaciones arquitectónicas gTAA.
 
-    Each violation type corresponds to a specific gTAA principle:
-    - Layer separation (Definition, Adaptation, Execution)
-    - Data externalization
-    - Code quality and maintainability
+    Cada tipo de violación corresponde a un principio específico de gTAA:
+    - Separación de capas (Definición, Adaptación, Ejecución)
+    - Externalización de datos
+    - Calidad y mantenibilidad del código
 
-    PHASE 2: Only ADAPTATION_IN_DEFINITION is implemented
-    PHASE 3: All violation types will be detected
+    FASE 2: Solo se implementó ADAPTATION_IN_DEFINITION
+    FASE 3: Se detectan todos los tipos de violación
     """
 
-    # CRITICAL violations - Core gTAA principles
-    ADAPTATION_IN_DEFINITION = "ADAPTATION_IN_DEFINITION"  # Selenium/Playwright in test files
-    MISSING_LAYER_STRUCTURE = "MISSING_LAYER_STRUCTURE"    # Missing tests/, pages/ directories
+    # Violaciones CRÍTICAS - Principios fundamentales de gTAA
+    ADAPTATION_IN_DEFINITION = "ADAPTATION_IN_DEFINITION"  # Selenium/Playwright en archivos de test
+    MISSING_LAYER_STRUCTURE = "MISSING_LAYER_STRUCTURE"    # Faltan directorios tests/, pages/
 
-    # HIGH severity violations
-    HARDCODED_TEST_DATA = "HARDCODED_TEST_DATA"            # Emails, URLs hardcoded in tests
-    ASSERTION_IN_POM = "ASSERTION_IN_POM"                  # Assertions in Page Object Methods
-    FORBIDDEN_IMPORT = "FORBIDDEN_IMPORT"                  # Wrong layer imports
+    # Violaciones de severidad ALTA
+    HARDCODED_TEST_DATA = "HARDCODED_TEST_DATA"            # Emails, URLs hardcodeados en tests
+    ASSERTION_IN_POM = "ASSERTION_IN_POM"                  # Aserciones en Page Object Methods
+    FORBIDDEN_IMPORT = "FORBIDDEN_IMPORT"                  # Imports de capa incorrecta
 
-    # MEDIUM severity violations
-    BUSINESS_LOGIC_IN_POM = "BUSINESS_LOGIC_IN_POM"        # Business logic in Page Objects
-    DUPLICATE_LOCATOR = "DUPLICATE_LOCATOR"                # Same locator in multiple places
-    LONG_TEST_FUNCTION = "LONG_TEST_FUNCTION"              # Tests >50 lines
+    # Violaciones de severidad MEDIA
+    BUSINESS_LOGIC_IN_POM = "BUSINESS_LOGIC_IN_POM"        # Lógica de negocio en Page Objects
+    DUPLICATE_LOCATOR = "DUPLICATE_LOCATOR"                # Mismo localizador en múltiples sitios
+    LONG_TEST_FUNCTION = "LONG_TEST_FUNCTION"              # Tests >50 líneas
 
-    # LOW severity violations
-    POOR_TEST_NAMING = "POOR_TEST_NAMING"                  # Generic test names (test_1, test_2)
+    # Violaciones de severidad BAJA
+    POOR_TEST_NAMING = "POOR_TEST_NAMING"                  # Nombres genéricos de test (test_1, test_2)
 
     def get_severity(self) -> Severity:
-        """Return the severity level for this violation type."""
+        """Devuelve el nivel de severidad para este tipo de violación."""
         severity_map = {
-            # Critical
+            # Crítica
             ViolationType.ADAPTATION_IN_DEFINITION: Severity.CRITICAL,
             ViolationType.MISSING_LAYER_STRUCTURE: Severity.CRITICAL,
 
-            # High
+            # Alta
             ViolationType.HARDCODED_TEST_DATA: Severity.HIGH,
             ViolationType.ASSERTION_IN_POM: Severity.HIGH,
             ViolationType.FORBIDDEN_IMPORT: Severity.HIGH,
 
-            # Medium
+            # Media
             ViolationType.BUSINESS_LOGIC_IN_POM: Severity.MEDIUM,
             ViolationType.DUPLICATE_LOCATOR: Severity.MEDIUM,
             ViolationType.LONG_TEST_FUNCTION: Severity.MEDIUM,
 
-            # Low
+            # Baja
             ViolationType.POOR_TEST_NAMING: Severity.LOW,
         }
         return severity_map[self]
 
     def get_description(self) -> str:
-        """Return a human-readable description of this violation type."""
+        """Devuelve una descripción legible de este tipo de violación."""
         descriptions = {
             ViolationType.ADAPTATION_IN_DEFINITION:
-                "Test code directly calls Selenium/Playwright instead of using Page Objects",
+                "El código de test llama directamente a Selenium/Playwright en lugar de usar Page Objects",
             ViolationType.MISSING_LAYER_STRUCTURE:
-                "Project lacks proper gTAA layer structure (tests/, pages/ directories)",
+                "El proyecto carece de la estructura de capas gTAA adecuada (directorios tests/, pages/)",
             ViolationType.HARDCODED_TEST_DATA:
-                "Test data is hardcoded instead of externalized in data files",
+                "Los datos de test están hardcodeados en lugar de externalizados en archivos de datos",
             ViolationType.ASSERTION_IN_POM:
-                "Page Object contains assertions (should only be in test layer)",
+                "El Page Object contiene aserciones (solo deben estar en la capa de test)",
             ViolationType.FORBIDDEN_IMPORT:
-                "File imports from forbidden layer (violates layer separation)",
+                "El archivo importa de una capa prohibida (viola la separación de capas)",
             ViolationType.BUSINESS_LOGIC_IN_POM:
-                "Page Object contains business logic (should be in separate layer)",
+                "El Page Object contiene lógica de negocio (debe estar en una capa separada)",
             ViolationType.DUPLICATE_LOCATOR:
-                "Same locator defined in multiple Page Objects",
+                "El mismo localizador está definido en múltiples Page Objects",
             ViolationType.LONG_TEST_FUNCTION:
-                "Test function is too long (>50 lines), reducing maintainability",
+                "La función de test es demasiado larga (>50 líneas), reduciendo la mantenibilidad",
             ViolationType.POOR_TEST_NAMING:
-                "Test function has generic name (test_1, test_2, etc.)",
+                "La función de test tiene un nombre genérico (test_1, test_2, etc.)",
         }
         return descriptions[self]
 
     def get_recommendation(self) -> str:
-        """Return a recommendation on how to fix this violation."""
+        """Devuelve una recomendación sobre cómo corregir esta violación."""
         recommendations = {
             ViolationType.ADAPTATION_IN_DEFINITION:
-                "Create Page Objects that encapsulate Selenium/Playwright interactions. "
-                "Test code should call page.login() instead of driver.find_element().",
+                "Crear Page Objects que encapsulen las interacciones con Selenium/Playwright. "
+                "El código de test debe llamar a page.login() en lugar de driver.find_element().",
             ViolationType.MISSING_LAYER_STRUCTURE:
-                "Organize project with: tests/ (test definitions), pages/ (page objects), "
-                "data/ (test data), utils/ (helpers).",
+                "Organizar el proyecto con: tests/ (definiciones de test), pages/ (page objects), "
+                "data/ (datos de test), utils/ (utilidades).",
             ViolationType.HARDCODED_TEST_DATA:
-                "Move test data to external files (JSON, YAML, CSV) or test fixtures. "
-                "Keep tests DRY and data-driven.",
+                "Mover los datos de test a archivos externos (JSON, YAML, CSV) o fixtures. "
+                "Mantener los tests DRY y orientados a datos.",
             ViolationType.ASSERTION_IN_POM:
-                "Remove assertions from Page Objects. Page Objects should only interact "
-                "with UI and return data. Let tests verify the data.",
+                "Eliminar las aserciones de los Page Objects. Los Page Objects solo deben interactuar "
+                "con la UI y devolver datos. Dejar que los tests verifiquen los datos.",
             ViolationType.FORBIDDEN_IMPORT:
-                "Follow gTAA layer separation: Tests import Pages, Pages import Utils, "
-                "but never the reverse.",
+                "Seguir la separación de capas gTAA: Tests importan Pages, Pages importan Utils, "
+                "pero nunca al revés.",
             ViolationType.BUSINESS_LOGIC_IN_POM:
-                "Extract business logic to separate service/helper classes. "
-                "Page Objects should only handle UI interactions.",
+                "Extraer la lógica de negocio a clases de servicio/helper separadas. "
+                "Los Page Objects solo deben manejar interacciones con la UI.",
             ViolationType.DUPLICATE_LOCATOR:
-                "Create a base page class or locator repository. Define each locator once "
-                "and reuse across Page Objects.",
+                "Crear una clase base de página o repositorio de localizadores. Definir cada localizador "
+                "una sola vez y reutilizar entre Page Objects.",
             ViolationType.LONG_TEST_FUNCTION:
-                "Break long tests into smaller, focused test functions. Each test should "
-                "verify one specific behavior.",
+                "Dividir los tests largos en funciones de test más pequeñas y enfocadas. Cada test debe "
+                "verificar un comportamiento específico.",
             ViolationType.POOR_TEST_NAMING:
-                "Use descriptive test names: test_user_can_login_with_valid_credentials() "
-                "instead of test_1().",
+                "Usar nombres descriptivos: test_usuario_puede_hacer_login_con_credenciales_validas() "
+                "en lugar de test_1().",
         }
         return recommendations[self]
 
@@ -170,16 +170,16 @@ class ViolationType(Enum):
 @dataclass
 class Violation:
     """
-    Represents a single gTAA architectural violation detected in the code.
+    Representa una única violación arquitectónica gTAA detectada en el código.
 
-    Attributes:
-        violation_type: Type of violation (enum)
-        severity: Severity level (enum)
-        file_path: Path to the file containing the violation
-        line_number: Line number where violation occurs (if applicable)
-        message: Detailed message explaining the violation
-        code_snippet: Optional code snippet showing the violation
-        recommendation: How to fix this violation
+    Atributos:
+        violation_type: Tipo de violación (enum)
+        severity: Nivel de severidad (enum)
+        file_path: Ruta al archivo que contiene la violación
+        line_number: Número de línea donde ocurre la violación (si aplica)
+        message: Mensaje detallado explicando la violación
+        code_snippet: Fragmento de código opcional mostrando la violación
+        recommendation: Cómo corregir esta violación
     """
     violation_type: ViolationType
     severity: Severity
@@ -191,23 +191,23 @@ class Violation:
 
     def __post_init__(self):
         """
-        Auto-populate fields from violation type if not provided.
-        This ensures consistency across all violations.
+        Auto-rellenar campos desde el tipo de violación si no se proporcionan.
+        Esto asegura consistencia en todas las violaciones.
         """
-        # If severity not explicitly set, get from violation type
+        # Si la severidad no se establece explícitamente, obtener del tipo de violación
         if not self.severity:
             self.severity = self.violation_type.get_severity()
 
-        # If recommendation not provided, get default recommendation
+        # Si no se proporciona recomendación, obtener la recomendación por defecto
         if not self.recommendation:
             self.recommendation = self.violation_type.get_recommendation()
 
-        # If message not provided, use violation description
+        # Si no se proporciona mensaje, usar la descripción de la violación
         if not self.message:
             self.message = self.violation_type.get_description()
 
     def to_dict(self) -> dict:
-        """Convert violation to dictionary for JSON serialization."""
+        """Convertir violación a diccionario para serialización JSON."""
         return {
             "type": self.violation_type.name,
             "severity": self.severity.value,
@@ -222,31 +222,31 @@ class Violation:
 @dataclass
 class Report:
     """
-    Aggregates all violations and metadata for a complete project analysis.
+    Agrega todas las violaciones y metadatos de un análisis completo de proyecto.
 
-    Attributes:
-        project_path: Root directory of the analyzed project
-        violations: List of all detected violations
-        files_analyzed: Number of files analyzed
-        timestamp: When the analysis was performed
-        validator_version: Version of gTAA Validator used
-        score: Compliance score (0-100)
-        execution_time_seconds: Time taken for analysis
+    Atributos:
+        project_path: Directorio raíz del proyecto analizado
+        violations: Lista de todas las violaciones detectadas
+        files_analyzed: Número de archivos analizados
+        timestamp: Cuándo se realizó el análisis
+        validator_version: Versión del validador gTAA utilizado
+        score: Puntuación de cumplimiento (0-100)
+        execution_time_seconds: Tiempo empleado en el análisis
     """
     project_path: Path
     violations: List[Violation] = field(default_factory=list)
     files_analyzed: int = 0
     timestamp: datetime = field(default_factory=datetime.now)
-    validator_version: str = "0.1.0"
+    validator_version: str = "0.3.0"
     score: float = 100.0
     execution_time_seconds: float = 0.0
 
     def calculate_score(self) -> float:
         """
-        Calculate compliance score (0-100) based on violations.
+        Calcular la puntuación de cumplimiento (0-100) basada en las violaciones.
 
-        Formula: Start at 100, subtract penalty for each violation.
-        Minimum score is 0.
+        Fórmula: Comenzar en 100, restar penalización por cada violación.
+        La puntuación mínima es 0.
         """
         total_penalty = sum(v.severity.get_score_penalty() for v in self.violations)
         score = max(0.0, 100.0 - total_penalty)
@@ -254,11 +254,11 @@ class Report:
         return score
 
     def get_violations_by_severity(self, severity: Severity) -> List[Violation]:
-        """Get all violations of a specific severity level."""
+        """Obtener todas las violaciones de un nivel de severidad específico."""
         return [v for v in self.violations if v.severity == severity]
 
     def get_violation_count_by_severity(self) -> dict:
-        """Return count of violations grouped by severity."""
+        """Devolver el recuento de violaciones agrupadas por severidad."""
         return {
             "CRITICAL": len(self.get_violations_by_severity(Severity.CRITICAL)),
             "HIGH": len(self.get_violations_by_severity(Severity.HIGH)),
@@ -267,7 +267,7 @@ class Report:
         }
 
     def to_dict(self) -> dict:
-        """Convert report to dictionary for JSON serialization."""
+        """Convertir informe a diccionario para serialización JSON."""
         return {
             "metadata": {
                 "project_path": str(self.project_path),

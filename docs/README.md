@@ -11,7 +11,7 @@ Diagramas de flujo completos que explican el funcionamiento de la Fase 2: Motor 
 **Contenido**:
 - Diagrama de flujo principal (vista general)
 - Subdiagrama: DefinitionChecker.check() - El corazón del análisis
-- Subdiagrama: SeleniumCallVisitor - Recorrido del AST
+- Subdiagrama: BrowserAPICallVisitor - Recorrido del AST
 - Subdiagrama: _get_object_name() - Extraer nombre del objeto
 - Subdiagrama: Creación de Violation
 - Subdiagrama: Cálculo de Score

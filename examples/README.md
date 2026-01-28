@@ -17,11 +17,14 @@ Los proyectos de ejemplo sirven para:
 
 ```
 examples/
-├── README.md           # Este archivo
-├── bad_project/        # Proyecto con múltiples violaciones gTAA
-│   ├── test_login.py   # Tests con violaciones Selenium
-│   └── test_search.py  # Tests con violaciones Playwright
-└── good_project/       # Proyecto que sigue arquitectura gTAA correctamente
+├── README.md                  # Este archivo
+├── bad_project/               # Proyecto con ~35 violaciones gTAA
+│   ├── test_login.py          # Tests con violaciones Selenium
+│   ├── test_search.py         # Tests con violaciones Playwright
+│   ├── test_data_issues.py    # Datos hardcoded, nombres genéricos, función larga
+│   └── pages/
+│       └── checkout_page.py   # Page Object con asserts, imports prohibidos, lógica
+└── good_project/              # Proyecto que sigue arquitectura gTAA correctamente
     ├── tests/
     │   └── test_login.py
     └── pages/
@@ -43,9 +46,9 @@ python -m gtaa_validator examples/bad_project --verbose
 ```
 
 **Resultado esperado:**
-- 15 violaciones críticas detectadas
-- Score: 0.0/100
-- Status: CRITICAL ISSUES
+- 35 violaciones detectadas (múltiples severidades)
+- Puntuación: 0.0/100
+- Estado: PROBLEMAS CRÍTICOS
 
 ### Analizar proyecto bueno
 
@@ -58,8 +61,8 @@ python -m gtaa_validator examples/good_project --verbose
 
 **Resultado esperado:**
 - 0 violaciones
-- Score: 100.0/100
-- Status: EXCELLENT
+- Puntuación: 100.0/100
+- Estado: EXCELENTE
 
 ---
 
@@ -139,23 +142,24 @@ search_page.enter_search_query("query")
 
 ### Resumen bad_project
 
-**Total violaciones esperadas: 15**
+**Total violaciones esperadas: 35**
 
 | Severidad | Cantidad |
 |-----------|----------|
-| CRITICAL | 15 |
-| HIGH | 0 |
-| MEDIUM | 0 |
-| LOW | 0 |
+| CRÍTICA | 16 |
+| ALTA | 13 |
+| MEDIA | 4 |
+| BAJA | 2 |
 
-**Score esperado: 0.0/100**
+**Puntuación esperada: 0.0/100**
 
 **Problemas arquitectónicos:**
-- ❌ No existe separación de capas
-- ❌ No hay Page Objects
-- ❌ Tests tienen código de bajo nivel (locators, waits)
+- ❌ No existe separación de capas (falta directorio tests/)
+- ❌ Tests llaman directamente a Selenium/Playwright
+- ❌ Page Objects con asserts, imports prohibidos y lógica de negocio
+- ❌ Datos hardcoded en tests (emails, URLs, passwords)
+- ❌ Nombres genéricos (test_1, test_2) y funciones largas
 - ❌ Código no es mantenible ni reutilizable
-- ❌ Alta duplicación de código
 
 ---
 
@@ -332,12 +336,12 @@ python -m gtaa_validator examples/bad_project --verbose
 
 Para evaluadores/profesores - verificar que:
 
-- [ ] `bad_project` detecta exactamente **15 violaciones**
-- [ ] Todas las violaciones son de tipo `ADAPTATION_IN_DEFINITION`
-- [ ] Todas las violaciones son severidad `CRITICAL`
-- [ ] Score de `bad_project` es **0.0/100**
+- [ ] `bad_project` detecta exactamente **35 violaciones**
+- [ ] Violaciones incluyen 9 tipos distintos (4 checkers)
+- [ ] Severidades: 16 CRÍTICA, 13 ALTA, 4 MEDIA, 2 BAJA
+- [ ] Puntuación de `bad_project` es **0.0/100**
 - [ ] `good_project` detecta **0 violaciones**
-- [ ] Score de `good_project` es **100.0/100**
+- [ ] Puntuación de `good_project` es **100.0/100**
 - [ ] Modo `--verbose` muestra líneas y código para cada violación
 - [ ] Las líneas reportadas coinciden con las tablas de este README
 

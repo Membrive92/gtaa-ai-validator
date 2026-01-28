@@ -1,15 +1,15 @@
 """
-Structure Checker for gTAA Validator.
+Checker de Estructura para gTAA Validator.
 
-Validates that the project has proper gTAA layer structure:
-- Tests directory (tests/ or test/)
-- Page Objects directory (pages/, page_objects/, or pom/)
+Valida que el proyecto tenga la estructura de capas gTAA correcta:
+- Directorio de tests (tests/ o test/)
+- Directorio de Page Objects (pages/, page_objects/ o pom/)
 
-This is a PROJECT-LEVEL checker — it runs once via check_project(),
-not per-file via check().
+Este es un checker a NIVEL DE PROYECTO — se ejecuta una vez vía check_project(),
+no por archivo vía check().
 
-According to gTAA architecture, projects must have separate directories
-for the Definition layer (tests) and the Adaptation layer (Page Objects).
+Según la arquitectura gTAA, los proyectos deben tener directorios separados
+para la capa de Definición (tests) y la capa de Adaptación (Page Objects).
 """
 
 import ast
@@ -22,39 +22,39 @@ from gtaa_validator.models import Violation, ViolationType, Severity
 
 class StructureChecker(BaseChecker):
     """
-    Checks project structure for required gTAA directories.
+    Verifica la estructura del proyecto en busca de directorios gTAA requeridos.
 
-    This checker validates that the project has at least:
-    - A test directory (tests/ or test/)
-    - A page objects directory (pages/, page_objects/, or pom/)
+    Este checker valida que el proyecto tenga al menos:
+    - Un directorio de tests (tests/ o test/)
+    - Un directorio de page objects (pages/, page_objects/ o pom/)
 
-    If either is missing, it reports a MISSING_LAYER_STRUCTURE violation.
+    Si falta alguno, reporta una violación MISSING_LAYER_STRUCTURE.
     """
 
-    # Acceptable directory names for each layer
+    # Nombres de directorio aceptables para cada capa
     TEST_DIR_NAMES = {"tests", "test"}
     PAGE_DIR_NAMES = {"pages", "page_objects", "pom"}
 
     def can_check(self, file_path: Path) -> bool:
-        """StructureChecker never runs on individual files."""
+        """StructureChecker nunca se ejecuta sobre archivos individuales."""
         return False
 
     def check(self, file_path: Path, tree: Optional[ast.Module] = None) -> List[Violation]:
-        """Not used — StructureChecker only implements check_project()."""
+        """No se usa — StructureChecker solo implementa check_project()."""
         return []
 
     def check_project(self, project_path: Path) -> List[Violation]:
         """
-        Check if project has required gTAA directory structure.
+        Verificar si el proyecto tiene la estructura de directorios gTAA requerida.
 
-        Looks for immediate subdirectories matching expected layer names.
-        Creates a single violation listing all missing layers.
+        Busca subdirectorios inmediatos que coincidan con los nombres de capa esperados.
+        Crea una única violación listando todas las capas ausentes.
 
         Args:
-            project_path: Root directory of the project
+            project_path: Directorio raíz del proyecto
 
         Returns:
-            List containing 0 or 1 violation
+            Lista con 0 o 1 violación
         """
         try:
             subdirs = {d.name.lower() for d in project_path.iterdir() if d.is_dir()}
@@ -70,11 +70,11 @@ class StructureChecker(BaseChecker):
         missing = []
         if not has_test_dir:
             missing.append(
-                f"tests directory (expected one of: {', '.join(sorted(self.TEST_DIR_NAMES))})"
+                f"directorio de tests (se esperaba uno de: {', '.join(sorted(self.TEST_DIR_NAMES))})"
             )
         if not has_page_dir:
             missing.append(
-                f"page objects directory (expected one of: {', '.join(sorted(self.PAGE_DIR_NAMES))})"
+                f"directorio de page objects (se esperaba uno de: {', '.join(sorted(self.PAGE_DIR_NAMES))})"
             )
 
         violation = Violation(
@@ -83,10 +83,10 @@ class StructureChecker(BaseChecker):
             file_path=project_path,
             line_number=None,
             message=(
-                f"Project lacks required gTAA directory structure. "
-                f"Missing: {'; '.join(missing)}. "
-                f"According to gTAA, projects should have separate directories "
-                f"for the Definition layer (tests) and the Adaptation layer (Page Objects)."
+                f"El proyecto carece de la estructura de directorios gTAA requerida. "
+                f"Falta: {'; '.join(missing)}. "
+                f"Según gTAA, los proyectos deben tener directorios separados "
+                f"para la capa de Definición (tests) y la capa de Adaptación (Page Objects)."
             ),
             recommendation=ViolationType.MISSING_LAYER_STRUCTURE.get_recommendation(),
         )
