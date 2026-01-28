@@ -22,7 +22,7 @@ def test_login_with_valid_credentials():
     # Use Page Object for all interactions
     login_page = LoginPage(driver)
     login_page.navigate()
-    login_page.login("testuser", "password123")
+    login_page.login("testuser", "S3cure!2026")
 
     # Get data via Page Object method
     welcome_msg = login_page.get_welcome_message()
