@@ -70,6 +70,27 @@ Diagramas de flujo de la Fase 3: Cobertura Completa de Análisis Estático (9 ti
 - Regex + AST combinados para detección de datos
 - Múltiples visitors especializados por tipo de violación
 
+### [PHASE4_FLOW_DIAGRAMS.md](PHASE4_FLOW_DIAGRAMS.md)
+
+Diagramas de flujo de la Fase 4: Reportes HTML/JSON Profesionales.
+
+**Contenido**:
+- Arquitectura del módulo de reportes (`reporters/`)
+- Flujo de generación de reportes (JSON y HTML)
+- JsonReporter — serialización con `to_dict()` + `json.dumps()`
+- HtmlReporter — dashboard visual autocontenido
+- Estructura del dashboard HTML (secciones, tarjetas, tablas)
+- SVG inline: gauge circular de score y gráfico de barras
+- Agrupación de violaciones por checker
+- Integración con el CLI (`--json`, `--html`)
+- Mapa completo de tests (21 unitarios + 4 integración)
+
+**Conceptos nuevos explicados**:
+- SVG programático (stroke-dasharray para gauges)
+- HTML autocontenido sin dependencias externas
+- Prevención XSS con `html.escape()`
+- CSS Grid responsive para dashboard
+
 ### [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md)
 
 Registro de decisiones arquitectónicas (ADR) que explica **por qué** se eligió cada enfoque técnico.
@@ -83,6 +104,9 @@ Registro de decisiones arquitectónicas (ADR) que explica **por qué** se eligi�
 6. Verificación a dos niveles (proyecto + archivo)
 7. Optimización: parseo único del AST por archivo
 8. Paradigmas de programación utilizados (POO + Declarativo)
+9. Reportes: HTML autocontenido frente a alternativas (Jinja2, Chart.js, PDF)
+10. Reportes: JSON con serialización propia frente a librerías (Pydantic, marshmallow)
+11. CLI: flags separados frente a formato único
 
 **Para quién**:
 - Evaluadores del TFM que quieran entender las decisiones de diseño
@@ -110,8 +134,9 @@ Guía para contribuir al proyecto (estructura de código, estándares, pull requ
 1. Lee [PHASE1_FLOW_DIAGRAMS.md](PHASE1_FLOW_DIAGRAMS.md) para entender la estructura base y el CLI
 2. Lee [PHASE2_FLOW_DIAGRAMS.md](PHASE2_FLOW_DIAGRAMS.md) para entender el motor de análisis estático
 3. Lee [PHASE3_FLOW_DIAGRAMS.md](PHASE3_FLOW_DIAGRAMS.md) para la cobertura completa de 9 violaciones
-4. Lee [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md) para las justificaciones técnicas
-5. Ejecuta el código mientras lees: `python -m gtaa_validator examples/bad_project --verbose`
+4. Lee [PHASE4_FLOW_DIAGRAMS.md](PHASE4_FLOW_DIAGRAMS.md) para los reportes HTML/JSON
+5. Lee [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md) para las justificaciones técnicas
+6. Ejecuta el código mientras lees: `python -m gtaa_validator examples/bad_project --verbose`
 
 ### Para Desarrollar
 1. Consulta [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md) para entender los patrones (Strategy, Visitor, Facade)

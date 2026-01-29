@@ -18,6 +18,9 @@ El formato sigue la estructura de un ADR (Architecture Decision Record) adaptado
 6. [Verificación a dos niveles: proyecto y archivo](#6-verificación-a-dos-niveles-proyecto-y-archivo)
 7. [Optimización: parseo único del AST por archivo](#7-optimización-parseo-único-del-ast-por-archivo)
 8. [Paradigmas de programación utilizados](#8-paradigmas-de-programación-utilizados)
+9. [Reportes: HTML autocontenido frente a alternativas](#9-reportes-html-autocontenido-frente-a-alternativas)
+10. [Reportes: JSON con serialización propia frente a librerías](#10-reportes-json-con-serialización-propia-frente-a-librerías)
+11. [CLI: flags separados frente a formato único](#11-cli-flags-separados-frente-a-formato-único)
 
 ---
 
@@ -34,29 +37,7 @@ Se requiere un mecanismo de análisis que distinga el contexto sintáctico (dent
 
 ### Alternativa evaluada: Mapas anidados (diccionarios)
 
-Un enfoque basado en diccionarios representaría el código como estructuras de datos manuales:
-
-```python
-code_map = {
-    "functions": {
-        "test_login": {
-            "calls": ["driver.find_element", "login_page.login"],
-            "strings": ["admin@test.com"],
-            "lines": [10, 11, 12]
-        }
-    },
-    "classes": {
-        "LoginPage": {
-            "methods": {
-                "login": {
-                    "has_assert": True,
-                    "has_if": False
-                }
-            }
-        }
-    }
-}
-```
+Un enfoque basado en diccionarios representaría el código como estructuras de datos manuales, organizando funciones, clases y sus propiedades en un mapa jerárquico.
 
 **Motivos de descarte:**
 
@@ -69,10 +50,7 @@ code_map = {
 
 ### Alternativa evaluada: Expresiones regulares (regex)
 
-```python
-import re
-violations = re.findall(r'driver\.\w+\(', source_code)
-```
+Buscar patrones como `driver.\w+\(` directamente en el código fuente como texto plano.
 
 **Motivos de descarte:**
 
@@ -87,13 +65,7 @@ violations = re.findall(r'driver\.\w+\(', source_code)
 
 ### Solución elegida: AST (Abstract Syntax Tree)
 
-```python
-tree = ast.parse(source_code)
-visitor = BrowserAPICallVisitor()
-visitor.visit(tree)
-```
-
-El módulo `ast` de la biblioteca estándar de Python genera un árbol sintáctico que representa la estructura completa del código fuente.
+El módulo `ast` de la biblioteca estándar de Python genera un árbol sintáctico que representa la estructura completa del código fuente. Se parsea el código con `ast.parse()` y se recorre con un Visitor especializado.
 
 **Justificación:**
 
@@ -108,31 +80,7 @@ El módulo `ast` de la biblioteca estándar de Python genera un árbol sintácti
 
 ### Ejemplo comparativo: detección de `assert` en Page Objects
 
-```python
-# Con regex (frágil):
-if re.search(r'^\s+assert\s', line):
-    # No se puede determinar si se está dentro de una clase o un método.
-
-# Con AST (robusto):
-class _AssertionVisitor(ast.NodeVisitor):
-    def visit_ClassDef(self, node):
-        self._in_class = True
-        self.generic_visit(node)
-        self._in_class = False
-
-    def visit_FunctionDef(self, node):
-        if self._in_class:
-            self._in_method = True
-            self.generic_visit(node)
-            self._in_method = False
-
-    def visit_Assert(self, node):
-        if self._in_class and self._in_method:
-            # Solo se reporta si el assert está dentro de un método de clase
-            self.violations.append(...)
-```
-
-El AST proporciona la jerarquía `Clase → Método → Assert` de forma natural, sin necesidad de rastrear indentación.
+Con regex, una búsqueda como `^\s+assert\s` no puede determinar si el `assert` se encuentra dentro de un método de una clase Page Object o dentro de un test. Con AST, el Visitor recorre la jerarquía `Clase → Método → Assert` de forma natural: al entrar en un `ClassDef` se activa un flag `_in_class`, al entrar en un `FunctionDef` se activa `_in_method`, y al visitar un nodo `Assert` solo se reporta si ambos flags están activos. El AST proporciona este contexto jerárquico sin necesidad de rastrear indentación.
 
 ### Uso complementario de regex
 
@@ -154,13 +102,7 @@ Una vez obtenido el AST, se necesita un mecanismo para recorrerlo y reaccionar a
 
 ### Alternativa evaluada: `ast.walk()` con condicionales
 
-```python
-for node in ast.walk(tree):
-    if isinstance(node, ast.FunctionDef) and node.name.startswith("test_"):
-        for child in ast.walk(node):
-            if isinstance(node, ast.Call):
-                ...
-```
+Usar `ast.walk()` para recorrer todos los nodos del árbol y filtrar con condicionales `isinstance()` en bucles anidados.
 
 **Motivos de descarte:**
 - `ast.walk()` recorre en orden arbitrario, sin garantizar que el padre se procese antes que el hijo
@@ -169,20 +111,7 @@ for node in ast.walk(tree):
 
 ### Solución elegida: Patrón Visitor (`ast.NodeVisitor`)
 
-```python
-class BrowserAPICallVisitor(ast.NodeVisitor):
-    def visit_FunctionDef(self, node):
-        self._current_function = node.name
-        self.generic_visit(node)       # Procesa hijos dentro del contexto
-        self._current_function = None
-
-    def visit_Call(self, node):
-        if self._current_function:     # El contexto se mantiene durante el recorrido
-            self._check_call(node)
-        self.generic_visit(node)
-```
-
-El Patrón Visitor permite definir un método `visit_X()` para cada tipo de nodo AST. El recorrido en profundidad que realiza `generic_visit()` garantiza que el estado contextual (variables como `_in_class`, `_in_method`) se mantenga correctamente.
+El Patrón Visitor permite definir un método `visit_X()` para cada tipo de nodo AST. Por ejemplo, `visit_FunctionDef()` establece el contexto de la función actual, y `visit_Call()` comprueba las llamadas dentro de ese contexto. El recorrido en profundidad que realiza `generic_visit()` garantiza que el estado contextual (variables como `_in_class`, `_in_method`) se mantenga correctamente.
 
 **Justificación:**
 - **Recorrido en profundidad ordenado**: el padre siempre se visita antes que sus hijos
@@ -203,20 +132,7 @@ El validador necesita ejecutar diferentes tipos de verificaciones (llamadas a Se
 
 El Patrón Strategy define una familia de algoritmos intercambiables detrás de una **interfaz común**. El cliente que los utiliza desconoce el algoritmo concreto y solo interactúa con la interfaz.
 
-En este proyecto, la interfaz común es `BaseChecker`, que define tres métodos:
-
-```
-BaseChecker (interfaz abstracta)
-    ├── can_check(file_path)    → Determina si el checker aplica a un archivo
-    ├── check(file_path, tree)  → Analiza el archivo y devuelve violaciones
-    └── check_project(path)     → Analiza el proyecto a nivel global
-
-        ▲ implementan la misma interfaz
-        │
-    ┌───┴────────────────────────────────────┐
-    │                                        │
-DefinitionChecker  StructureChecker  AdaptationChecker  QualityChecker
-```
+En este proyecto, la interfaz común es `BaseChecker`, que define tres métodos: `can_check(file_path)` para determinar si el checker aplica a un archivo, `check(file_path, tree)` para analizar el archivo y devolver violaciones, y `check_project(path)` para analizar el proyecto a nivel global. Los cuatro checkers concretos (DefinitionChecker, StructureChecker, AdaptationChecker, QualityChecker) implementan esta misma interfaz.
 
 Cada checker implementa los mismos métodos con lógica interna distinta:
 
@@ -482,6 +398,168 @@ La razón principal es que los patrones de diseño seleccionados (Strategy, Visi
 
 ---
 
+## 9. Reportes: HTML autocontenido frente a alternativas
+
+### Problema
+
+El validador necesita generar un informe visual que permita a los usuarios revisar los resultados del análisis de forma cómoda. El informe debe ser portable (compartir por correo, abrir en cualquier ordenador) y no depender de conexión a internet.
+
+### Alternativa evaluada: Jinja2 (template engine)
+
+```python
+from jinja2 import Template
+template = Template(open("report_template.html").read())
+html = template.render(report=report)
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Dependencia externa | Jinja2 no pertenece a la biblioteca estándar; añade una entrada a `requirements.txt` |
+| Fichero de template separado | Requiere distribuir un fichero `.html` junto con el paquete Python |
+| Sobredimensionado | Para un único template sin herencia ni bloques, Jinja2 no aporta ventajas frente a f-strings |
+
+### Alternativa evaluada: Chart.js / Plotly (gráficos JavaScript)
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>new Chart(ctx, { type: 'bar', data: {...} });</script>
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Dependencia CDN | Requiere conexión a internet para cargar la librería JavaScript |
+| No autocontenido | El fichero HTML no funciona offline sin incluir la librería completa (~200 KB) |
+| Complejidad | Requiere generar JavaScript dinámico además de HTML |
+
+### Alternativa evaluada: PDF con ReportLab / WeasyPrint
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Dependencias pesadas | WeasyPrint requiere Cairo y Pango (binarios del sistema operativo) |
+| Instalación compleja | En Windows la instalación de estas dependencias es especialmente problemática |
+| Sin interactividad | Un PDF no permite hover en filas de tabla ni reordenación |
+| HTML → PDF gratuito | El navegador puede imprimir a PDF directamente (`Ctrl+P`) |
+
+### Solución elegida: HTML autocontenido con f-strings y SVG inline
+
+```python
+class HtmlReporter:
+    def generate(self, report, output_path):
+        html_content = self._build_html(report)  # f-strings de Python
+        output_path.write_text(html_content, encoding="utf-8")
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Cero dependencias | Solo usa módulos de la biblioteca estándar (`html`, `collections`, `pathlib`) |
+| Autocontenido | Un solo fichero `.html` con CSS y SVG inline, sin assets externos |
+| Portable | Funciona offline en cualquier navegador moderno |
+| SVG nativo | Los gráficos (gauge, barras) se generan como SVG, escalables sin pérdida de calidad |
+| Seguridad XSS | Todos los campos de usuario se escapan con `html.escape()` |
+| Responsive | CSS con `grid`, `flex-wrap` y `@media` para adaptación a móvil |
+
+### Decisión sobre XSS
+
+El reporter escapa todos los campos que provienen del análisis (nombre de proyecto, rutas de fichero, mensajes de violación, snippets de código) mediante `html.escape()`. Esto previene inyección de HTML en caso de que un nombre de fichero o un snippet contenga caracteres como `<`, `>` o `"`.
+
+---
+
+## 10. Reportes: JSON con serialización propia frente a librerías
+
+### Problema
+
+El validador necesita exportar los resultados a un formato estructurado para integración programática (CI/CD, procesamiento automático).
+
+### Alternativa evaluada: Pydantic / marshmallow
+
+```python
+class ReportSchema(BaseModel):
+    metadata: MetadataSchema
+    summary: SummarySchema
+    violations: List[ViolationSchema]
+```
+
+**Motivos de descarte:**
+- Añade una dependencia externa para un caso de uso simple
+- El modelo `Report` ya dispone de `to_dict()` desde la Fase 2
+- La serialización a JSON con `json.dumps()` es trivial y directa
+
+### Solución elegida: `Report.to_dict()` + `json.dumps()`
+
+```python
+class JsonReporter:
+    def generate(self, report, output_path):
+        data = report.to_dict()
+        output_path.write_text(
+            json.dumps(data, indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Reutiliza código existente | `to_dict()` ya convierte `Report` a diccionario serializable |
+| `indent=2` | JSON legible para revisión humana directa |
+| `ensure_ascii=False` | Preserva caracteres UTF-8 (español: `á`, `é`, `ñ`) sin escape Unicode |
+| Sin dependencias | Solo usa `json` de la biblioteca estándar |
+
+---
+
+## 11. CLI: flags separados frente a formato único
+
+### Problema
+
+Se necesita una interfaz para que el usuario solicite la generación de reportes desde la línea de comandos. Existen dos enfoques posibles.
+
+### Alternativa evaluada: `--format` con valor único
+
+```bash
+python -m gtaa_validator /path --format json --output report.json
+python -m gtaa_validator /path --format html --output report.html
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Un solo formato por ejecución | No se pueden generar JSON y HTML simultáneamente |
+| Dos flags obligatorios | Requiere `--format` y `--output` por separado |
+| Más verboso | Más caracteres para el mismo resultado |
+
+### Solución elegida: `--json PATH` y `--html PATH`
+
+```bash
+# Generar solo JSON
+python -m gtaa_validator /path --json report.json
+
+# Generar solo HTML
+python -m gtaa_validator /path --html report.html
+
+# Generar ambos simultáneamente
+python -m gtaa_validator /path --json report.json --html report.html
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Generación simultánea | Ambos flags son compatibles entre sí |
+| Un flag = formato + ruta | Cada flag indica el formato y la ruta de salida en un solo argumento |
+| Compatible con salida de texto | La salida de texto del CLI se muestra siempre, independientemente de los flags |
+| Conciso | Menos flags necesarios para el caso de uso más común |
+
+---
+
 ## Resumen de decisiones
 
 | Decisión | Solución elegida | Alternativa descartada | Justificación principal |
@@ -494,6 +572,9 @@ La razón principal es que los patrones de diseño seleccionados (Strategy, Visi
 | Niveles de verificación | Proyecto + Archivo | Solo archivo | `StructureChecker` requiere vista global del proyecto |
 | Parseo del AST | Una vez por archivo | Una vez por checker | Elimina trabajo redundante, retrocompatible |
 | Paradigma principal | POO | Funcional | Los patrones de diseño requieren estado mutable y polimorfismo |
+| Reporte HTML | HTML autocontenido (f-strings + SVG) | Jinja2 / Chart.js / PDF | Cero dependencias, portable, offline, XSS-safe |
+| Reporte JSON | `to_dict()` + `json.dumps()` | Pydantic / marshmallow | Reutiliza código existente, sin dependencias |
+| CLI de reportes | `--json PATH` / `--html PATH` | `--format` + `--output` | Generación simultánea, conciso, compatible con texto |
 
 ---
 
