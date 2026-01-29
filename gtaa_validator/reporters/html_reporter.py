@@ -38,6 +38,27 @@ class HtmlReporter:
         "POOR_TEST_NAMING": "QualityChecker — Calidad de tests",
     }
 
+    # Nombres de severidad en español
+    _SEVERITY_LABELS: Dict[str, str] = {
+        "CRITICAL": "CRÍTICA",
+        "HIGH": "ALTA",
+        "MEDIUM": "MEDIA",
+        "LOW": "BAJA",
+    }
+
+    # Nombres legibles en español para cada tipo de violación
+    _VIOLATION_TYPE_LABELS: Dict[str, str] = {
+        "ADAPTATION_IN_DEFINITION": "Adaptación en capa de definición",
+        "MISSING_LAYER_STRUCTURE": "Estructura de capas ausente",
+        "HARDCODED_TEST_DATA": "Datos de test hardcodeados",
+        "ASSERTION_IN_POM": "Aserción en Page Object",
+        "FORBIDDEN_IMPORT": "Importación prohibida en Page Object",
+        "BUSINESS_LOGIC_IN_POM": "Lógica de negocio en Page Object",
+        "DUPLICATE_LOCATOR": "Localizador duplicado",
+        "LONG_TEST_FUNCTION": "Función de test demasiado larga",
+        "POOR_TEST_NAMING": "Nombre de test genérico",
+    }
+
     # Orden de los checkers para agrupación
     _CHECKER_ORDER = [
         "StructureChecker — Estructura del proyecto",
@@ -247,9 +268,10 @@ class HtmlReporter:
         """Tarjetas de conteo por severidad."""
         cards = []
         for sev, css_class in [("CRITICAL", "critical"), ("HIGH", "high"), ("MEDIUM", "medium"), ("LOW", "low")]:
+            label = self._SEVERITY_LABELS[sev]
             cards.append(f"""            <div class="card {css_class}">
                 <div class="card-value">{counts[sev]}</div>
-                <div class="card-label">{sev}</div>
+                <div class="card-label">{label}</div>
             </div>""")
         return "\n".join(cards)
 
@@ -282,9 +304,10 @@ class HtmlReporter:
                     f'<text x="{x + bar_width // 2}" y="{y - 6:.0f}" text-anchor="middle" '
                     f'font-size="13" font-weight="600" fill="{color}">{val}</text>'
                 )
+            sev_label = self._SEVERITY_LABELS[sev]
             labels.append(
                 f'<text x="{x + bar_width // 2}" y="198" text-anchor="middle" '
-                f'font-size="11" fill="#64748b">{sev}</text>'
+                f'font-size="11" fill="#64748b">{sev_label}</text>'
             )
             x += bar_width + gap
 
@@ -364,7 +387,8 @@ class HtmlReporter:
             rows = []
             for v in violations:
                 sev_lower = v.severity.value.lower()
-                badge = f'<span class="severity-badge badge-{sev_lower}">{v.severity.value}</span>'
+                sev_es = self._SEVERITY_LABELS.get(v.severity.value, v.severity.value)
+                badge = f'<span class="severity-badge badge-{sev_lower}">{sev_es}</span>'
 
                 try:
                     file_display = str(v.file_path.relative_to(report.project_path))
@@ -376,9 +400,10 @@ class HtmlReporter:
                     location += f":{v.line_number}"
 
                 # Tipo legible con descripción
+                type_label = self._VIOLATION_TYPE_LABELS.get(v.violation_type.name, v.violation_type.name)
                 type_desc = html.escape(v.violation_type.get_description())
                 type_cell = (
-                    f'<span class="violation-type">{html.escape(v.violation_type.name)}</span><br>'
+                    f'<span class="violation-type">{html.escape(type_label)}</span><br>'
                     f'<span class="violation-desc">{type_desc}</span>'
                 )
 

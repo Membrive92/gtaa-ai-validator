@@ -109,10 +109,10 @@ class TestHtmlReporter:
         reporter.generate(sample_report, output)
         content = output.read_text(encoding="utf-8")
 
-        assert "CRITICAL" in content
-        assert "HIGH" in content
-        assert "MEDIUM" in content
-        assert "LOW" in content
+        assert "CRÍTICA" in content
+        assert "ALTA" in content
+        assert "MEDIA" in content
+        assert "BAJA" in content
 
     def test_contiene_tabla_violaciones(self, reporter, sample_report, tmp_path):
         """El HTML incluye tabla con las violaciones detectadas."""
@@ -120,8 +120,8 @@ class TestHtmlReporter:
         reporter.generate(sample_report, output)
         content = output.read_text(encoding="utf-8")
 
-        assert "ADAPTATION_IN_DEFINITION" in content
-        assert "POOR_TEST_NAMING" in content
+        assert "Adaptación en capa de definición" in content
+        assert "Nombre de test genérico" in content
         # Violaciones agrupadas por checker
         assert "DefinitionChecker" in content
         assert "QualityChecker" in content

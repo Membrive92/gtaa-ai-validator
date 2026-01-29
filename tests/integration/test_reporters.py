@@ -76,7 +76,7 @@ class TestHtmlReporterIntegration:
 
         assert "<!DOCTYPE html>" in content
         assert "gTAA AI Validator" in content
-        assert "CRITICAL" in content
+        assert "CRÍTICA" in content
         assert "<svg" in content
         assert "DefinitionChecker" in content
         assert "<table>" in content
