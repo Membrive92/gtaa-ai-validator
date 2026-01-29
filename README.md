@@ -11,7 +11,6 @@
 > **📌 TRABAJO DE FIN DE MÁSTER - EN DESARROLLO INCREMENTAL**
 >
 > Autor: Jose Antonio Membrive Guillen
-> Universidad: [Tu Universidad]
 > Año: 2025-2026
 > **Estado:** Fase 3/6 Completa | Última actualización: 28 Enero 2026
 
@@ -27,8 +26,8 @@
 
 | Fase | Componente | Estado | Fecha Completada |
 |------|-----------|--------|------------------|
-| **✅ Fase 1** | **CLI básico y descubrimiento de archivos** | **COMPLETO** | **26/01/2025** |
-| **✅ Fase 2** | **Análisis estático con AST (1 violación)** | **COMPLETO** | **26/01/2025** |
+| **✅ Fase 1** | **CLI básico y descubrimiento de archivos** | **COMPLETO** | **26/01/2026** |
+| **✅ Fase 2** | **Análisis estático con AST (1 violación)** | **COMPLETO** | **26/01/2026** |
 | **✅ Fase 3** | **Cobertura completa (9 tipos de violaciones) + Tests** | **COMPLETO** | **28/01/2026** |
 | ⏳ Fase 4 | Reportes HTML/JSON profesionales | Pendiente | - |
 | ⏳ Fase 5 | Integración LLM (opcional, sin API key aún) | Pendiente | - |
@@ -62,11 +61,84 @@
 
 ### 🎯 Problema que resuelve
 
-Los frameworks de test automation (Selenium, Playwright, Cypress) frecuentemente se desarrollan sin seguir principios arquitectónicos sólidos, resultando en:
-- ❌ Código difícil de mantener
-- ❌ Tests frágiles que fallan con cualquier cambio
-- ❌ Violación de principios de separación de responsabilidades
-- ❌ Mezcla de capas arquitectónicas (Definition, Adaptation, Execution)
+En la práctica profesional del aseguramiento de calidad, es habitual encontrar proyectos de test automation que carecen de una arquitectura definida. A lo largo de la experiencia del autor en distintos departamentos de Quality Assurance de diferentes compañías, el denominador común ha sido la ausencia de estructura arquitectónica en los proyectos de automatización: código de test sin separación de capas, localizadores duplicados, lógica de negocio mezclada con interacciones de UI, y datos de prueba hardcodeados directamente en los scripts.
+
+Esta desorganización produce proyectos que se vuelven inmantenibles a medida que crecen en volumen de tests y en áreas de la aplicación bajo prueba, generando una deuda técnica que obliga a refactorizaciones costosas sobre la marcha.
+
+La mayoría de equipos de automatización adoptan patrones de diseño conocidos como **Page Object Model (POM)**, **Page Factory** o **Screenplay**, que proporcionan una estructura inicial para organizar el código. Sin embargo, conforme el proyecto crece en número de tests y en cobertura funcional, es frecuente que el patrón se degrade: los Page Objects acumulan aserciones, los tests acceden directamente al driver, la lógica de negocio se filtra en capas que no le corresponden, y los datos de prueba quedan dispersos en los scripts.
+
+El estándar **ISTQB CT-TAE** define la **gTAA (Generic Test Automation Architecture)**, que constituye precisamente el marco de referencia arquitectónico sobre el que se sustentan estos patrones. La gTAA no reemplaza a POM ni a Screenplay, sino que establece la separación en capas que estos patrones implementan parcialmente. Validar el cumplimiento de la gTAA es, en esencia, verificar que el patrón adoptado se mantiene íntegro a lo largo de la vida del proyecto.
+
+La gTAA organiza el framework de automatización en capas con responsabilidades claramente delimitadas:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    gTAA — Arquitectura Genérica                  │
+│              (ISTQB CT-TAE, Capítulo 3)                          │
+│                                                                  │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │              Test Generation Layer                         │  │
+│  │  Diseño de casos de test (manual o automatizado)          │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                              │                                   │
+│                              ▼                                   │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │              Test Definition Layer                         │  │
+│  │                                                           │  │
+│  │  • Definición de test suites y test cases                 │  │
+│  │  • Test data, test procedures, test library               │  │
+│  │  • Tests de alto y bajo nivel                             │  │
+│  │                                                           │  │
+│  │  Ejemplo: test_login(), test_checkout()                   │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                              │                                   │
+│                              ▼                                   │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │              Test Execution Layer                          │  │
+│  │                                                           │  │
+│  │  • Ejecución automática de tests seleccionados            │  │
+│  │  • Setup/teardown del SUT y test suites                   │  │
+│  │  • Logging, reporting, validación de respuestas           │  │
+│  │                                                           │  │
+│  │  Ejemplo: pytest runner, fixtures, conftest               │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                              │                                   │
+│                              ▼                                   │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │              Test Adaptation Layer                         │  │
+│  │                                                           │  │
+│  │  • Adaptadores para conectar con el SUT                   │  │
+│  │  • Interacción vía APIs, protocolos, interfaces UI        │  │
+│  │  • Control del test harness                               │  │
+│  │                                                           │  │
+│  │  Ejemplo: Page Objects (LoginPage, CheckoutPage)          │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                              │                                   │
+│                              ▼                                   │
+│                    ┌─────────────────┐                           │
+│                    │   SUT (System   │                           │
+│                    │  Under Test)    │                           │
+│                    └─────────────────┘                           │
+│                                                                  │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │  Componentes transversales:                                │  │
+│  │  • Project Management                                      │  │
+│  │  • Configuration Management                                │  │
+│  │  • Test Management                                         │  │
+│  └───────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**El principio fundamental**: cada capa tiene una responsabilidad única. Los tests (Definition) no deben interactuar directamente con el navegador; los Page Objects (Adaptation) no deben contener aserciones ni lógica de negocio. Cuando estas fronteras se violan, el proyecto pierde mantenibilidad.
+
+**El problema concreto**: no existe ninguna herramienta que valide automáticamente si un proyecto de test automation cumple con esta separación de capas. La revisión se realiza manualmente, es subjetiva y no escalable.
+
+**Consecuencias de la falta de arquitectura:**
+- Código de test acoplado directamente a Selenium/Playwright (frágil ante cambios de UI)
+- Page Objects con aserciones, lógica de negocio e imports de frameworks de test
+- Datos de prueba hardcodeados en los scripts (difíciles de parametrizar)
+- Tests con nombres genéricos y funciones de cientos de líneas
+- Localizadores duplicados entre múltiples Page Objects
 
 ### ✨ Solución propuesta
 
@@ -136,7 +208,7 @@ pytest>=7.0            # Framework de testing
 
 ```bash
 # Clonar repositorio
-git clone https://github.com/tu-usuario/gtaa-ai-validator.git
+git clone https://github.com/Membrive92/gtaa-ai-validator.git
 cd gtaa-ai-validator
 
 # Crear entorno virtual (recomendado)
@@ -154,7 +226,7 @@ pip install -e .
 
 ### ✅ Funcionalidad ACTUAL (Fase 3)
 
-**Lo que puedes hacer AHORA:**
+**Funcionalidad disponible en la versión actual:**
 
 ```bash
 # Análisis estático con detección de 9 tipos de violaciones
@@ -251,7 +323,7 @@ El archivo [examples/README.md](examples/README.md) incluye:
 
 - ✅ **Tabla de violaciones esperadas**: Cada violación con línea exacta y razón
 - ✅ **Comparación lado a lado**: Código MAL vs código BIEN estructurado
-- ✅ **Checklist de validación**: Para evaluadores y profesores
+- ✅ **Checklist de validación**: Para evaluadores del proyecto
 - ✅ **Ground truth etiquetado**: Dataset para validación empírica del TFM
 
 ---
@@ -272,7 +344,7 @@ python -m gtaa_validator /path/to/project --format json --output report.json
 #### Fase 5: Análisis con IA
 ```bash
 # ⏳ PRÓXIMAMENTE - Análisis semántico con LLM (requiere API key)
-export ANTHROPIC_API_KEY="tu-api-key"
+export ANTHROPIC_API_KEY="sk-ant-..."
 python -m gtaa_validator /path/to/project --use-ai
 ```
 
@@ -328,9 +400,13 @@ gtaa-ai-validator/
 │
 └── docs/                               # 📚 Documentación técnica
     ├── README.md                       # Índice de documentación
+    ├── ARCHITECTURE_DECISIONS.md       # Decisiones arquitectónicas (ADR)
+    ├── PHASE1_FLOW_DIAGRAMS.md         # Diagramas Fase 1 (CLI y fundación)
     ├── PHASE2_FLOW_DIAGRAMS.md         # Diagramas Fase 2
     └── PHASE3_FLOW_DIAGRAMS.md         # Diagramas Fase 3
 ```
+
+> **Nota sobre `docs/`**: La documentación técnica se distribuye en múltiples documentos independientes, uno por cada fase del proyecto y uno para las decisiones arquitectónicas. Esta separación responde a un criterio de **transparencia y trazabilidad**: cada documento refleja el estado del proyecto en el momento de su elaboración, permitiendo seguir la evolución del diseño y las decisiones técnicas a lo largo del desarrollo. El índice general se encuentra en [`docs/README.md`](docs/README.md).
 
 ---
 
@@ -428,6 +504,8 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 - [ISTQB CT-TAE Syllabus v2016](https://www.istqb.org/)
 
 ### Documentación Técnica del Proyecto
+- **[Decisiones Arquitectónicas (ADR)](docs/ARCHITECTURE_DECISIONS.md)** ✅ — Patrones de diseño, paradigmas, justificaciones técnicas
+- **[Diagramas de Flujo - Fase 1](docs/PHASE1_FLOW_DIAGRAMS.md)** ✅ — Fundación del proyecto, CLI con Click, descubrimiento de archivos
 - **[Diagramas de Flujo - Fase 2](docs/PHASE2_FLOW_DIAGRAMS.md)** ✅ — Motor de análisis estático, BrowserAPICallVisitor, scoring
 - **[Diagramas de Flujo - Fase 3](docs/PHASE3_FLOW_DIAGRAMS.md)** ✅ — 4 checkers, 9 violaciones, AST visitors, cross-file state
 - **[Índice de documentación](docs/README.md)** ✅
@@ -436,7 +514,7 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 
 ## 📝 Historial de Desarrollo
 
-### Versión 0.1.0 - Fase 1 (26 Enero 2025) ✅
+### Versión 0.1.0 - Fase 1 (26 Enero 2026) ✅
 
 **Implementado:**
 - ✅ Estructura básica del proyecto (setup.py, requirements.txt, etc.)
@@ -446,7 +524,7 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 
 ---
 
-### Versión 0.2.0 - Fase 2 (26 Enero 2025) ✅
+### Versión 0.2.0 - Fase 2 (26 Enero 2026) ✅
 
 **Implementado:**
 - ✅ Modelos de datos (Violation, Report, Severity, ViolationType)
@@ -487,8 +565,6 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 
 <div align="center">
 
-**⭐ Si este proyecto te resulta interesante, síguelo para ver su evolución ⭐**
-
-**Estado del proyecto:** 🚧 En desarrollo activo | Fase 3/6 completa
+**Estado del proyecto:** En desarrollo activo | Fase 3/6 completa
 
 </div>

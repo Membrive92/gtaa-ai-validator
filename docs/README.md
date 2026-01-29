@@ -4,6 +4,22 @@ Este directorio contiene documentación técnica detallada sobre el proyecto.
 
 ## Documentos Disponibles
 
+### [PHASE1_FLOW_DIAGRAMS.md](PHASE1_FLOW_DIAGRAMS.md)
+
+Diagramas de flujo de la Fase 1: Fundación del Proyecto y CLI.
+
+**Contenido**:
+- Estructura del proyecto y paquete Python
+- Flujo del CLI con Click (`__main__.py`)
+- Descubrimiento recursivo de archivos con exclusiones
+- Diagrama de interacción entre componentes
+- Decisiones de diseño de la Fase 1 (Click, estructura anticipada)
+
+**Conceptos explicados**:
+- Click como framework CLI declarativo
+- Descubrimiento de archivos con `rglob` y filtrado
+- Estructura de paquete Python ejecutable (`__main__.py`)
+
 ### [PHASE2_FLOW_DIAGRAMS.md](PHASE2_FLOW_DIAGRAMS.md)
 
 Diagramas de flujo completos que explican el funcionamiento de la Fase 2: Motor de Análisis Estático.
@@ -59,12 +75,14 @@ Diagramas de flujo de la Fase 3: Cobertura Completa de Análisis Estático (9 ti
 Registro de decisiones arquitectónicas (ADR) que explica **por qué** se eligió cada enfoque técnico.
 
 **Contenido**:
-- Por qué AST y no mapas anidados ni regex puro
-- Por qué Visitor Pattern y no bucles con ast.walk()
-- Por qué Strategy Pattern (BaseChecker) y no un checker monolítico
-- Por qué Facade (StaticAnalyzer) y no llamadas directas
-- Por qué Dataclasses + Enums y no diccionarios
-- Por qué checks a dos niveles (proyecto + archivo)
+1. Análisis de código: AST frente a alternativas (mapas anidados, regex)
+2. Recorrido del AST: Patrón Visitor
+3. Organización de checkers: Patrón Strategy (interfaz uniforme, justificación)
+4. Orquestación: Patrón Facade (StaticAnalyzer)
+5. Modelos de datos: Dataclasses y Enums
+6. Verificación a dos niveles (proyecto + archivo)
+7. Optimización: parseo único del AST por archivo
+8. Paradigmas de programación utilizados (POO + Declarativo)
 
 **Para quién**:
 - Evaluadores del TFM que quieran entender las decisiones de diseño
@@ -75,7 +93,7 @@ Registro de decisiones arquitectónicas (ADR) que explica **por qué** se eligi�
 
 ## Documentación Futura (Planeada)
 
-### gtaa_reference.md (Fase 3+)
+### gtaa_reference.md (Fase 4+)
 Referencia completa de la arquitectura gTAA según ISTQB CT-TAE.
 
 ### api_documentation.md (Fase 4+)
@@ -84,27 +102,26 @@ Documentación de la API pública del validador para uso programático.
 ### contributing.md
 Guía para contribuir al proyecto (estructura de código, estándares, pull requests).
 
-### architecture_decisions.md
-Registro de decisiones arquitectónicas importantes (ADR - Architecture Decision Records).
-
 ---
 
 ## Cómo Usar Esta Documentación
 
 ### Para Aprender
-1. Lee [PHASE2_FLOW_DIAGRAMS.md](PHASE2_FLOW_DIAGRAMS.md) siguiendo el orden de los diagramas
-2. Ejecuta el código mientras lees: `python -m gtaa_validator examples/bad_project --verbose`
-3. Compara el output con los diagramas para entender el flujo
+1. Lee [PHASE1_FLOW_DIAGRAMS.md](PHASE1_FLOW_DIAGRAMS.md) para entender la estructura base y el CLI
+2. Lee [PHASE2_FLOW_DIAGRAMS.md](PHASE2_FLOW_DIAGRAMS.md) para entender el motor de análisis estático
+3. Lee [PHASE3_FLOW_DIAGRAMS.md](PHASE3_FLOW_DIAGRAMS.md) para la cobertura completa de 9 violaciones
+4. Lee [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md) para las justificaciones técnicas
+5. Ejecuta el código mientras lees: `python -m gtaa_validator examples/bad_project --verbose`
 
 ### Para Desarrollar
-1. Consulta los diagramas de interacción entre clases
-2. Revisa los patrones de diseño utilizados
-3. Sigue la misma estructura para añadir nuevos checkers en Fase 3
+1. Consulta [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md) para entender los patrones (Strategy, Visitor, Facade)
+2. Consulta los diagramas de interacción entre clases en los documentos de flujo
+3. Sigue la misma estructura de `BaseChecker` para añadir nuevos checkers
 
 ### Para Evaluar (TFM)
 1. Los diagramas demuestran comprensión técnica profunda
-2. Muestran aplicación correcta de patrones de diseño
-3. Documentan decisiones de implementación
+2. [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md) documenta las decisiones de diseño y sus alternativas evaluadas
+3. Muestran aplicación correcta de patrones de diseño y paradigmas
 4. Facilitan la reproducibilidad de resultados
 
 ---
@@ -137,4 +154,4 @@ Este directorio se actualizará con:
 - Guías de uso avanzadas
 - Ejemplos adicionales
 
-**Última actualización**: 28 Enero 2026
+**Última actualización**: 29 Enero 2026

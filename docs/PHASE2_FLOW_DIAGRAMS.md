@@ -3,7 +3,7 @@
 Este documento contiene todos los diagramas de flujo que explican el funcionamiento de la Fase 2 del proyecto gTAA AI Validator.
 
 **Autor**: Jose Antonio Membrive Guillen
-**Fecha**: 26 Enero 2025
+**Fecha**: 26 Enero 2026
 **Versión**: 0.2.0
 
 ---
@@ -934,27 +934,21 @@ class Violation:
 
 ---
 
-## Próximas Fases
+## Conexión con Otras Fases
 
-**Fase 3**: Añadir 8 tipos de violaciones adicionales
-- MISSING_LAYER_STRUCTURE (CRITICAL)
-- HARDCODED_TEST_DATA (HIGH)
-- ASSERTION_IN_POM (HIGH)
-- FORBIDDEN_IMPORT (HIGH)
-- BUSINESS_LOGIC_IN_POM (MEDIUM)
-- DUPLICATE_LOCATOR (MEDIUM)
-- LONG_TEST_FUNCTION (MEDIUM)
-- POOR_TEST_NAMING (LOW)
+**✅ Fase 1** (completada): Fundación del proyecto y CLI. Ver [PHASE1_FLOW_DIAGRAMS.md](PHASE1_FLOW_DIAGRAMS.md).
 
-**Fase 4**: Reportes HTML/JSON profesionales
+**✅ Fase 3** (completada): Cobertura completa con 9 tipos de violaciones y 4 checkers. Ver [PHASE3_FLOW_DIAGRAMS.md](PHASE3_FLOW_DIAGRAMS.md).
 
-**Fase 5**: Tests unitarios con pytest
+**⏳ Fase 4**: Reportes HTML/JSON profesionales
 
-**Fase 6**: Integración LLM (opcional)
+**⏳ Fase 5**: Integración LLM (opcional)
+
+**⏳ Fase 6**: Validación empírica y documentación TFM
 
 ---
 
-**Última actualización**: 26 Enero 2025
-**Versión del documento**: 1.0
+**Última actualización**: 29 Enero 2026
+**Versión del documento**: 1.1
 **Proyecto**: gTAA AI Validator
 **Repositorio**: https://github.com/Membrive92/gtaa-ai-validator
