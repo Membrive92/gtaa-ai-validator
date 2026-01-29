@@ -8,6 +8,7 @@ Análisis estático con AST:
 - Calcular puntuación de cumplimiento (0-100)
 - Mostrar violaciones por severidad
 - Soporte de flag --verbose para información detallada
+- Exportación a JSON y HTML (--json, --html)
 """
 
 import click
@@ -15,12 +16,16 @@ import sys
 from pathlib import Path
 
 from gtaa_validator.analyzers.static_analyzer import StaticAnalyzer
+from gtaa_validator.reporters.json_reporter import JsonReporter
+from gtaa_validator.reporters.html_reporter import HtmlReporter
 
 
 @click.command()
 @click.argument('project_path', type=click.Path(exists=True))
 @click.option('--verbose', '-v', is_flag=True, help='Activar salida detallada')
-def main(project_path: str, verbose: bool):
+@click.option('--json', 'json_path', type=click.Path(), default=None, help='Exportar reporte JSON al fichero indicado')
+@click.option('--html', 'html_path', type=click.Path(), default=None, help='Exportar reporte HTML al fichero indicado')
+def main(project_path: str, verbose: bool, json_path: str, html_path: str):
     """
     Valida el cumplimiento de la arquitectura gTAA en un proyecto de test automation.
 
@@ -111,6 +116,15 @@ def main(project_path: str, verbose: bool):
             # Mostrar fragmento de código si está disponible
             if violation.code_snippet:
                 click.echo(f"    Código: {violation.code_snippet}")
+
+    # Exportar reportes si se solicitaron
+    if json_path:
+        JsonReporter().generate(report, Path(json_path))
+        click.echo(f"\nReporte JSON exportado: {json_path}")
+
+    if html_path:
+        HtmlReporter().generate(report, Path(html_path))
+        click.echo(f"Reporte HTML exportado: {html_path}")
 
     # Resumen final
     click.echo("\n" + "="*60)
