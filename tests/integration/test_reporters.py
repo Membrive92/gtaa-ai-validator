@@ -44,7 +44,7 @@ class TestJsonReporterIntegration:
         assert data["summary"]["score"] < 100
         assert data["summary"]["files_analyzed"] > 0
         assert len(data["violations"]) == data["summary"]["total_violations"]
-        assert data["metadata"]["validator_version"] == "0.3.0"
+        assert data["metadata"]["validator_version"] == "0.4.0"
 
     def test_good_project_json(self, good_project_path, tmp_path):
         """Análisis de good_project genera JSON sin violaciones."""

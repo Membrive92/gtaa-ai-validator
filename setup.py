@@ -17,7 +17,7 @@ else:
 
 setup(
     name="gtaa-ai-validator",
-    version="0.3.0",
+    version="0.4.0",
     author="Jose Antonio Membrive Guillen",
     author_email="membri_2@hotmail.com",
     description="Validador de cumplimiento arquitectónico gTAA para proyectos de test automation",

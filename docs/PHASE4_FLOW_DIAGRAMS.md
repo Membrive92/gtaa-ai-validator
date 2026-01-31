@@ -239,7 +239,7 @@ El `HtmlReporter` genera un fichero HTML autocontenido con CSS y SVG inline.
 │  └─────────┴──────────┴────────┴────────────┘│
 ├─────────────────────────────────────────────┤
 │  FOOTER                                      │
-│  Generado por gTAA AI Validator v0.3.0       │
+│  Generado por gTAA AI Validator v0.4.0       │
 └─────────────────────────────────────────────┘
 ```
 

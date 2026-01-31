@@ -14,7 +14,7 @@ Componentes principales:
 - models: Estructuras de datos para violaciones e informes
 """
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 __author__ = "Jose Antonio Membrive Guillen"
 __license__ = "MIT"
 __all__ = ["__version__", "__author__", "__license__"]

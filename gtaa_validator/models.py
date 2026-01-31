@@ -237,7 +237,7 @@ class Report:
     violations: List[Violation] = field(default_factory=list)
     files_analyzed: int = 0
     timestamp: datetime = field(default_factory=datetime.now)
-    validator_version: str = "0.3.0"
+    validator_version: str = "0.4.0"
     score: float = 100.0
     execution_time_seconds: float = 0.0
 
