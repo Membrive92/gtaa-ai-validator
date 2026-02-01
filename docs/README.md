@@ -105,7 +105,7 @@ Diagramas de flujo de la Fase 5: Análisis Semántico con Inteligencia Artificia
 - Fase 1: detección de violaciones semánticas
 - Fase 2: enriquecimiento con sugerencias AI contextuales
 - Parsing robusto de respuestas LLM (JSON, markdown, errores)
-- Mapa completo de 13 violaciones (9 estáticas + 4 semánticas)
+- Mapa de 13 violaciones de Fase 5 (9 estáticas + 4 semánticas)
 - Configuración de API key con .env y python-dotenv
 - Mapa de tests (12 tests unitarios para GeminiLLMClient)
 
@@ -116,6 +116,27 @@ Diagramas de flujo de la Fase 5: Análisis Semántico con Inteligencia Artificia
 - Manejo silencioso de errores de API (degradación elegante)
 - google-genai SDK nativo
 - Configuración por variable de entorno con .env
+
+### [PHASE6_FLOW_DIAGRAMS.md](PHASE6_FLOW_DIAGRAMS.md)
+
+Diagramas de flujo de la Fase 6: Ampliación de Cobertura de Violaciones (13 → 18).
+
+**Contenido**:
+- 5 nuevas violaciones basadas en catálogo ISTQB CT-TAE
+- 3 violaciones estáticas nuevas en QualityChecker (AST + regex)
+- 2 violaciones semánticas nuevas (LLM + MockLLM)
+- Ampliación del MockLLMClient con 2 heurísticas
+- Ampliación del GeminiLLMClient (VALID_TYPES) y prompts
+- Mapa completo de 18 violaciones por capa gTAA
+- Mapa de 25 tests nuevos (234 total)
+- Consideraciones sobre falsos positivos (Playwright, API testing)
+
+**Conceptos nuevos explicados**:
+- Detección de excepciones genéricas con ast.ExceptHandler
+- Regex compiladas como constantes de clase
+- Detección de estado mutable a dos niveles (módulo + global)
+- Ampliación de prompts LLM vs prompts separados
+- Análisis de falsos positivos por framework
 
 ### [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md)
 
@@ -138,6 +159,11 @@ Registro de decisiones arquitectónicas (ADR) que explica **por qué** se eligi�
 14. LLM: Duck typing frente a clase base abstracta
 15. LLM: Manejo silencioso de errores de API
 16. LLM: Configuración por variable de entorno frente a alternativas
+17. Detección de excepciones genéricas: AST frente a regex
+18. Detección de configuración hardcodeada: regex compiladas como constantes de clase
+19. Detección de estado mutable compartido: dos fases complementarias
+20. Ampliación de violaciones semánticas: prompts ampliados frente a prompts separados
+21. Heurísticas mock: búsqueda textual frente a visitor AST para detección de asserts
 
 **Para quién**:
 - Evaluadores del TFM que quieran entender las decisiones de diseño
@@ -148,10 +174,23 @@ Registro de decisiones arquitectónicas (ADR) que explica **por qué** se eligi�
 
 ## Documentación Futura (Planeada)
 
-### gtaa_reference.md (Fase 4+)
+### PHASE7_FLOW_DIAGRAMS.md (Fase 7)
+Diagramas de flujo de la Fase 7: Soporte para proyectos con API testing.
+- Clasificador de archivos (API vs UI tests)
+- Configuración por proyecto (.gtaa.yaml)
+- Reglas condicionales por tipo de test
+- Reducción de falsos positivos
+
+### PHASE8_FLOW_DIAGRAMS.md (Fase 8)
+Diagramas de flujo de la Fase 8: Optimización y documentación final.
+- Optimización de prompts LLM
+- Integración CI/CD
+- Documentación TFM final
+
+### gtaa_reference.md
 Referencia completa de la arquitectura gTAA según ISTQB CT-TAE.
 
-### api_documentation.md (Fase 4+)
+### api_documentation.md
 Documentación de la API pública del validador para uso programático.
 
 ### contributing.md
@@ -167,8 +206,9 @@ Guía para contribuir al proyecto (estructura de código, estándares, pull requ
 3. Lee [PHASE3_FLOW_DIAGRAMS.md](PHASE3_FLOW_DIAGRAMS.md) para la cobertura completa de 9 violaciones
 4. Lee [PHASE4_FLOW_DIAGRAMS.md](PHASE4_FLOW_DIAGRAMS.md) para los reportes HTML/JSON
 5. Lee [PHASE5_FLOW_DIAGRAMS.md](PHASE5_FLOW_DIAGRAMS.md) para el análisis semántico con AI
-6. Lee [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md) para las justificaciones técnicas
-7. Ejecuta el código mientras lees: `python -m gtaa_validator examples/bad_project --ai --verbose`
+6. Lee [PHASE6_FLOW_DIAGRAMS.md](PHASE6_FLOW_DIAGRAMS.md) para la ampliación a 18 violaciones
+7. Lee [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md) para las justificaciones técnicas
+8. Ejecuta el código mientras lees: `python -m gtaa_validator examples/bad_project --ai --verbose`
 
 ### Para Desarrollar
 1. Consulta [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md) para entender los patrones (Strategy, Visitor, Facade)

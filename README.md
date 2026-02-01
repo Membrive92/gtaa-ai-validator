@@ -5,21 +5,21 @@
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Estado](https://img.shields.io/badge/estado-en%20desarrollo-yellow)](https://github.com/Membrive92/gtaa-ai-validator)
-[![Fase](https://img.shields.io/badge/fase-5%2F6%20completa-blue)](https://github.com/Membrive92/gtaa-ai-validator)
-[![Progreso](https://img.shields.io/badge/progreso-83%25-green)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Fase](https://img.shields.io/badge/fase-6%2F8-blue)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Progreso](https://img.shields.io/badge/progreso-75%25-yellow)](https://github.com/Membrive92/gtaa-ai-validator)
 
 > **📌 TRABAJO DE FIN DE MÁSTER - EN DESARROLLO INCREMENTAL**
 >
 > Autor: Jose Antonio Membrive Guillen
 > Año: 2025-2026
-> **Estado:** Fase 5/6 Completa | Última actualización: 1 Febrero 2026
+> **Estado:** Fase 6/8 Completa | Última actualización: 1 Febrero 2026
 
 ---
 
 ## ⚠️ ESTADO DEL PROYECTO
 
 > **IMPORTANTE:** Este README describe la **visión completa** del proyecto TFM.
-> El desarrollo sigue una metodología incremental con 6 fases.
+> El desarrollo sigue una metodología incremental con 8 fases.
 > Funcionalidades marcadas con ⏳ están pendientes de implementación.
 
 ### 🚀 Estado de Implementación por Fases
@@ -31,7 +31,9 @@
 | **✅ Fase 3** | **Cobertura completa (9 tipos de violaciones) + Tests** | **COMPLETO** | **28/01/2026** |
 | **✅ Fase 4** | **Reportes HTML/JSON profesionales** | **COMPLETO** | **31/01/2026** |
 | **✅ Fase 5** | **Análisis semántico AI (Gemini Flash + Mock)** | **COMPLETO** | **01/02/2026** |
-| ⏳ Fase 6 | Validación empírica y documentación TFM | Pendiente | - |
+| **✅ Fase 6** | **Ampliación cobertura (18 violaciones) + Documentación** | **COMPLETO** | **01/02/2026** |
+| **⏳ Fase 7** | **Soporte para proyectos con API testing (falsos positivos)** | **PENDIENTE** | — |
+| **⏳ Fase 8** | **Optimización y documentación final** | **PENDIENTE** | — |
 
 ### 📊 Funcionalidades Implementadas vs Planeadas
 
@@ -41,15 +43,16 @@
 | ✅ Descubrimiento de archivos test | Implementado | Soporta patrones test_*.py y *_test.py |
 | ✅ Validación de entrada | Implementado | Verifica existencia de directorio |
 | ✅ Análisis AST de código Python | Implementado | Visitor Pattern + ast.walk |
-| ✅ Detección de 9 tipos de violaciones gTAA | Implementado | Fase 2-3 — 4 checkers |
+| ✅ Detección de 18 tipos de violaciones gTAA | Implementado | Fase 2-6 — 4 checkers + LLM |
 | ✅ Sistema de scoring (0-100) | Implementado | Penalización por severidad |
 | ✅ Proyectos de ejemplo (bueno/malo) | Implementado | En directorio examples/ |
-| ✅ Tests unitarios + integración (209 tests) | Implementado | pytest con unit/ e integration/ |
-| ✅ Documentación técnica con diagramas | Implementado | docs/ con flujos Fase 1-5 |
+| ✅ Tests unitarios + integración (234 tests) | Implementado | pytest con unit/ e integration/ |
+| ✅ Documentación técnica con diagramas | Implementado | docs/ con flujos Fase 1-6 |
 | ✅ Reportes HTML dashboard | Implementado | Fase 4 — SVG inline, autocontenido |
 | ✅ Reportes JSON para CI/CD | Implementado | Fase 4 — `--json` / `--html` |
 | ✅ Análisis semántico con LLM | Implementado | Fase 5 — Gemini Flash API + MockLLM fallback |
-| ⏳ Clasificador ML (Random Forest) | Pendiente | Fase 7 (opcional) |
+| ⏳ Soporte API testing (falsos positivos) | Pendiente | Fase 7 — .gtaa.yaml, clasificador de archivos |
+| ⏳ Optimización y documentación final | Pendiente | Fase 8 — prompts, CI/CD, docs TFM |
 
 **Leyenda:** ✅ Implementado | ⏳ Pendiente
 
@@ -144,17 +147,16 @@ La gTAA organiza el framework de automatización en capas con responsabilidades 
 
 Sistema híbrido que combina **3 técnicas de IA** para detectar automáticamente violaciones arquitectónicas:
 
-1. **🔍 Análisis Estático**: Pattern matching con AST y regex
-2. **🧠 Análisis Semántico (LLM)**: Gemini Flash para detección profunda
-3. **📊 Clasificador ML**: Random Forest entrenado con código etiquetado
+1. **🔍 Análisis Estático**: Pattern matching con AST y regex (12 violaciones)
+2. **🧠 Análisis Semántico (LLM)**: Gemini Flash para detección profunda (6 violaciones)
 
 ### 🏆 Contribuciones Planificadas (TFM)
 
 - 🎯 **Primera herramienta** que valida automáticamente gTAA (objetivo del TFM)
 - ✅ **Sistema híbrido** que combina reglas estáticas + IA semántica (implementado Fase 5)
-- ✅ **Detecta 13 tipos** de violaciones arquitectónicas (9 estáticas + 4 semánticas)
+- ✅ **Detecta 18 tipos** de violaciones arquitectónicas (12 estáticas + 6 semánticas)
 - ✅ **Reportes visuales** en HTML y JSON para CI/CD (implementado Fase 4)
-- 🎯 **Validación empírica** con proyectos reales (pendiente Fase 6)
+- ✅ **Cobertura ampliada** con 5 nuevas violaciones basadas en catálogo CT-TAE (Fase 6)
 
 ---
 
@@ -164,7 +166,7 @@ Sistema híbrido que combina **3 técnicas de IA** para detectar automáticament
 - **Python 3.8+** - Lenguaje principal
 - **AST (Abstract Syntax Tree)** - Análisis sintáctico de código
 - **Google Gemini Flash API** - LLM para análisis semántico (Fase 5)
-- **scikit-learn** - Clasificador ML (opcional)
+- **PyYAML** - Configuración por proyecto .gtaa.yaml (⏳ Fase 7)
 
 ### Librerías principales
 ```python
@@ -223,12 +225,12 @@ pip install -e .
 
 ---
 
-### ✅ Funcionalidad ACTUAL (Fase 5)
+### ✅ Funcionalidad ACTUAL (Fase 6)
 
 **Funcionalidad disponible en la versión actual:**
 
 ```bash
-# Análisis estático con detección de 9 tipos de violaciones
+# Análisis estático con detección de 12 tipos de violaciones estáticas
 python -m gtaa_validator /path/to/your/selenium-project
 
 # Modo verbose para ver detalles de cada violación
@@ -247,17 +249,17 @@ python -m gtaa_validator examples/bad_project --verbose
 python -m gtaa_validator examples/good_project
 
 # Ejecutar tests
-pytest tests/               # Todos (209 tests)
+pytest tests/               # Todos (234 tests)
 pytest tests/unit/          # Solo unitarios
 pytest tests/integration/   # Solo integración
 ```
 
 **Capacidades implementadas:**
-- ✅ 4 checkers detectando 9 tipos de violaciones estáticas
+- ✅ 4 checkers detectando 12 tipos de violaciones estáticas
 - ✅ Análisis AST con Visitor Pattern (BrowserAPICallVisitor, AssertionVisitor, BusinessLogicVisitor, HardcodedDataVisitor)
 - ✅ Análisis de estructura de proyecto (directorios requeridos)
-- ✅ Detección por regex (emails, URLs, teléfonos, passwords, locators duplicados)
-- ✅ Análisis semántico AI con Gemini Flash API (4 tipos de violación semántica)
+- ✅ Detección por regex (emails, URLs, teléfonos, passwords, locators duplicados, configuración hardcodeada)
+- ✅ Análisis semántico AI con Gemini Flash API (6 tipos de violación semántica)
 - ✅ Sugerencias AI contextuales para cada violación (enriquecimiento)
 - ✅ Fallback automático a MockLLMClient cuando no hay API key
 - ✅ Sistema de scoring 0-100 basado en severidad de violaciones
@@ -266,7 +268,7 @@ pytest tests/integration/   # Solo integración
 - ✅ Reporte HTML dashboard autocontenido con SVG inline (score gauge, gráficos, tablas)
 - ✅ Reporte JSON estructurado para integración CI/CD
 - ✅ Flags `--json`, `--html` y `--ai` compatibles entre sí
-- ✅ 209 tests automatizados
+- ✅ 234 tests automatizados
 
 **Ejemplo de salida (con --ai):**
 ```
@@ -342,21 +344,58 @@ El archivo [examples/README.md](examples/README.md) incluye:
 
 ---
 
-### ⏳ Funcionalidad FUTURA (Fase 6)
+### ⏳ Funcionalidad FUTURA — Fase 7: Soporte API Testing
 
-**Las siguientes funcionalidades están PENDIENTES de implementación:**
+**Problema**: Proyectos mixtos con tests de API y front-end generan falsos positivos. Tests de API no necesitan Page Objects, wait strategies ni capa de adaptación UI.
 
-#### Fase 6: Validación empírica
-```bash
-# ⏳ PRÓXIMAMENTE - Validación con proyectos reales y métricas comparativas
-# Comparativa análisis estático vs semántico (LLM)
-# Documentación TFM final
+**Funcionalidades planificadas:**
+
+#### Clasificador de archivos (API vs UI)
+```python
+# ⏳ PRÓXIMAMENTE - Detección automática del tipo de test
+# Heurísticas: imports (requests, httpx), patrones (response.json()), ausencia de Selenium/Playwright
+```
+
+#### Configuración por proyecto (.gtaa.yaml)
+```yaml
+# ⏳ PRÓXIMAMENTE - Personalización de reglas por proyecto
+exclude_checks:
+  - MISSING_WAIT_STRATEGY  # Playwright auto-waits
+ignore_paths:
+  - tests/api/**           # API tests sin capa UI
+api_test_patterns:
+  - "**/test_api_*.py"
+  - "**/api/**"
+```
+
+#### Reglas condicionales por tipo de test
+```
+# ⏳ PRÓXIMAMENTE - Violaciones aplicables solo a tests UI
+# ADAPTATION_IN_DEFINITION → solo UI tests
+# MISSING_WAIT_STRATEGY → solo UI tests
+# MISSING_LAYER_STRUCTURE → configurable (pages/ no requerido si solo API)
+```
+
+---
+
+### ⏳ Funcionalidad FUTURA — Fase 8: Optimización y Documentación Final
+
+**Funcionalidades planificadas:**
+
+#### Optimización de prompts LLM
+```
+# ⏳ Reducir tokens, mejorar precisión, evaluar cost/benefit
 ```
 
 #### Integración CI/CD
 ```bash
 # ⏳ PRÓXIMAMENTE - Validación en pipelines
 python -m gtaa_validator . --min-score 70 --format json
+```
+
+#### Documentación TFM final
+```
+# ⏳ Revisión de estructura, documentación académica, PHASE7/8_FLOW_DIAGRAMS.md
 ```
 
 ---
@@ -397,7 +436,7 @@ gtaa-ai-validator/
 │       ├── adaptation_checker.py       # Test Adaptation Layer (AST + Regex)
 │       └── quality_checker.py          # Calidad de tests (AST + Regex)
 │
-├── tests/                              # 🧪 Tests automatizados (209 tests)
+├── tests/                              # 🧪 Tests automatizados (234 tests)
 │   ├── conftest.py                     # Fixtures compartidas
 │   ├── unit/                           # Tests unitarios
 │   │   ├── test_models.py             # Modelos de datos
@@ -423,12 +462,13 @@ gtaa-ai-validator/
 │
 └── docs/                               # 📚 Documentación técnica
     ├── README.md                       # Índice de documentación
-    ├── ARCHITECTURE_DECISIONS.md       # Decisiones arquitectónicas (16 ADR)
+    ├── ARCHITECTURE_DECISIONS.md       # Decisiones arquitectónicas (21 ADR)
     ├── PHASE1_FLOW_DIAGRAMS.md         # Diagramas Fase 1 (CLI y fundación)
     ├── PHASE2_FLOW_DIAGRAMS.md         # Diagramas Fase 2 (análisis estático)
     ├── PHASE3_FLOW_DIAGRAMS.md         # Diagramas Fase 3 (9 violaciones)
     ├── PHASE4_FLOW_DIAGRAMS.md         # Diagramas Fase 4 (reportes)
-    └── PHASE5_FLOW_DIAGRAMS.md         # Diagramas Fase 5 (análisis semántico AI)
+    ├── PHASE5_FLOW_DIAGRAMS.md         # Diagramas Fase 5 (análisis semántico AI)
+    └── PHASE6_FLOW_DIAGRAMS.md         # Diagramas Fase 6 (18 violaciones)
 ```
 
 > **Nota sobre `docs/`**: La documentación técnica se distribuye en múltiples documentos independientes, uno por cada fase del proyecto y uno para las decisiones arquitectónicas. Esta separación responde a un criterio de **transparencia y trazabilidad**: cada documento refleja el estado del proyecto en el momento de su elaboración, permitiendo seguir la evolución del diseño y las decisiones técnicas a lo largo del desarrollo. El índice general se encuentra en [`docs/README.md`](docs/README.md).
@@ -439,7 +479,7 @@ gtaa-ai-validator/
 
 ### 1. 🔍 Detección de Violaciones Arquitectónicas
 
-#### 4 Checkers — 9 tipos de violaciones
+#### 4 Checkers — 12 tipos de violaciones estáticas
 
 | Severidad | Tipo | Checker | Técnica |
 |-----------|------|---------|---------|
@@ -448,9 +488,12 @@ gtaa-ai-validator/
 | 🟡 ALTA | `HARDCODED_TEST_DATA` | QualityChecker | AST Visitor + Regex |
 | 🟡 ALTA | `ASSERTION_IN_POM` | AdaptationChecker | AST Visitor |
 | 🟡 ALTA | `FORBIDDEN_IMPORT` | AdaptationChecker | ast.walk |
+| 🟡 ALTA | `HARDCODED_CONFIGURATION` | QualityChecker | Regex (localhost, sleep, paths) |
+| 🟡 ALTA | `SHARED_MUTABLE_STATE` | QualityChecker | AST (Assign + Global) |
 | 🟠 MEDIA | `BUSINESS_LOGIC_IN_POM` | AdaptationChecker | AST Visitor |
 | 🟠 MEDIA | `DUPLICATE_LOCATOR` | AdaptationChecker | Regex + Registro cross-file |
 | 🟠 MEDIA | `LONG_TEST_FUNCTION` | QualityChecker | ast.walk + lineno |
+| 🟠 MEDIA | `BROAD_EXCEPTION_HANDLING` | QualityChecker | AST (ExceptHandler) |
 | 🟢 BAJA | `POOR_TEST_NAMING` | QualityChecker | ast.walk + Regex |
 
 ### 2. 📊 Sistema de Puntuación (0-100)
@@ -480,10 +523,10 @@ Puntuación = max(0, 100 - suma de penalizaciones)
 - Compatible con pipelines CI/CD
 - Generado desde `Report.to_dict()` sin dependencias externas
 
-### 4. 🧠 Análisis Semántico con IA (✅ Fase 5)
+### 4. 🧠 Análisis Semántico con IA (✅ Fase 5-6)
 
 **Activado con `--ai`:**
-- Detección de 4 tipos de violaciones semánticas que AST no puede capturar
+- Detección de 6 tipos de violaciones semánticas que AST no puede capturar
 - Sugerencias AI contextuales en español para cada violación
 - Gemini Flash API (free tier) con fallback a MockLLMClient
 - Configuración via `GEMINI_API_KEY` en `.env`
@@ -491,25 +534,27 @@ Puntuación = max(0, 100 - suma de penalizaciones)
 | Severidad | Tipo Semántico | Detección |
 |-----------|---------------|-----------|
 | 🟡 ALTA | `IMPLICIT_TEST_DEPENDENCY` | LLM: tests comparten estado mutable |
+| 🟡 ALTA | `PAGE_OBJECT_DOES_TOO_MUCH` | LLM: POM con exceso de responsabilidades |
 | 🟠 MEDIA | `UNCLEAR_TEST_PURPOSE` | LLM: nombre/docstring no descriptivo |
-| 🟠 MEDIA | `PAGE_OBJECT_DOES_TOO_MUCH` | LLM: POM con exceso de responsabilidades |
 | 🟠 MEDIA | `MISSING_WAIT_STRATEGY` | LLM: interacción UI sin espera |
+| 🟠 MEDIA | `MISSING_AAA_STRUCTURE` | LLM: test sin estructura Arrange-Act-Assert |
+| 🟠 MEDIA | `MIXED_ABSTRACTION_LEVEL` | LLM: selectores UI en métodos de negocio |
 
 ---
 
 ## 🎓 Contexto Académico (TFM)
 
 ### Objetivos del TFM
-1. ✅ Desarrollar sistema de IA para validación arquitectónica (Fase 5/6 completa)
+1. ✅ Desarrollar sistema de IA para validación arquitectónica (Fase 6/8 completa)
 2. ✅ Integrar LLM real para análisis semántico (Gemini Flash - Fase 5)
-3. 🎯 Comparar análisis estático vs semántico con métricas (pendiente - Fase 6)
+3. ✅ Ampliar cobertura a 18 tipos de violación basados en catálogo CT-TAE (Fase 6)
 4. ✅ Crear dataset etiquetado para la comunidad (ejemplos con ground truth)
 
 ### Tecnologías de IA a Utilizar
 - **Abstract Syntax Tree (AST)** para análisis estático (✅ Implementado)
 - **Regex patterns** para detección de datos y locators (✅ Implementado)
 - **Large Language Models** (Gemini Flash - ✅ Fase 5)
-- **Machine Learning** (Random Forest - opcional)
+- **Clasificador de archivos** (heurísticas API vs UI - ⏳ Fase 7)
 
 ### Metodología
 **Desarrollo Incremental:**
@@ -518,7 +563,9 @@ Puntuación = max(0, 100 - suma de penalizaciones)
 - ✅ Fase 3: Cobertura completa (9 violaciones) + Tests (140) - **COMPLETA**
 - ✅ Fase 4: Reportes HTML/JSON profesionales - **COMPLETA**
 - ✅ Fase 5: Análisis semántico AI (Gemini Flash + Mock) - **COMPLETA**
-- ⏳ Fase 6: Validación empírica y documentación TFM
+- ✅ Fase 6: Ampliación cobertura (18 violaciones) + Documentación - **COMPLETA**
+- ⏳ Fase 7: Soporte para proyectos con API testing (falsos positivos) - **PENDIENTE**
+- ⏳ Fase 8: Optimización y documentación final - **PENDIENTE**
 
 ---
 
@@ -547,6 +594,7 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 - **[Diagramas de Flujo - Fase 3](docs/PHASE3_FLOW_DIAGRAMS.md)** ✅ — 4 checkers, 9 violaciones, AST visitors, cross-file state
 - **[Diagramas de Flujo - Fase 4](docs/PHASE4_FLOW_DIAGRAMS.md)** ✅ — Reportes JSON/HTML, SVG inline, agrupación por checker
 - **[Diagramas de Flujo - Fase 5](docs/PHASE5_FLOW_DIAGRAMS.md)** ✅ — Análisis semántico AI, Gemini Flash, prompt engineering, parsing LLM
+- **[Diagramas de Flujo - Fase 6](docs/PHASE6_FLOW_DIAGRAMS.md)** ✅ — Ampliación a 18 violaciones, nuevos checkers, heurísticas mock
 - **[Índice de documentación](docs/README.md)** ✅
 
 ---
@@ -596,7 +644,7 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 | DefinitionChecker | ADAPTATION_IN_DEFINITION | BrowserAPICallVisitor (AST) |
 | StructureChecker | MISSING_LAYER_STRUCTURE | Verificación de sistema de archivos |
 | AdaptationChecker | ASSERTION_IN_POM, FORBIDDEN_IMPORT, BUSINESS_LOGIC_IN_POM, DUPLICATE_LOCATOR | AST Visitors + Regex + Estado cross-file |
-| QualityChecker | HARDCODED_TEST_DATA, LONG_TEST_FUNCTION, POOR_TEST_NAMING | AST Visitor + Regex |
+| QualityChecker | HARDCODED_TEST_DATA, LONG_TEST_FUNCTION, POOR_TEST_NAMING, BROAD_EXCEPTION_HANDLING, HARDCODED_CONFIGURATION, SHARED_MUTABLE_STATE | AST Visitor + Regex |
 
 **Próximos pasos:** Fase 4 - Reportes HTML/JSON
 
@@ -636,12 +684,51 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 - ✅ 12 tests unitarios nuevos para GeminiLLMClient (mockeados)
 - ✅ Documentación: PHASE5_FLOW_DIAGRAMS.md + ADR 12-16
 
-**Próximos pasos:** Fase 6 - Validación empírica y documentación TFM
+**Próximos pasos:** Fase 6 - Ampliación de cobertura
+
+---
+
+### Versión 0.6.0 - Fase 6 (1 Febrero 2026) ✅
+
+**Implementado:**
+- ✅ 5 nuevas violaciones basadas en catálogo ISTQB CT-TAE (13 → 18 tipos)
+- ✅ BROAD_EXCEPTION_HANDLING: detección AST de `except:` y `except Exception:`
+- ✅ HARDCODED_CONFIGURATION: detección regex de localhost URLs, `time.sleep()`, paths absolutos
+- ✅ SHARED_MUTABLE_STATE: detección AST de variables mutables a nivel de módulo + `global` en tests
+- ✅ MISSING_AAA_STRUCTURE: detección LLM de tests sin estructura Arrange-Act-Assert
+- ✅ MIXED_ABSTRACTION_LEVEL: detección LLM de selectores UI en métodos de negocio
+- ✅ MockLLMClient ampliado con 2 nuevas heurísticas deterministas
+- ✅ GeminiLLMClient VALID_TYPES ampliado (4 → 6 tipos)
+- ✅ ANALYZE_FILE_PROMPT ampliado con 2 nuevos tipos de violación
+- ✅ 25 tests nuevos (15 QualityChecker + 7 MockLLMClient + 3 GeminiLLMClient)
+- ✅ Documentación: PHASE6_FLOW_DIAGRAMS.md + ADR 17-21
+
+**Próximos pasos:** Fase 7 - Soporte API testing
+
+---
+
+### Versión 0.7.0 - Fase 7 (Pendiente) ⏳
+
+**Planificado:**
+- ⏳ Clasificador de archivos: detección automática API vs UI tests
+- ⏳ Configuración por proyecto: `.gtaa.yaml` con exclusiones y paths
+- ⏳ Reglas condicionales: violaciones aplicables solo a tests UI
+- ⏳ Reducción de falsos positivos en proyectos mixtos (API + front-end)
+
+---
+
+### Versión 0.8.0 - Fase 8 (Pendiente) ⏳
+
+**Planificado:**
+- ⏳ Optimización de prompts LLM (reducir tokens, mejorar precisión)
+- ⏳ Integración CI/CD (`--min-score`, exit codes)
+- ⏳ Documentación TFM final
+- ⏳ PHASE7_FLOW_DIAGRAMS.md + PHASE8_FLOW_DIAGRAMS.md
 
 ---
 
 <div align="center">
 
-**Estado del proyecto:** En desarrollo activo | Fase 5/6 completa
+**Estado del proyecto:** Fase 6/8 | 18 violaciones | 234 tests
 
 </div>

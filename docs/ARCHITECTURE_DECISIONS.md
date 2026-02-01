@@ -26,6 +26,11 @@ El formato sigue la estructura de un ADR (Architecture Decision Record) adaptado
 14. [LLM: Duck typing frente a clase base abstracta](#14-llm-duck-typing-frente-a-clase-base-abstracta)
 15. [LLM: Manejo silencioso de errores de API](#15-llm-manejo-silencioso-de-errores-de-api)
 16. [LLM: Configuración por variable de entorno frente a alternativas](#16-llm-configuración-por-variable-de-entorno-frente-a-alternativas)
+17. [Detección de excepciones genéricas: AST frente a regex](#17-detección-de-excepciones-genéricas-ast-frente-a-regex)
+18. [Detección de configuración hardcodeada: regex compiladas como constantes de clase](#18-detección-de-configuración-hardcodeada-regex-compiladas-como-constantes-de-clase)
+19. [Detección de estado mutable compartido: dos fases complementarias](#19-detección-de-estado-mutable-compartido-dos-fases-complementarias)
+20. [Ampliación de violaciones semánticas: prompts ampliados frente a prompts separados](#20-ampliación-de-violaciones-semánticas-prompts-ampliados-frente-a-prompts-separados)
+21. [Heurísticas mock: búsqueda textual frente a visitor AST para detección de asserts](#21-heurísticas-mock-búsqueda-textual-frente-a-visitor-ast-para-detección-de-asserts)
 
 ---
 
@@ -699,7 +704,7 @@ Para versiones futuras del proyecto se contemplan dos líneas de mejora, pendien
 
 2. **Modelo local dockerizado**: Desplegar un modelo open-source (Llama, Mistral, CodeGemma) en un contenedor Docker, eliminando la dependencia de APIs externas y los límites de rate. Opciones como Ollama o vLLM permiten servir modelos localmente con una API compatible.
 
-3. **Servidor dedicado**: Implementación directa en un servidor propio o universitario con GPU, permitiendo modelos más grandes y sin restricciones de cuota.
+3. **Servidor dedicado**: Implementación directa en un servidor propio permitiendo modelos más grandes y sin restricciones de cuota.
 
 Estas opciones se evaluarán cuando los prompts estén optimizados y se conozca el consumo real mínimo necesario para un análisis de calidad.
 
@@ -943,6 +948,224 @@ api_key = os.environ.get("GEMINI_API_KEY", "")
 
 ---
 
+## 17. Detección de excepciones genéricas: AST frente a regex
+
+### Problema
+
+Se necesita detectar `except:` (bare) y `except Exception:` en archivos de test, ya que ocultan errores reales y dificultan el diagnóstico de fallos. Es necesario distinguir entre excepciones genéricas (violación) y específicas como `except ValueError:` (correcto).
+
+### Alternativa evaluada: Regex sobre el código fuente
+
+```python
+import re
+broad_except = re.findall(r'except\s*(?:Exception\s*)?:', source_code)
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Falsos positivos en strings | `"except Exception:"` dentro de una cadena se detectaría |
+| Falsos positivos en comentarios | `# except:` se detectaría como violación |
+| Dificultad con herencia | `except (TypeError, KeyError):` requiere regex complejas para parsear tuplas |
+
+### Solución elegida: Inspección de `ast.ExceptHandler`
+
+```python
+for node in ast.walk(tree):
+    if isinstance(node, ast.ExceptHandler):
+        is_bare = node.type is None
+        is_broad = isinstance(node.type, ast.Name) and node.type.id == "Exception"
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Preciso | `node.type is None` identifica exactamente `except:` sin ambigüedad |
+| Ignora strings y comentarios | El AST solo contiene nodos ejecutables |
+| Extensible | Se puede añadir detección de `BaseException` o excepciones custom |
+| Línea exacta | `node.lineno` proporciona la ubicación precisa |
+
+---
+
+## 18. Detección de configuración hardcodeada: regex compiladas como constantes de clase
+
+### Problema
+
+Se necesita detectar URLs localhost, `time.sleep()` y paths absolutos embebidos en código de test. Estos valores deben externalizarse en configuración o fixtures.
+
+### Alternativa evaluada: Análisis AST de strings
+
+```python
+for node in ast.walk(tree):
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        if "localhost" in node.value:
+            ...
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| No cubre `time.sleep()` | `time.sleep(5)` es una llamada a función, no una string |
+| Más verboso | Requiere detectar ast.Call para `time.sleep` + ast.Constant para URLs, duplicando lógica |
+| Paths absolutos | Requiere AST + regex igualmente para validar patrones de path |
+
+### Solución elegida: Regex compiladas como constantes de clase
+
+```python
+class QualityChecker:
+    LOCALHOST_PATTERN = re.compile(r"https?://localhost[:\d/]|https?://127\.0\.0\.1[:\d/]")
+    SLEEP_PATTERN = re.compile(r"time\.sleep\s*\(\s*\d")
+    ABSOLUTE_PATH_PATTERN = re.compile(r'["\'][A-Z]:\\|["\']/home/|["\']/usr/|["\']/tmp/')
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Compilación única | Las regex se compilan una vez al cargar la clase, no por cada archivo |
+| Cobertura uniforme | Un solo mecanismo detecta URLs, sleeps y paths sin mezclar AST y regex |
+| Excluye comentarios | El check `stripped.startswith("#")` filtra comentarios antes de aplicar regex |
+| Mantenible | Añadir un nuevo patrón (ej. `timeout=`) es una línea adicional |
+
+---
+
+## 19. Detección de estado mutable compartido: dos fases complementarias
+
+### Problema
+
+Los tests que comparten estado mutable a nivel de módulo (`shared_data = []`) o usan `global` dentro de funciones de test crean dependencias implícitas entre tests. Se necesita detectar ambos patrones.
+
+### Alternativa evaluada: Detección única con `ast.walk()`
+
+```python
+for node in ast.walk(tree):
+    if isinstance(node, ast.Assign):
+        # Problema: no distingue módulo-level de función-level
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| `ast.walk()` es plano | No distingue entre `shared = []` a nivel de módulo y `result = []` dentro de una función |
+| Falsos positivos | Variables locales mutables dentro de tests serían flaggeadas incorrectamente |
+
+### Solución elegida: Dos fases con `ast.iter_child_nodes()` + `ast.walk()`
+
+**Fase 1** — `ast.iter_child_nodes(tree)` para variables de módulo:
+- Solo inspecciona hijos directos del módulo (no desciende a funciones/clases)
+- Verifica que el valor sea mutable: `ast.List`, `ast.Dict`, `ast.Set`, `ast.Call(list/dict/set)`
+- Excluye MAYÚSCULAS (constantes) y `_prefijo` (privadas)
+
+**Fase 2** — `ast.walk()` dentro de funciones `test_*` para `global`:
+- Busca `ast.Global` solo dentro de funciones de test
+- Reporta cada nombre declarado como global
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Sin falsos positivos | `iter_child_nodes` solo ve el primer nivel, evitando variables locales |
+| Cobertura completa | Fase 1 cubre declaración mutable, Fase 2 cubre uso de `global` |
+| Exclusiones razonables | MAYÚSCULAS y `_privadas` son patrones comunes que no indican estado compartido |
+
+---
+
+## 20. Ampliación de violaciones semánticas: prompts ampliados frente a prompts separados
+
+### Problema
+
+La Fase 6 añade 2 nuevos tipos de violación semántica (`MISSING_AAA_STRUCTURE`, `MIXED_ABSTRACTION_LEVEL`). Se necesita decidir cómo incorporarlos al análisis con LLM.
+
+### Alternativa evaluada: Prompts separados por tipo
+
+```python
+# Un prompt especializado para cada tipo de violación
+AAA_PROMPT = "Analiza si este test sigue el patrón AAA..."
+ABSTRACTION_PROMPT = "Analiza si este método mezcla niveles de abstracción..."
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Más llamadas API | 2 prompts adicionales por archivo = +12 llamadas/ejecución |
+| Rate limiting | Con el free tier (15 RPM), más llamadas incrementa el riesgo de 429 |
+| Contexto duplicado | El mismo código fuente se envía múltiples veces |
+
+### Solución elegida: Ampliar el prompt existente
+
+Se añaden las 2 nuevas violaciones a la lista del `ANALYZE_FILE_PROMPT` existente, manteniendo una única llamada por archivo:
+
+```
+Busca SOLO estos tipos de violaciones:
+- UNCLEAR_TEST_PURPOSE
+- PAGE_OBJECT_DOES_TOO_MUCH
+- IMPLICIT_TEST_DEPENDENCY
+- MISSING_WAIT_STRATEGY
+- MISSING_AAA_STRUCTURE          ← nuevo
+- MIXED_ABSTRACTION_LEVEL        ← nuevo
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Misma cantidad de llamadas | 6 por ejecución (una por archivo), igual que en Fase 5 |
+| Contexto compartido | El modelo ve todo el código y puede detectar múltiples tipos en una pasada |
+| VALID_TYPES como filtro | El whitelist en `GeminiLLMClient` asegura que solo se aceptan tipos conocidos |
+
+---
+
+## 21. Heurísticas mock: búsqueda textual frente a visitor AST para detección de asserts
+
+### Problema
+
+El MockLLMClient necesita detectar si un test tiene aserciones para la heurística `MISSING_AAA_STRUCTURE`. Se necesita un mecanismo que identifique la presencia de `assert`, `assertEqual`, `assertTrue`, etc. en el cuerpo de una función de test.
+
+### Alternativa evaluada: AST visitor para sentencias Assert
+
+```python
+class AssertFinder(ast.NodeVisitor):
+    def __init__(self):
+        self.found = False
+    def visit_Assert(self, node):
+        self.found = True
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Solo cubre `assert` nativo | `ast.Assert` detecta `assert x == y` pero no `self.assertEqual(x, y)` ni `mock.assert_called()` |
+| Requiere visitor adicional | Para cubrir `assertEqual` habría que buscar `ast.Call` con nombres específicos |
+| Más complejo | El visitor necesita rastrear múltiples tipos de nodo para un check simple |
+
+### Solución elegida: Búsqueda textual en el código fuente del test
+
+```python
+assert_keywords = {"assert", "assertEqual", "assertTrue", "assertFalse",
+                   "assertIn", "assertRaises", "assertIsNone", ...}
+func_source = "\n".join(lines[node.lineno - 1:node.end_lineno])
+has_assert = any(kw in func_source for kw in assert_keywords)
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Cobertura amplia | Detecta `assert`, `assertEqual`, `assert_called`, `assert_called_once` en una sola pasada |
+| Simple | 3 líneas de código frente a un visitor completo |
+| Heurística suficiente | Para el MockLLMClient (fallback), la precisión no necesita ser perfecta |
+| Consistente | El GeminiLLMClient real complementa con análisis semántico más profundo |
+
+**Nota:** Esta heurística tiene una limitación conocida: los nombres de función que contienen "assert" como subcadena (ej. `test_assert_helper`) pueden causar falsos negativos. En la práctica, esto es poco frecuente y el GeminiLLMClient real no tiene esta limitación.
+
+---
+
 ## Resumen de decisiones
 
 | Decisión | Solución elegida | Alternativa descartada | Justificación principal |
@@ -960,6 +1183,11 @@ api_key = os.environ.get("GEMINI_API_KEY", "")
 | Interfaz LLM | Duck typing + Union | ABC (Abstract Base Class) | Solo 2 implementaciones, sin herencia retroactiva, Python idiomático |
 | Errores de API | Silencioso (try/except → []) | Propagar excepciones | Preserva análisis estático, degradación elegante, free tier friendly |
 | Configuración API key | Variable de entorno + .env | Flag CLI / fichero config | Estándar de la industria, seguro, CI/CD compatible, fallback a mock |
+| Excepciones genéricas | AST (`ExceptHandler`) | Regex sobre source | Preciso, ignora strings/comentarios, extensible |
+| Config hardcodeada | Regex compiladas (clase) | AST de strings | Cobertura uniforme (URLs + sleeps + paths), compilación única |
+| Estado mutable compartido | `iter_child_nodes` + `walk` | Solo `ast.walk` | Sin falsos positivos en variables locales, cobertura completa |
+| Nuevas violaciones LLM | Ampliar prompt existente | Prompts separados | Misma cantidad de llamadas API, contexto compartido |
+| Detección de asserts mock | Búsqueda textual | AST visitor | Cobertura amplia (assert + assertEqual + assert_called), simple |
 
 ---
 
