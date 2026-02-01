@@ -21,6 +21,11 @@ El formato sigue la estructura de un ADR (Architecture Decision Record) adaptado
 9. [Reportes: HTML autocontenido frente a alternativas](#9-reportes-html-autocontenido-frente-a-alternativas)
 10. [Reportes: JSON con serialización propia frente a librerías](#10-reportes-json-con-serialización-propia-frente-a-librerías)
 11. [CLI: flags separados frente a formato único](#11-cli-flags-separados-frente-a-formato-único)
+12. [LLM: Evaluación de APIs y modelos LLM](#12-llm-evaluación-de-apis-y-modelos-llm)
+13. [LLM: SDK google-genai frente a alternativas](#13-llm-sdk-google-genai-frente-a-alternativas)
+14. [LLM: Duck typing frente a clase base abstracta](#14-llm-duck-typing-frente-a-clase-base-abstracta)
+15. [LLM: Manejo silencioso de errores de API](#15-llm-manejo-silencioso-de-errores-de-api)
+16. [LLM: Configuración por variable de entorno frente a alternativas](#16-llm-configuración-por-variable-de-entorno-frente-a-alternativas)
 
 ---
 
@@ -647,6 +652,297 @@ python -m gtaa_validator /path --json report.json --html report.html
 
 ---
 
+## 12. LLM: Evaluación de APIs y modelos LLM
+
+### Problema
+
+El análisis semántico requiere un modelo LLM capaz de comprender código de test automation y detectar violaciones arquitectónicas. Se evaluaron diferentes proveedores y modelos, considerando capacidades de análisis de código, coste y disponibilidad.
+
+### Modelos evaluados
+
+| Modelo | Capacidad de código (SWE-Bench Verified) | Disponibilidad | Coste estimado |
+|--------|------------------------------------------|----------------|----------------|
+| Claude 4 Sonnet/Opus | 60-75% | De pago | Alto |
+| Gemini 2.5 Pro | 63.8% | Free tier limitado | Gratuito (limitado) |
+| GPT-4o | ~55% | De pago | Alto |
+| DeepSeek V3 | ~45-50% | Muy barato | Bajo |
+| Llama 3.3 70B | ~35-40% | Gratis (Groq) | Gratuito |
+| **Gemini 2.5 Flash Lite** | **Suficiente para PoC** | **Free tier generoso** | **Gratuito** |
+
+### APIs descartadas en esta fase
+
+Todas las APIs de pago (Claude, GPT-4o, DeepSeek) se descartaron en esta fase por el coste de consumo. El proyecto realiza ~65 llamadas API por ejecución (6 de detección + ~59 de enriquecimiento), y sin una optimización previa de los prompts para reducir tokens y llamadas, el gasto sería difícil de justificar en un contexto de TFM.
+
+| API descartada | Motivo principal |
+|----------------|-----------------|
+| OpenAI (GPT-4o) | Coste por token elevado; sin free tier viable para ~65 llamadas/ejecución |
+| Anthropic (Claude) | Coste por token elevado; sin free tier |
+| DeepSeek | Más barato, pero requiere pago y la latencia desde Europa es alta |
+| Groq (Llama 3.3) | Gratuito pero menor capacidad de comprensión de código; free tier con límites de RPM |
+
+### Solución elegida: Gemini 2.5 Flash Lite (free tier)
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Gratuito | 1000 requests/día y 15 RPM en el free tier |
+| Capacidad suficiente | Detecta violaciones semánticas de forma competente para una PoC |
+| SDK oficial | google-genai bien mantenido |
+| Sin factura | Requisito del TFM: no generar costes innecesarios |
+
+### Trabajo futuro: modelos locales y optimización
+
+Para versiones futuras del proyecto se contemplan dos líneas de mejora, pendientes de exploración en profundidad:
+
+1. **Optimización de prompts**: Reducir el número de tokens y llamadas API antes de considerar modelos de pago. Técnicas como batch de violaciones en una sola llamada o reducción del contexto enviado podrían reducir el consumo un 50-70%.
+
+2. **Modelo local dockerizado**: Desplegar un modelo open-source (Llama, Mistral, CodeGemma) en un contenedor Docker, eliminando la dependencia de APIs externas y los límites de rate. Opciones como Ollama o vLLM permiten servir modelos localmente con una API compatible.
+
+3. **Servidor dedicado**: Implementación directa en un servidor propio o universitario con GPU, permitiendo modelos más grandes y sin restricciones de cuota.
+
+Estas opciones se evaluarán cuando los prompts estén optimizados y se conozca el consumo real mínimo necesario para un análisis de calidad.
+
+---
+
+## 13. LLM: SDK google-genai frente a alternativas
+
+### Problema
+
+El análisis semántico requiere comunicarse con un modelo LLM. El modelo elegido es Gemini Flash de Google (gratuito y suficiente para el TFM). Se necesita decidir qué SDK usar para la comunicación.
+
+### Alternativa evaluada: SDK openai (endpoint compatible)
+
+```python
+from openai import OpenAI
+client = OpenAI(base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+                api_key=os.environ["GEMINI_API_KEY"])
+response = client.chat.completions.create(model="gemini-2.0-flash", messages=[...])
+```
+
+Google ofrece un endpoint compatible con la API de OpenAI, lo que permite reusar el SDK `openai`.
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Dependencia engañosa | El código importa `openai` pero se comunica con Google, generando confusión |
+| Funcionalidades limitadas | El endpoint compatible no soporta todas las features nativas de Gemini |
+| Capa de compatibilidad | Se añade una traducción innecesaria de formatos (OpenAI → Gemini → OpenAI) |
+
+### Alternativa evaluada: REST directo con requests
+
+```python
+import requests
+response = requests.post(
+    f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}",
+    json={"contents": [{"parts": [{"text": prompt}]}]}
+)
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Código boilerplate | Hay que construir manualmente los headers, body y parsear la respuesta |
+| Sin tipado | No hay objetos de respuesta tipados, todo es `dict` |
+| Sin reintentos | No hay retry automático ni manejo de rate limiting integrado |
+
+### Solución elegida: google-genai (SDK nativo)
+
+```python
+from google import genai
+client = genai.Client(api_key=api_key)
+response = client.models.generate_content(
+    model="gemini-2.5-flash-lite",
+    contents=prompt,
+    config=genai.types.GenerateContentConfig(
+        system_instruction=SYSTEM_PROMPT,
+        temperature=0.1,
+    ),
+)
+text = response.text
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| SDK oficial | Mantenido por Google, sin capas de compatibilidad intermedias |
+| API directa | `client.models.generate_content()` — una sola llamada |
+| System instruction | Soporte nativo de `system_instruction` en la config |
+| Tipado | Objetos de respuesta con atributos (`.text`, `.candidates`) |
+| Coherencia | El import `from google import genai` refleja que se usa Google Gemini |
+
+---
+
+## 14. LLM: Duck typing frente a clase base abstracta
+
+### Problema
+
+El `SemanticAnalyzer` necesita aceptar tanto `MockLLMClient` como `GeminiLLMClient`. Ambos implementan los mismos métodos: `analyze_file()` y `enrich_violation()`.
+
+### Alternativa evaluada: ABC (Abstract Base Class)
+
+```python
+from abc import ABC, abstractmethod
+
+class BaseLLMClient(ABC):
+    @abstractmethod
+    def analyze_file(self, content: str, path: str) -> List[dict]: ...
+
+    @abstractmethod
+    def enrich_violation(self, violation: dict, content: str) -> str: ...
+
+class MockLLMClient(BaseLLMClient): ...
+class GeminiLLMClient(BaseLLMClient): ...
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Solo 2 implementaciones | Para dos clases con la misma interfaz, una ABC añade ceremonia sin beneficio proporcional |
+| Modificación retroactiva | Requiere alterar `MockLLMClient` (ya existente y testeado) para heredar de la nueva ABC |
+| Python idiomático | Duck typing es el enfoque natural en Python — "si camina como un pato..." |
+
+### Solución elegida: Duck typing con Union type hint
+
+```python
+from typing import Union
+
+class SemanticAnalyzer:
+    def __init__(self, ..., llm_client: Union[MockLLMClient, GeminiLLMClient], ...):
+        self.llm_client = llm_client
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Sin herencia | No requiere modificar las clases existentes |
+| Type checking | El `Union` proporciona soporte a IDEs y type checkers |
+| Extensible | Si se añade un tercer cliente, solo hay que actualizar el `Union` |
+| Pragmático | Para un TFM con dos implementaciones, ABC sería sobreingeniería |
+
+**Nota:** Si en el futuro se añaden más clientes (OpenAI, Claude, Ollama), se formalizaría con `BaseLLMClient(ABC)` y se actualizaría el type hint a la clase base.
+
+---
+
+## 15. LLM: Manejo silencioso de errores de API
+
+### Problema
+
+Las llamadas a la API de Gemini pueden fallar por múltiples razones (rate limiting, timeout, API key inválida, servidor caído). Se necesita decidir cómo manejar estos errores.
+
+### Alternativa evaluada: Propagar excepciones
+
+```python
+def analyze_file(self, content, path):
+    response = self.client.models.generate_content(...)  # Puede lanzar Exception
+    return self._parse_violations(response.text)
+    # Si falla, la excepción se propaga y aborta el análisis
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Rompe el flujo | Un error de API aborta todo el análisis, incluyendo el reporte estático ya completado |
+| El análisis estático ya terminó | El `Report` con 35+ violaciones estáticas ya está listo; perderlo por un error de red es inaceptable |
+| Rate limiting es frecuente | Con el free tier, los 429 son esperables; no deben ser fatales |
+
+### Solución elegida: try/except silencioso con fallback vacío
+
+```python
+def analyze_file(self, content, path):
+    try:
+        response = self.client.models.generate_content(...)
+        return self._parse_violations(response.text)
+    except Exception:
+        return []  # Silencioso: no rompe el flujo
+
+def enrich_violation(self, violation, content):
+    try:
+        response = self.client.models.generate_content(...)
+        return response.text.strip() or ""
+    except Exception:
+        return ""  # Silencioso: la violación queda sin sugerencia AI
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Resiliente | El análisis estático siempre se preserva, independientemente de fallos de la API |
+| Degradación elegante | Sin API → sin violaciones semánticas ni sugerencias, pero el reporte sigue siendo útil |
+| Consistente con mock | `MockLLMClient` nunca falla; `GeminiLLMClient` se comporta igual ante errores |
+| Free tier friendly | Los 429 (rate limit) no abortan el análisis |
+
+---
+
+## 16. LLM: Configuración por variable de entorno frente a alternativas
+
+### Problema
+
+El `GeminiLLMClient` requiere una API key para autenticarse. Se necesita decidir cómo el usuario la proporciona.
+
+### Alternativa evaluada: Flag del CLI
+
+```bash
+python -m gtaa_validator /path --ai --api-key AIzaSy...
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Seguridad | La API key queda en el historial de comandos del terminal |
+| Verbosidad | Requiere copiar/pegar la key en cada ejecución |
+| CI/CD | En pipelines automatizados, las variables de entorno son el estándar |
+
+### Alternativa evaluada: Fichero de configuración
+
+```yaml
+# ~/.gtaa-validator/config.yml
+gemini:
+  api_key: AIzaSy...
+  model: gemini-2.5-flash-lite
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Sobreingeniería | Para una sola variable, un fichero de configuración es excesivo |
+| Ubicación no estándar | Requiere documentar dónde crear el fichero |
+| Parsing | Requiere dependencia (pyyaml/toml) o implementar parsing propio |
+
+### Solución elegida: Variable de entorno con .env
+
+```bash
+# .env (gitignored)
+GEMINI_API_KEY=AIzaSy...
+
+# __main__.py
+from dotenv import load_dotenv
+load_dotenv()
+api_key = os.environ.get("GEMINI_API_KEY", "")
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Estándar de la industria | Variables de entorno es el mecanismo universal para secrets |
+| Seguro | `.env` está en `.gitignore`; nunca se sube al repositorio |
+| .env.example | Template para nuevos usuarios con instrucciones para obtener la key |
+| python-dotenv | Librería ligera que carga `.env` automáticamente |
+| CI/CD compatible | En pipelines, la variable se define directamente en el entorno |
+| Fallback elegante | Sin key → `MockLLMClient` automático, sin error |
+
+---
+
 ## Resumen de decisiones
 
 | Decisión | Solución elegida | Alternativa descartada | Justificación principal |
@@ -659,7 +955,12 @@ python -m gtaa_validator /path --json report.json --html report.html
 | Niveles de verificación | Proyecto + Archivo | Solo archivo | `StructureChecker` requiere vista global del proyecto |
 | Parseo del AST | Una vez por archivo | Una vez por checker | Elimina trabajo redundante, retrocompatible |
 | Paradigma principal | POO | Funcional | Los patrones de diseño requieren estado mutable y polimorfismo |
+| Modelo LLM | Gemini 2.5 Flash Lite (free) | Claude, GPT-4o, DeepSeek | Gratuito, capacidad suficiente para PoC, sin factura |
+| SDK de LLM | google-genai (nativo) | openai SDK / REST directo | SDK oficial, sin capas de compatibilidad, system instruction nativa |
+| Interfaz LLM | Duck typing + Union | ABC (Abstract Base Class) | Solo 2 implementaciones, sin herencia retroactiva, Python idiomático |
+| Errores de API | Silencioso (try/except → []) | Propagar excepciones | Preserva análisis estático, degradación elegante, free tier friendly |
+| Configuración API key | Variable de entorno + .env | Flag CLI / fichero config | Estándar de la industria, seguro, CI/CD compatible, fallback a mock |
 
 ---
 
-*Última actualización: 29 de enero de 2026*
+*Última actualización: 1 de febrero de 2026*

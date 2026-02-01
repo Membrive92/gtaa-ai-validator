@@ -91,6 +91,32 @@ Diagramas de flujo de la Fase 4: Reportes HTML/JSON Profesionales.
 - Prevención XSS con `html.escape()`
 - CSS Grid responsive para dashboard
 
+### [PHASE5_FLOW_DIAGRAMS.md](PHASE5_FLOW_DIAGRAMS.md)
+
+Diagramas de flujo de la Fase 5: Análisis Semántico con Inteligencia Artificial.
+
+**Contenido**:
+- Arquitectura del módulo LLM (`llm/`)
+- Flujo de selección de cliente LLM (Gemini vs Mock)
+- GeminiLLMClient — comunicación con Gemini Flash API
+- MockLLMClient — heurísticas deterministas (AST + regex)
+- Prompt engineering: system prompt, analyze prompt, enrich prompt
+- SemanticAnalyzer — orquestación de las dos fases
+- Fase 1: detección de violaciones semánticas
+- Fase 2: enriquecimiento con sugerencias AI contextuales
+- Parsing robusto de respuestas LLM (JSON, markdown, errores)
+- Mapa completo de 13 violaciones (9 estáticas + 4 semánticas)
+- Configuración de API key con .env y python-dotenv
+- Mapa de tests (12 tests unitarios para GeminiLLMClient)
+
+**Conceptos nuevos explicados**:
+- LLM como herramienta de análisis de código
+- Prompt engineering para detección de violaciones
+- Duck typing como alternativa a ABC
+- Manejo silencioso de errores de API (degradación elegante)
+- google-genai SDK nativo
+- Configuración por variable de entorno con .env
+
 ### [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md)
 
 Registro de decisiones arquitectónicas (ADR) que explica **por qué** se eligió cada enfoque técnico.
@@ -107,6 +133,11 @@ Registro de decisiones arquitectónicas (ADR) que explica **por qué** se eligi�
 9. Reportes: HTML autocontenido frente a alternativas (Jinja2, Chart.js, PDF)
 10. Reportes: JSON con serialización propia frente a librerías (Pydantic, marshmallow)
 11. CLI: flags separados frente a formato único
+12. LLM: Evaluación de APIs y modelos LLM (Claude, GPT-4o, DeepSeek, Gemini, Llama)
+13. LLM: SDK google-genai frente a alternativas (openai, REST)
+14. LLM: Duck typing frente a clase base abstracta
+15. LLM: Manejo silencioso de errores de API
+16. LLM: Configuración por variable de entorno frente a alternativas
 
 **Para quién**:
 - Evaluadores del TFM que quieran entender las decisiones de diseño
@@ -135,8 +166,9 @@ Guía para contribuir al proyecto (estructura de código, estándares, pull requ
 2. Lee [PHASE2_FLOW_DIAGRAMS.md](PHASE2_FLOW_DIAGRAMS.md) para entender el motor de análisis estático
 3. Lee [PHASE3_FLOW_DIAGRAMS.md](PHASE3_FLOW_DIAGRAMS.md) para la cobertura completa de 9 violaciones
 4. Lee [PHASE4_FLOW_DIAGRAMS.md](PHASE4_FLOW_DIAGRAMS.md) para los reportes HTML/JSON
-5. Lee [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md) para las justificaciones técnicas
-6. Ejecuta el código mientras lees: `python -m gtaa_validator examples/bad_project --verbose`
+5. Lee [PHASE5_FLOW_DIAGRAMS.md](PHASE5_FLOW_DIAGRAMS.md) para el análisis semántico con AI
+6. Lee [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md) para las justificaciones técnicas
+7. Ejecuta el código mientras lees: `python -m gtaa_validator examples/bad_project --ai --verbose`
 
 ### Para Desarrollar
 1. Consulta [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md) para entender los patrones (Strategy, Visitor, Facade)
@@ -179,4 +211,4 @@ Este directorio se actualizará con:
 - Guías de uso avanzadas
 - Ejemplos adicionales
 
-**Última actualización**: 29 Enero 2026
+**Última actualización**: 1 Febrero 2026

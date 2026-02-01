@@ -5,14 +5,14 @@
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Estado](https://img.shields.io/badge/estado-en%20desarrollo-yellow)](https://github.com/Membrive92/gtaa-ai-validator)
-[![Fase](https://img.shields.io/badge/fase-4%2F6%20completa-blue)](https://github.com/Membrive92/gtaa-ai-validator)
-[![Progreso](https://img.shields.io/badge/progreso-67%25-yellow)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Fase](https://img.shields.io/badge/fase-5%2F6%20completa-blue)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Progreso](https://img.shields.io/badge/progreso-83%25-green)](https://github.com/Membrive92/gtaa-ai-validator)
 
 > **📌 TRABAJO DE FIN DE MÁSTER - EN DESARROLLO INCREMENTAL**
 >
 > Autor: Jose Antonio Membrive Guillen
 > Año: 2025-2026
-> **Estado:** Fase 4/6 Completa | Última actualización: 31 Enero 2026
+> **Estado:** Fase 5/6 Completa | Última actualización: 1 Febrero 2026
 
 ---
 
@@ -30,7 +30,7 @@
 | **✅ Fase 2** | **Análisis estático con AST (1 violación)** | **COMPLETO** | **26/01/2026** |
 | **✅ Fase 3** | **Cobertura completa (9 tipos de violaciones) + Tests** | **COMPLETO** | **28/01/2026** |
 | **✅ Fase 4** | **Reportes HTML/JSON profesionales** | **COMPLETO** | **31/01/2026** |
-| ⏳ Fase 5 | Integración LLM (opcional, sin API key aún) | Pendiente | - |
+| **✅ Fase 5** | **Análisis semántico AI (Gemini Flash + Mock)** | **COMPLETO** | **01/02/2026** |
 | ⏳ Fase 6 | Validación empírica y documentación TFM | Pendiente | - |
 
 ### 📊 Funcionalidades Implementadas vs Planeadas
@@ -44,11 +44,11 @@
 | ✅ Detección de 9 tipos de violaciones gTAA | Implementado | Fase 2-3 — 4 checkers |
 | ✅ Sistema de scoring (0-100) | Implementado | Penalización por severidad |
 | ✅ Proyectos de ejemplo (bueno/malo) | Implementado | En directorio examples/ |
-| ✅ Tests unitarios + integración (165 tests) | Implementado | pytest con unit/ e integration/ |
-| ✅ Documentación técnica con diagramas | Implementado | docs/ con flujos Fase 1-4 |
+| ✅ Tests unitarios + integración (209 tests) | Implementado | pytest con unit/ e integration/ |
+| ✅ Documentación técnica con diagramas | Implementado | docs/ con flujos Fase 1-5 |
 | ✅ Reportes HTML dashboard | Implementado | Fase 4 — SVG inline, autocontenido |
 | ✅ Reportes JSON para CI/CD | Implementado | Fase 4 — `--json` / `--html` |
-| ⏳ Análisis semántico con LLM | Pendiente | Fase 5 (opcional) |
+| ✅ Análisis semántico con LLM | Implementado | Fase 5 — Gemini Flash API + MockLLM fallback |
 | ⏳ Clasificador ML (Random Forest) | Pendiente | Fase 7 (opcional) |
 
 **Leyenda:** ✅ Implementado | ⏳ Pendiente
@@ -145,14 +145,14 @@ La gTAA organiza el framework de automatización en capas con responsabilidades 
 Sistema híbrido que combina **3 técnicas de IA** para detectar automáticamente violaciones arquitectónicas:
 
 1. **🔍 Análisis Estático**: Pattern matching con AST y regex
-2. **🧠 Análisis Semántico (LLM)**: Claude/GPT-4 para detección profunda
+2. **🧠 Análisis Semántico (LLM)**: Gemini Flash para detección profunda
 3. **📊 Clasificador ML**: Random Forest entrenado con código etiquetado
 
 ### 🏆 Contribuciones Planificadas (TFM)
 
 - 🎯 **Primera herramienta** que valida automáticamente gTAA (objetivo del TFM)
-- 🎯 **Sistema híbrido** que combina reglas estáticas + IA semántica (en desarrollo)
-- ✅ **Detecta 9 tipos** de violaciones arquitectónicas (implementado Fase 3)
+- ✅ **Sistema híbrido** que combina reglas estáticas + IA semántica (implementado Fase 5)
+- ✅ **Detecta 13 tipos** de violaciones arquitectónicas (9 estáticas + 4 semánticas)
 - ✅ **Reportes visuales** en HTML y JSON para CI/CD (implementado Fase 4)
 - 🎯 **Validación empírica** con proyectos reales (pendiente Fase 6)
 
@@ -163,15 +163,15 @@ Sistema híbrido que combina **3 técnicas de IA** para detectar automáticament
 ### Lenguajes y Frameworks
 - **Python 3.8+** - Lenguaje principal
 - **AST (Abstract Syntax Tree)** - Análisis sintáctico de código
-- **Anthropic Claude API** - LLM para análisis semántico (futuro)
+- **Google Gemini Flash API** - LLM para análisis semántico (Fase 5)
 - **scikit-learn** - Clasificador ML (opcional)
 
 ### Librerías principales
 ```python
 click>=8.0             # Interfaz CLI
+google-genai>=1.0.0    # SDK Gemini Flash API (Fase 5)
+python-dotenv>=1.0.0   # Carga de .env para API key
 pytest>=7.0            # Framework de testing
-# Futuro:
-# anthropic>=0.18.0    # API de Claude (Fase 5)
 ```
 
 ### Arquitectura del sistema
@@ -184,8 +184,8 @@ pytest>=7.0            # Framework de testing
       ↓                      ↓
 ┌──────────────┐    ┌──────────────────┐
 │   ESTÁTICO   │    │   SEMÁNTICO      │
-│  AST + Regex │    │  LLM (Claude)    │
-│  4 Checkers  │    │  ⏳ Pendiente    │
+│  AST + Regex │    │  LLM (Gemini)    │
+│  4 Checkers  │    │  ✅ Fase 5       │
 └──────┬───────┘    └────────┬─────────┘
        └──────────┬───────────┘
                   ↓
@@ -223,7 +223,7 @@ pip install -e .
 
 ---
 
-### ✅ Funcionalidad ACTUAL (Fase 4)
+### ✅ Funcionalidad ACTUAL (Fase 5)
 
 **Funcionalidad disponible en la versión actual:**
 
@@ -234,59 +234,66 @@ python -m gtaa_validator /path/to/your/selenium-project
 # Modo verbose para ver detalles de cada violación
 python -m gtaa_validator /path/to/project --verbose
 
+# Análisis semántico AI (requiere GEMINI_API_KEY en .env)
+python -m gtaa_validator /path/to/project --ai --verbose
+
 # Exportar reportes
 python -m gtaa_validator examples/bad_project --html report.html
 python -m gtaa_validator examples/bad_project --json report.json
-python -m gtaa_validator examples/bad_project --html report.html --json report.json --verbose
+python -m gtaa_validator examples/bad_project --ai --html report.html --json report.json --verbose
 
 # Probar con ejemplos incluidos
 python -m gtaa_validator examples/bad_project --verbose
 python -m gtaa_validator examples/good_project
 
 # Ejecutar tests
-pytest tests/               # Todos (165 tests)
-pytest tests/unit/          # Solo unitarios (143 tests)
-pytest tests/integration/   # Solo integración (22 tests)
+pytest tests/               # Todos (209 tests)
+pytest tests/unit/          # Solo unitarios
+pytest tests/integration/   # Solo integración
 ```
 
 **Capacidades implementadas:**
-- ✅ 4 checkers detectando 9 tipos de violaciones
+- ✅ 4 checkers detectando 9 tipos de violaciones estáticas
 - ✅ Análisis AST con Visitor Pattern (BrowserAPICallVisitor, AssertionVisitor, BusinessLogicVisitor, HardcodedDataVisitor)
 - ✅ Análisis de estructura de proyecto (directorios requeridos)
 - ✅ Detección por regex (emails, URLs, teléfonos, passwords, locators duplicados)
+- ✅ Análisis semántico AI con Gemini Flash API (4 tipos de violación semántica)
+- ✅ Sugerencias AI contextuales para cada violación (enriquecimiento)
+- ✅ Fallback automático a MockLLMClient cuando no hay API key
 - ✅ Sistema de scoring 0-100 basado en severidad de violaciones
-- ✅ Modo verbose con detalles: archivo, línea, código, mensaje
+- ✅ Modo verbose con detalles: archivo, línea, código, mensaje, sugerencias AI
 - ✅ Exit code 1 si hay violaciones críticas (útil para CI/CD)
 - ✅ Reporte HTML dashboard autocontenido con SVG inline (score gauge, gráficos, tablas)
 - ✅ Reporte JSON estructurado para integración CI/CD
-- ✅ Flags `--json` y `--html` compatibles entre sí y con salida de texto
-- ✅ 165 tests automatizados (143 unitarios + 22 integración)
+- ✅ Flags `--json`, `--html` y `--ai` compatibles entre sí
+- ✅ 209 tests automatizados
 
-**Ejemplo de salida:**
+**Ejemplo de salida (con --ai):**
 ```
-=== gTAA AI Validator - Fase 4 ===
+=== gTAA AI Validator - Fase 5 ===
 Analizando proyecto: examples/bad_project
 
 Ejecutando análisis estático...
+Usando Gemini Flash API para análisis semántico...
 
 ============================================================
 RESULTADOS DEL ANÁLISIS
 ============================================================
 
 Archivos analizados: 6
-Violaciones totales: 35
+Violaciones totales: 59
 
 Violaciones por severidad:
   CRÍTICA: 16
-  ALTA:    13
-  MEDIA:   4
+  ALTA:    19
+  MEDIA:   22
   BAJA:    2
 
 Puntuación de cumplimiento: 0.0/100
 Estado: PROBLEMAS CRÍTICOS
 
 ============================================================
-Análisis completado en 0.00s
+Análisis completado en 12.34s
 ============================================================
 ```
 
@@ -335,15 +342,15 @@ El archivo [examples/README.md](examples/README.md) incluye:
 
 ---
 
-### ⏳ Funcionalidad FUTURA (Fases 5-6)
+### ⏳ Funcionalidad FUTURA (Fase 6)
 
 **Las siguientes funcionalidades están PENDIENTES de implementación:**
 
-#### Fase 5: Análisis con IA
+#### Fase 6: Validación empírica
 ```bash
-# ⏳ PRÓXIMAMENTE - Análisis semántico con LLM (requiere API key)
-export ANTHROPIC_API_KEY="sk-ant-..."
-python -m gtaa_validator /path/to/project --use-ai
+# ⏳ PRÓXIMAMENTE - Validación con proyectos reales y métricas comparativas
+# Comparativa análisis estático vs semántico (LLM)
+# Documentación TFM final
 ```
 
 #### Integración CI/CD
@@ -371,7 +378,13 @@ gtaa-ai-validator/
 │   ├── models.py                       # Modelos de datos (Violation, Report)
 │   │
 │   ├── analyzers/                      # 🔍 Motores de análisis
-│   │   └── static_analyzer.py          # Orquestador (Facade Pattern)
+│   │   ├── static_analyzer.py          # Orquestador estático (Facade Pattern)
+│   │   └── semantic_analyzer.py        # Orquestador semántico AI (Fase 5)
+│   │
+│   ├── llm/                            # 🧠 Clientes LLM (Fase 5)
+│   │   ├── client.py                   # MockLLMClient (heurísticas deterministas)
+│   │   ├── gemini_client.py            # GeminiLLMClient (Gemini Flash API)
+│   │   └── prompts.py                  # Templates de prompts para el modelo
 │   │
 │   ├── reporters/                      # 📊 Generadores de reportes
 │   │   ├── json_reporter.py            # Reporte JSON estructurado
@@ -384,17 +397,20 @@ gtaa-ai-validator/
 │       ├── adaptation_checker.py       # Test Adaptation Layer (AST + Regex)
 │       └── quality_checker.py          # Calidad de tests (AST + Regex)
 │
-├── tests/                              # 🧪 Tests automatizados (165 tests)
+├── tests/                              # 🧪 Tests automatizados (209 tests)
 │   ├── conftest.py                     # Fixtures compartidas
-│   ├── unit/                           # Tests unitarios (143 tests)
+│   ├── unit/                           # Tests unitarios
 │   │   ├── test_models.py             # Modelos de datos
 │   │   ├── test_definition_checker.py # DefinitionChecker
 │   │   ├── test_structure_checker.py  # StructureChecker
 │   │   ├── test_adaptation_checker.py # AdaptationChecker
 │   │   ├── test_quality_checker.py    # QualityChecker
 │   │   ├── test_json_reporter.py      # JsonReporter
-│   │   └── test_html_reporter.py      # HtmlReporter
-│   └── integration/                    # Tests de integración (22 tests)
+│   │   ├── test_html_reporter.py      # HtmlReporter
+│   │   ├── test_llm_client.py         # MockLLMClient
+│   │   ├── test_gemini_client.py      # GeminiLLMClient
+│   │   └── test_semantic_analyzer.py  # SemanticAnalyzer
+│   └── integration/                    # Tests de integración
 │       ├── test_static_analyzer.py    # Pipeline completo
 │       └── test_reporters.py          # Análisis → JSON/HTML
 │
@@ -403,13 +419,16 @@ gtaa-ai-validator/
 │   ├── bad_project/                    # Proyecto con ~35 violaciones
 │   └── good_project/                   # Proyecto gTAA correcto (score 100)
 │
+├── .env.example                        # 🔑 Template para API key de Gemini
+│
 └── docs/                               # 📚 Documentación técnica
     ├── README.md                       # Índice de documentación
-    ├── ARCHITECTURE_DECISIONS.md       # Decisiones arquitectónicas (ADR)
+    ├── ARCHITECTURE_DECISIONS.md       # Decisiones arquitectónicas (16 ADR)
     ├── PHASE1_FLOW_DIAGRAMS.md         # Diagramas Fase 1 (CLI y fundación)
-    ├── PHASE2_FLOW_DIAGRAMS.md         # Diagramas Fase 2
-    ├── PHASE3_FLOW_DIAGRAMS.md         # Diagramas Fase 3
-    └── PHASE4_FLOW_DIAGRAMS.md         # Diagramas Fase 4 (Reportes)
+    ├── PHASE2_FLOW_DIAGRAMS.md         # Diagramas Fase 2 (análisis estático)
+    ├── PHASE3_FLOW_DIAGRAMS.md         # Diagramas Fase 3 (9 violaciones)
+    ├── PHASE4_FLOW_DIAGRAMS.md         # Diagramas Fase 4 (reportes)
+    └── PHASE5_FLOW_DIAGRAMS.md         # Diagramas Fase 5 (análisis semántico AI)
 ```
 
 > **Nota sobre `docs/`**: La documentación técnica se distribuye en múltiples documentos independientes, uno por cada fase del proyecto y uno para las decisiones arquitectónicas. Esta separación responde a un criterio de **transparencia y trazabilidad**: cada documento refleja el estado del proyecto en el momento de su elaboración, permitiendo seguir la evolución del diseño y las decisiones técnicas a lo largo del desarrollo. El índice general se encuentra en [`docs/README.md`](docs/README.md).
@@ -461,27 +480,35 @@ Puntuación = max(0, 100 - suma de penalizaciones)
 - Compatible con pipelines CI/CD
 - Generado desde `Report.to_dict()` sin dependencias externas
 
-### 4. 🧠 Análisis Semántico con IA (⏳ Fase 5)
+### 4. 🧠 Análisis Semántico con IA (✅ Fase 5)
 
-**Componente de LLM:**
-- Detección de violaciones semánticas que reglas estáticas no pueden capturar
-- Análisis contextual del código
-- Recomendaciones inteligentes de refactorización
+**Activado con `--ai`:**
+- Detección de 4 tipos de violaciones semánticas que AST no puede capturar
+- Sugerencias AI contextuales en español para cada violación
+- Gemini Flash API (free tier) con fallback a MockLLMClient
+- Configuración via `GEMINI_API_KEY` en `.env`
+
+| Severidad | Tipo Semántico | Detección |
+|-----------|---------------|-----------|
+| 🟡 ALTA | `IMPLICIT_TEST_DEPENDENCY` | LLM: tests comparten estado mutable |
+| 🟠 MEDIA | `UNCLEAR_TEST_PURPOSE` | LLM: nombre/docstring no descriptivo |
+| 🟠 MEDIA | `PAGE_OBJECT_DOES_TOO_MUCH` | LLM: POM con exceso de responsabilidades |
+| 🟠 MEDIA | `MISSING_WAIT_STRATEGY` | LLM: interacción UI sin espera |
 
 ---
 
 ## 🎓 Contexto Académico (TFM)
 
 ### Objetivos del TFM
-1. ✅ Desarrollar sistema de IA para validación arquitectónica (Fase 4/6 completa)
-2. 🎯 Comparar análisis estático vs semántico (LLM) (pendiente - Fase 5)
-3. 🎯 Demostrar viabilidad de LLMs en code analysis (pendiente - Fase 5)
+1. ✅ Desarrollar sistema de IA para validación arquitectónica (Fase 5/6 completa)
+2. ✅ Integrar LLM real para análisis semántico (Gemini Flash - Fase 5)
+3. 🎯 Comparar análisis estático vs semántico con métricas (pendiente - Fase 6)
 4. ✅ Crear dataset etiquetado para la comunidad (ejemplos con ground truth)
 
 ### Tecnologías de IA a Utilizar
 - **Abstract Syntax Tree (AST)** para análisis estático (✅ Implementado)
 - **Regex patterns** para detección de datos y locators (✅ Implementado)
-- **Large Language Models** (Claude - ⏳ Fase 5)
+- **Large Language Models** (Gemini Flash - ✅ Fase 5)
 - **Machine Learning** (Random Forest - opcional)
 
 ### Metodología
@@ -490,7 +517,7 @@ Puntuación = max(0, 100 - suma de penalizaciones)
 - ✅ Fase 2: Motor de análisis estático con AST (1 violación) - **COMPLETA**
 - ✅ Fase 3: Cobertura completa (9 violaciones) + Tests (140) - **COMPLETA**
 - ✅ Fase 4: Reportes HTML/JSON profesionales - **COMPLETA**
-- ⏳ Fase 5: Integración LLM y comparativa
+- ✅ Fase 5: Análisis semántico AI (Gemini Flash + Mock) - **COMPLETA**
 - ⏳ Fase 6: Validación empírica y documentación TFM
 
 ---
@@ -519,6 +546,7 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 - **[Diagramas de Flujo - Fase 2](docs/PHASE2_FLOW_DIAGRAMS.md)** ✅ — Motor de análisis estático, BrowserAPICallVisitor, scoring
 - **[Diagramas de Flujo - Fase 3](docs/PHASE3_FLOW_DIAGRAMS.md)** ✅ — 4 checkers, 9 violaciones, AST visitors, cross-file state
 - **[Diagramas de Flujo - Fase 4](docs/PHASE4_FLOW_DIAGRAMS.md)** ✅ — Reportes JSON/HTML, SVG inline, agrupación por checker
+- **[Diagramas de Flujo - Fase 5](docs/PHASE5_FLOW_DIAGRAMS.md)** ✅ — Análisis semántico AI, Gemini Flash, prompt engineering, parsing LLM
 - **[Índice de documentación](docs/README.md)** ✅
 
 ---
@@ -570,7 +598,7 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 | AdaptationChecker | ASSERTION_IN_POM, FORBIDDEN_IMPORT, BUSINESS_LOGIC_IN_POM, DUPLICATE_LOCATOR | AST Visitors + Regex + Estado cross-file |
 | QualityChecker | HARDCODED_TEST_DATA, LONG_TEST_FUNCTION, POOR_TEST_NAMING | AST Visitor + Regex |
 
-**Próximos pasos:** Fase 5 - Integración LLM (análisis semántico)
+**Próximos pasos:** Fase 4 - Reportes HTML/JSON
 
 ---
 
@@ -588,12 +616,32 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 - ✅ 25 tests nuevos (14 unitarios HtmlReporter + 7 unitarios JsonReporter + 4 integración)
 - ✅ Documentación: PHASE4_FLOW_DIAGRAMS.md + ADR 9-11
 
-**Próximos pasos:** Fase 5 - Integración LLM (análisis semántico)
+**Próximos pasos:** Fase 5 - Análisis semántico AI
+
+---
+
+### Versión 0.5.0 - Fase 5 (1 Febrero 2026) ✅
+
+**Implementado:**
+- ✅ GeminiLLMClient: análisis semántico real con Gemini 2.5 Flash Lite API
+- ✅ MockLLMClient: heurísticas deterministas (AST + regex) como fallback
+- ✅ Prompt engineering: 3 templates (system, analyze, enrich) optimizados para gTAA
+- ✅ SemanticAnalyzer: orquestación en 2 fases (detección + enriquecimiento)
+- ✅ 4 nuevos tipos de violación semántica (UNCLEAR_TEST_PURPOSE, PAGE_OBJECT_DOES_TOO_MUCH, IMPLICIT_TEST_DEPENDENCY, MISSING_WAIT_STRATEGY)
+- ✅ Sugerencias AI contextuales en español para cada violación
+- ✅ Parsing robusto de respuestas LLM (JSON, markdown, errores)
+- ✅ Configuración via .env con python-dotenv (GEMINI_API_KEY)
+- ✅ Fallback automático: sin API key → MockLLMClient sin error
+- ✅ Flag CLI `--ai` para activar análisis semántico
+- ✅ 12 tests unitarios nuevos para GeminiLLMClient (mockeados)
+- ✅ Documentación: PHASE5_FLOW_DIAGRAMS.md + ADR 12-16
+
+**Próximos pasos:** Fase 6 - Validación empírica y documentación TFM
 
 ---
 
 <div align="center">
 
-**Estado del proyecto:** En desarrollo activo | Fase 4/6 completa
+**Estado del proyecto:** En desarrollo activo | Fase 5/6 completa
 
 </div>
