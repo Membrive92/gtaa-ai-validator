@@ -98,6 +98,9 @@ class ViolationType(Enum):
     IMPLICIT_TEST_DEPENDENCY = "IMPLICIT_TEST_DEPENDENCY"    # Tests dependientes del orden de ejecución
     MISSING_WAIT_STRATEGY = "MISSING_WAIT_STRATEGY"          # Sin esperas para operaciones async
 
+    # Violaciones semánticas adicionales (FASE 6 — detectadas por LLM)
+    MISSING_AAA_STRUCTURE = "MISSING_AAA_STRUCTURE"          # Test sin estructura Arrange-Act-Assert
+
     def get_severity(self) -> Severity:
         """Devuelve el nivel de severidad para este tipo de violación."""
         severity_map = {
@@ -128,6 +131,9 @@ class ViolationType(Enum):
             ViolationType.PAGE_OBJECT_DOES_TOO_MUCH: Severity.HIGH,
             ViolationType.IMPLICIT_TEST_DEPENDENCY: Severity.HIGH,
             ViolationType.MISSING_WAIT_STRATEGY: Severity.MEDIUM,
+
+            # Semánticas (Fase 6)
+            ViolationType.MISSING_AAA_STRUCTURE: Severity.MEDIUM,
         }
         return severity_map[self]
 
@@ -168,6 +174,10 @@ class ViolationType(Enum):
                 "El test depende de estado global o variables a nivel de módulo, creando dependencias implícitas",
             ViolationType.MISSING_WAIT_STRATEGY:
                 "Interacción con UI sin espera explícita previa, puede causar flakiness",
+
+            # Semánticas (Fase 6)
+            ViolationType.MISSING_AAA_STRUCTURE:
+                "El test no sigue la estructura Arrange-Act-Assert, dificultando su comprensión",
         }
         return descriptions[self]
 
@@ -224,6 +234,11 @@ class ViolationType(Enum):
             ViolationType.MISSING_WAIT_STRATEGY:
                 "Añadir esperas explícitas (WebDriverWait, expect) antes de interacciones con elementos. "
                 "Evitar time.sleep() y preferir esperas condicionales.",
+
+            # Semánticas (Fase 6)
+            ViolationType.MISSING_AAA_STRUCTURE:
+                "Estructurar el test en tres bloques claros: Arrange (preparar datos), "
+                "Act (ejecutar acción) y Assert (verificar resultado). Separar con líneas en blanco.",
         }
         return recommendations[self]
 

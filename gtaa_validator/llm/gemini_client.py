@@ -31,6 +31,7 @@ class GeminiLLMClient:
         "PAGE_OBJECT_DOES_TOO_MUCH",
         "IMPLICIT_TEST_DEPENDENCY",
         "MISSING_WAIT_STRATEGY",
+        "MISSING_AAA_STRUCTURE",
     }
 
     def __init__(self, api_key: str, model: str = "gemini-2.5-flash-lite"):

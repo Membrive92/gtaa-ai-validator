@@ -32,6 +32,7 @@ class MockLLMClient:
         if is_test_file:
             violations.extend(self._check_unclear_test_purpose(tree, file_content))
             violations.extend(self._check_implicit_test_dependency(tree, file_content))
+            violations.extend(self._check_missing_aaa_structure(tree, file_content))
 
         if is_page_object:
             violations.extend(self._check_page_object_too_much(tree, file_content))
@@ -221,6 +222,43 @@ class MockLLMClient:
                     "line": line_no,
                     "message": (
                         f"Llamada a '{node.func.attr}()' sin espera explícita previa"
+                    ),
+                    "code_snippet": line_text,
+                })
+
+        return violations
+
+    def _check_missing_aaa_structure(
+        self, tree: ast.Module, source: str
+    ) -> List[dict]:
+        """Tests sin aserciones → MISSING_AAA_STRUCTURE."""
+        violations = []
+        lines = source.splitlines()
+        assert_keywords = {"assert", "assertEqual", "assertTrue", "assertFalse",
+                           "assertIn", "assertRaises", "assertIsNone", "assertIsNotNone",
+                           "assert_called", "assert_called_once", "assert_called_with"}
+
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            if not node.name.startswith("test_"):
+                continue
+
+            # Check if test body contains any assert
+            func_source = "\n".join(
+                lines[node.lineno - 1:node.end_lineno] if hasattr(node, "end_lineno") and node.end_lineno
+                else lines[node.lineno - 1:node.lineno + 10]
+            )
+
+            has_assert = any(kw in func_source for kw in assert_keywords)
+            if not has_assert:
+                line_text = lines[node.lineno - 1].strip() if node.lineno <= len(lines) else ""
+                violations.append({
+                    "type": "MISSING_AAA_STRUCTURE",
+                    "line": node.lineno,
+                    "message": (
+                        f"El test '{node.name}' no contiene aserciones visibles. "
+                        "Un test debe tener una fase Assert clara"
                     ),
                     "code_snippet": line_text,
                 })

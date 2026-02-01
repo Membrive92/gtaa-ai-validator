@@ -218,3 +218,40 @@ class TestMockEnrichViolation:
             assert len(result) > 20, f"Sugerencia corta para {vtype}"
 
 
+# =========================================================================
+# MISSING_AAA_STRUCTURE heuristic
+# =========================================================================
+
+class TestMissingAAAStructure:
+
+    def test_test_without_assert_detected(self, mock_client):
+        source = '''\
+def test_sum_values():
+    x = 1 + 1
+    y = x * 2
+'''
+        results = mock_client.analyze_file(source, "test_example.py")
+        aaa = [v for v in results if v["type"] == "MISSING_AAA_STRUCTURE"]
+        assert len(aaa) == 1
+
+    def test_test_with_assert_ok(self, mock_client):
+        source = '''\
+def test_with_assert():
+    x = 1 + 1
+    assert x == 2
+'''
+        results = mock_client.analyze_file(source, "test_example.py")
+        aaa = [v for v in results if v["type"] == "MISSING_AAA_STRUCTURE"]
+        assert len(aaa) == 0
+
+    def test_test_with_assertEqual_ok(self, mock_client):
+        source = '''\
+def test_unittest_style():
+    x = 1 + 1
+    self.assertEqual(x, 2)
+'''
+        results = mock_client.analyze_file(source, "test_example.py")
+        aaa = [v for v in results if v["type"] == "MISSING_AAA_STRUCTURE"]
+        assert len(aaa) == 0
+
+

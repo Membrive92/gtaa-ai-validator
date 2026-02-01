@@ -32,6 +32,7 @@ Busca SOLO estos tipos de violaciones:
 - `PAGE_OBJECT_DOES_TOO_MUCH`: Page Object con demasiadas responsabilidades (muchos métodos, múltiples páginas).
 - `IMPLICIT_TEST_DEPENDENCY`: Tests que dependen del orden de ejecución o comparten estado mutable.
 - `MISSING_WAIT_STRATEGY`: Interacciones con UI (click, fill, etc.) sin espera explícita previa.
+- `MISSING_AAA_STRUCTURE`: Test que no sigue la estructura Arrange-Act-Assert. El código mezcla preparación, acción y verificación sin separación clara.
 
 Responde SOLO con un JSON array. Si no hay violaciones, responde con `[]`.
 Cada violación debe tener este formato:

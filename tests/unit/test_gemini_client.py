@@ -23,7 +23,7 @@ class TestGeminiClientInit:
     def test_con_api_key_crea_cliente(self, mock_genai_client):
         """Constructor con API key válida crea instancia."""
         client = GeminiLLMClient(api_key="test-key-123")
-        assert client.model == "gemini-2.0-flash"
+        assert client.model == "gemini-2.5-flash-lite"
         mock_genai_client.assert_called_once_with(api_key="test-key-123")
 
 
@@ -150,3 +150,18 @@ class TestGeminiEnrichViolation:
         result = client.enrich_violation({"type": "X", "message": "x"}, "# code")
 
         assert result == ""
+
+
+class TestGeminiValidTypes:
+    """Tests para VALID_TYPES."""
+
+    def test_valid_types_includes_aaa(self):
+        assert "MISSING_AAA_STRUCTURE" in GeminiLLMClient.VALID_TYPES
+
+    @patch("gtaa_validator.llm.gemini_client.genai.Client")
+    def test_parse_missing_aaa_structure(self, mock_genai_client):
+        client = GeminiLLMClient(api_key="test-key")
+        text = '[{"type": "MISSING_AAA_STRUCTURE", "line": 5, "message": "test", "code_snippet": "x"}]'
+        result = client._parse_violations(text)
+        assert len(result) == 1
+        assert result[0]["type"] == "MISSING_AAA_STRUCTURE"
