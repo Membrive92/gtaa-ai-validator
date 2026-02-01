@@ -227,7 +227,6 @@ class MockLLMClient:
 
         return violations
 
-
 # --- Utilidades ---
 
 def _is_test_file(file_path: str) -> bool:

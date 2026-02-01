@@ -11,10 +11,11 @@ y lo enriquece con análisis semántico.
 """
 
 from pathlib import Path
-from typing import List
+from typing import List, Union
 
 from gtaa_validator.models import Report, Violation, ViolationType, Severity
 from gtaa_validator.llm.client import MockLLMClient
+from gtaa_validator.llm.gemini_client import GeminiLLMClient
 
 
 # Directorios excluidos del análisis (mismos que StaticAnalyzer)
@@ -26,15 +27,17 @@ EXCLUDED_DIRS = {
 
 class SemanticAnalyzer:
     """
-    Analizador semántico que usa MockLLMClient para detectar y enriquecer violaciones.
+    Analizador semántico que usa un cliente LLM para detectar y enriquecer violaciones.
+
+    Acepta MockLLMClient (heurísticas) o GeminiLLMClient (API real).
 
     Uso:
-        client = MockLLMClient()
+        client = MockLLMClient()  # o GeminiLLMClient(api_key)
         semantic = SemanticAnalyzer(project_path, client)
         enriched_report = semantic.analyze(static_report)
     """
 
-    def __init__(self, project_path: Path, llm_client: MockLLMClient, verbose: bool = False):
+    def __init__(self, project_path: Path, llm_client: Union[MockLLMClient, GeminiLLMClient], verbose: bool = False):
         self.project_path = project_path
         self.llm_client = llm_client
         self.verbose = verbose

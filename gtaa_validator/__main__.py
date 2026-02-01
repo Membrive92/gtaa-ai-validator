@@ -12,15 +12,20 @@ Análisis estático con AST:
 - Análisis semántico AI con --ai (Fase 5)
 """
 
+import os
 import click
 import sys
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from gtaa_validator.analyzers.static_analyzer import StaticAnalyzer
 from gtaa_validator.reporters.json_reporter import JsonReporter
 from gtaa_validator.reporters.html_reporter import HtmlReporter
 from gtaa_validator.analyzers.semantic_analyzer import SemanticAnalyzer
 from gtaa_validator.llm.client import MockLLMClient
+from gtaa_validator.llm.gemini_client import GeminiLLMClient
 
 
 @click.command()
@@ -61,9 +66,13 @@ def main(project_path: str, verbose: bool, json_path: str, html_path: str, ai: b
 
     # Análisis semántico AI (opcional)
     if ai:
-        if not verbose:
-            click.echo("Ejecutando análisis semántico AI...")
-        llm_client = MockLLMClient()
+        api_key = os.environ.get("GEMINI_API_KEY", "")
+        if api_key:
+            click.echo("Usando Gemini Flash API para análisis semántico...")
+            llm_client = GeminiLLMClient(api_key)
+        else:
+            click.echo("GEMINI_API_KEY no configurada, usando análisis mock...")
+            llm_client = MockLLMClient()
         semantic = SemanticAnalyzer(project_path, llm_client, verbose=verbose)
         report = semantic.analyze(report)
 
