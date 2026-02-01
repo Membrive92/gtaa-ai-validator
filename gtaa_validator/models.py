@@ -87,6 +87,12 @@ class ViolationType(Enum):
     # Violaciones de severidad BAJA
     POOR_TEST_NAMING = "POOR_TEST_NAMING"                  # Nombres genéricos de test (test_1, test_2)
 
+    # Violaciones semánticas (FASE 5 — detectadas por LLM)
+    UNCLEAR_TEST_PURPOSE = "UNCLEAR_TEST_PURPOSE"            # Test sin propósito claro
+    PAGE_OBJECT_DOES_TOO_MUCH = "PAGE_OBJECT_DOES_TOO_MUCH" # Page Object con demasiadas responsabilidades
+    IMPLICIT_TEST_DEPENDENCY = "IMPLICIT_TEST_DEPENDENCY"    # Tests dependientes del orden de ejecución
+    MISSING_WAIT_STRATEGY = "MISSING_WAIT_STRATEGY"          # Sin esperas para operaciones async
+
     def get_severity(self) -> Severity:
         """Devuelve el nivel de severidad para este tipo de violación."""
         severity_map = {
@@ -106,6 +112,12 @@ class ViolationType(Enum):
 
             # Baja
             ViolationType.POOR_TEST_NAMING: Severity.LOW,
+
+            # Semánticas (Fase 5)
+            ViolationType.UNCLEAR_TEST_PURPOSE: Severity.MEDIUM,
+            ViolationType.PAGE_OBJECT_DOES_TOO_MUCH: Severity.HIGH,
+            ViolationType.IMPLICIT_TEST_DEPENDENCY: Severity.HIGH,
+            ViolationType.MISSING_WAIT_STRATEGY: Severity.MEDIUM,
         }
         return severity_map[self]
 
@@ -130,6 +142,16 @@ class ViolationType(Enum):
                 "La función de test es demasiado larga (>50 líneas), reduciendo la mantenibilidad",
             ViolationType.POOR_TEST_NAMING:
                 "La función de test tiene un nombre genérico (test_1, test_2, etc.)",
+
+            # Semánticas (Fase 5)
+            ViolationType.UNCLEAR_TEST_PURPOSE:
+                "El test no tiene un propósito claro: nombre genérico y sin docstring explicativa",
+            ViolationType.PAGE_OBJECT_DOES_TOO_MUCH:
+                "El Page Object tiene demasiadas responsabilidades (>10 métodos públicos)",
+            ViolationType.IMPLICIT_TEST_DEPENDENCY:
+                "El test depende de estado global o variables a nivel de módulo, creando dependencias implícitas",
+            ViolationType.MISSING_WAIT_STRATEGY:
+                "Interacción con UI sin espera explícita previa, puede causar flakiness",
         }
         return descriptions[self]
 
@@ -163,6 +185,20 @@ class ViolationType(Enum):
             ViolationType.POOR_TEST_NAMING:
                 "Usar nombres descriptivos: test_usuario_puede_hacer_login_con_credenciales_validas() "
                 "en lugar de test_1().",
+
+            # Semánticas (Fase 5)
+            ViolationType.UNCLEAR_TEST_PURPOSE:
+                "Añadir un docstring que explique qué valida el test y por qué. "
+                "El nombre debe describir el comportamiento esperado.",
+            ViolationType.PAGE_OBJECT_DOES_TOO_MUCH:
+                "Dividir el Page Object en componentes más pequeños siguiendo el patrón "
+                "Component Object. Cada clase debe representar una sección de la página.",
+            ViolationType.IMPLICIT_TEST_DEPENDENCY:
+                "Eliminar dependencias de estado global. Usar fixtures de pytest para setup/teardown. "
+                "Cada test debe ser independiente y ejecutable en cualquier orden.",
+            ViolationType.MISSING_WAIT_STRATEGY:
+                "Añadir esperas explícitas (WebDriverWait, expect) antes de interacciones con elementos. "
+                "Evitar time.sleep() y preferir esperas condicionales.",
         }
         return recommendations[self]
 
@@ -180,6 +216,7 @@ class Violation:
         message: Mensaje detallado explicando la violación
         code_snippet: Fragmento de código opcional mostrando la violación
         recommendation: Cómo corregir esta violación
+        ai_suggestion: Sugerencia generada por análisis semántico LLM (opcional)
     """
     violation_type: ViolationType
     severity: Severity
@@ -188,6 +225,7 @@ class Violation:
     message: str = ""
     code_snippet: Optional[str] = None
     recommendation: str = ""
+    ai_suggestion: Optional[str] = None
 
     def __post_init__(self):
         """
@@ -215,7 +253,8 @@ class Violation:
             "line": self.line_number,
             "message": self.message,
             "code_snippet": self.code_snippet,
-            "recommendation": self.recommendation
+            "recommendation": self.recommendation,
+            "ai_suggestion": self.ai_suggestion,
         }
 
 

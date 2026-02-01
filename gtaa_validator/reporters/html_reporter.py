@@ -36,6 +36,11 @@ class HtmlReporter:
         "DUPLICATE_LOCATOR": "AdaptationChecker — Page Objects",
         "LONG_TEST_FUNCTION": "QualityChecker — Calidad de tests",
         "POOR_TEST_NAMING": "QualityChecker — Calidad de tests",
+        # Semánticas (Fase 5)
+        "UNCLEAR_TEST_PURPOSE": "SemanticAnalyzer — Análisis AI",
+        "PAGE_OBJECT_DOES_TOO_MUCH": "SemanticAnalyzer — Análisis AI",
+        "IMPLICIT_TEST_DEPENDENCY": "SemanticAnalyzer — Análisis AI",
+        "MISSING_WAIT_STRATEGY": "SemanticAnalyzer — Análisis AI",
     }
 
     # Nombres de severidad en español
@@ -57,6 +62,11 @@ class HtmlReporter:
         "DUPLICATE_LOCATOR": "Localizador duplicado",
         "LONG_TEST_FUNCTION": "Función de test demasiado larga",
         "POOR_TEST_NAMING": "Nombre de test genérico",
+        # Semánticas (Fase 5)
+        "UNCLEAR_TEST_PURPOSE": "Propósito de test poco claro",
+        "PAGE_OBJECT_DOES_TOO_MUCH": "Page Object con demasiadas responsabilidades",
+        "IMPLICIT_TEST_DEPENDENCY": "Dependencia implícita entre tests",
+        "MISSING_WAIT_STRATEGY": "Sin estrategia de espera",
     }
 
     # Orden de los checkers para agrupación
@@ -65,6 +75,7 @@ class HtmlReporter:
         "DefinitionChecker — Separación de capas",
         "AdaptationChecker — Page Objects",
         "QualityChecker — Calidad de tests",
+        "SemanticAnalyzer — Análisis AI",
     ]
 
     def generate(self, report: Report, output_path: Path) -> None:
@@ -206,6 +217,8 @@ class HtmlReporter:
         .badge-medium { background: #ca8a04; }
         .badge-low { background: #2563eb; }
         .code-snippet { font-family: 'Consolas', 'Monaco', monospace; font-size: 0.8rem; background: #f1f5f9; padding: 0.3rem 0.5rem; border-radius: 3px; display: block; white-space: pre-wrap; word-break: break-word; margin-top: 0.3rem; }
+        .ai-badge { display: inline-block; padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600; background: #7c3aed; color: #fff; margin-left: 0.4rem; }
+        .ai-suggestion { font-size: 0.8rem; color: #6d28d9; background: #f5f3ff; padding: 0.4rem 0.6rem; border-radius: 4px; margin-top: 0.3rem; border-left: 3px solid #7c3aed; }
         .violation-type { font-weight: 600; color: #334155; font-size: 0.85rem; }
         .violation-desc { font-size: 0.8rem; color: #64748b; }
 
@@ -411,12 +424,22 @@ class HtmlReporter:
                 if v.code_snippet:
                     snippet = f'<span class="code-snippet">{html.escape(v.code_snippet)}</span>'
 
+                ai_html = ""
+                if v.ai_suggestion:
+                    ai_html = (
+                        f'<div class="ai-suggestion">🤖 {html.escape(v.ai_suggestion)}</div>'
+                    )
+
+                ai_badge = ""
+                if v.ai_suggestion:
+                    ai_badge = '<span class="ai-badge">AI</span>'
+
                 rows.append(f"""                <tr>
-                    <td>{badge}</td>
+                    <td>{badge}{ai_badge}</td>
                     <td>{type_cell}</td>
                     <td>{location}</td>
                     <td>{html.escape(v.message)}{snippet}</td>
-                    <td>{html.escape(v.recommendation)}</td>
+                    <td>{html.escape(v.recommendation)}{ai_html}</td>
                 </tr>""")
 
             rows_html = "\n".join(rows)

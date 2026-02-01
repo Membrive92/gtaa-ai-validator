@@ -9,6 +9,7 @@ Análisis estático con AST:
 - Mostrar violaciones por severidad
 - Soporte de flag --verbose para información detallada
 - Exportación a JSON y HTML (--json, --html)
+- Análisis semántico AI con --ai (Fase 5)
 """
 
 import click
@@ -18,6 +19,8 @@ from pathlib import Path
 from gtaa_validator.analyzers.static_analyzer import StaticAnalyzer
 from gtaa_validator.reporters.json_reporter import JsonReporter
 from gtaa_validator.reporters.html_reporter import HtmlReporter
+from gtaa_validator.analyzers.semantic_analyzer import SemanticAnalyzer
+from gtaa_validator.llm.client import MockLLMClient
 
 
 @click.command()
@@ -25,7 +28,8 @@ from gtaa_validator.reporters.html_reporter import HtmlReporter
 @click.option('--verbose', '-v', is_flag=True, help='Activar salida detallada')
 @click.option('--json', 'json_path', type=click.Path(), default=None, help='Exportar reporte JSON al fichero indicado')
 @click.option('--html', 'html_path', type=click.Path(), default=None, help='Exportar reporte HTML al fichero indicado')
-def main(project_path: str, verbose: bool, json_path: str, html_path: str):
+@click.option('--ai', is_flag=True, help='Activar análisis semántico AI')
+def main(project_path: str, verbose: bool, json_path: str, html_path: str, ai: bool):
     """
     Valida el cumplimiento de la arquitectura gTAA en un proyecto de test automation.
 
@@ -36,7 +40,7 @@ def main(project_path: str, verbose: bool, json_path: str, html_path: str):
         python -m gtaa_validator ./mi-proyecto-selenium --verbose
     """
     # Mostrar cabecera
-    click.echo("=== gTAA AI Validator - Fase 3 ===")
+    click.echo("=== gTAA AI Validator - Fase 5 ===")
     click.echo(f"Analizando proyecto: {project_path}\n")
 
     # Convertir a objeto Path y resolver a ruta absoluta
@@ -54,6 +58,14 @@ def main(project_path: str, verbose: bool, json_path: str, html_path: str):
         click.echo("Ejecutando análisis estático...")
 
     report = analyzer.analyze()
+
+    # Análisis semántico AI (opcional)
+    if ai:
+        if not verbose:
+            click.echo("Ejecutando análisis semántico AI...")
+        llm_client = MockLLMClient()
+        semantic = SemanticAnalyzer(project_path, llm_client, verbose=verbose)
+        report = semantic.analyze(report)
 
     # Mostrar resultados
     if not verbose:
@@ -116,6 +128,10 @@ def main(project_path: str, verbose: bool, json_path: str, html_path: str):
             # Mostrar fragmento de código si está disponible
             if violation.code_snippet:
                 click.echo(f"    Código: {violation.code_snippet}")
+
+            # Mostrar sugerencia AI si existe
+            if violation.ai_suggestion:
+                click.echo(f"    [AI] {violation.ai_suggestion}")
 
     # Exportar reportes si se solicitaron
     if json_path:
