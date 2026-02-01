@@ -320,6 +320,83 @@ def test_math():
 
 
 # =========================================================================
+# Shared mutable state
+# =========================================================================
+
+class TestSharedMutableState:
+
+    def test_module_level_list_detected(self, checker, write_test_file):
+        path = write_test_file("test_example.py", '''\
+shared_data = []
+
+def test_one():
+    shared_data.append(1)
+
+def test_two():
+    assert len(shared_data) == 1
+''')
+        violations = checker.check(path)
+        sm = [v for v in violations if v.violation_type == ViolationType.SHARED_MUTABLE_STATE]
+        assert len(sm) >= 1
+        assert sm[0].severity == Severity.HIGH
+
+    def test_module_level_dict_detected(self, checker, write_test_file):
+        path = write_test_file("test_example.py", '''\
+cache = {}
+
+def test_cached():
+    cache["key"] = "value"
+''')
+        violations = checker.check(path)
+        sm = [v for v in violations if v.violation_type == ViolationType.SHARED_MUTABLE_STATE]
+        assert len(sm) >= 1
+
+    def test_uppercase_constant_ok(self, checker, write_test_file):
+        path = write_test_file("test_example.py", '''\
+DEFAULTS = []
+
+def test_ok():
+    assert True
+''')
+        violations = checker.check(path)
+        assert not any(v.violation_type == ViolationType.SHARED_MUTABLE_STATE for v in violations)
+
+    def test_private_var_ok(self, checker, write_test_file):
+        path = write_test_file("test_example.py", '''\
+_internal = {}
+
+def test_ok():
+    assert True
+''')
+        violations = checker.check(path)
+        assert not any(v.violation_type == ViolationType.SHARED_MUTABLE_STATE for v in violations)
+
+    def test_global_keyword_in_test_detected(self, checker, write_test_file):
+        path = write_test_file("test_example.py", '''\
+counter = 0
+
+def test_increment():
+    global counter
+    counter += 1
+''')
+        violations = checker.check(path)
+        sm = [v for v in violations if v.violation_type == ViolationType.SHARED_MUTABLE_STATE]
+        # Should detect both: module-level mutable AND global keyword
+        assert len(sm) >= 1
+
+    def test_string_assignment_ok(self, checker, write_test_file):
+        """Non-mutable module-level assignments should not be flagged."""
+        path = write_test_file("test_example.py", '''\
+base_url = "https://example.com"
+
+def test_ok():
+    assert True
+''')
+        violations = checker.check(path)
+        assert not any(v.violation_type == ViolationType.SHARED_MUTABLE_STATE for v in violations)
+
+
+# =========================================================================
 # Edge cases
 # =========================================================================
 

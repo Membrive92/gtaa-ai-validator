@@ -90,6 +90,7 @@ class ViolationType(Enum):
     # Violaciones estáticas adicionales (FASE 6)
     BROAD_EXCEPTION_HANDLING = "BROAD_EXCEPTION_HANDLING"    # except Exception genérico en tests
     HARDCODED_CONFIGURATION = "HARDCODED_CONFIGURATION"      # URLs, timeouts, paths hardcodeados
+    SHARED_MUTABLE_STATE = "SHARED_MUTABLE_STATE"            # Variables mutables compartidas entre tests
 
     # Violaciones semánticas (FASE 5 — detectadas por LLM)
     UNCLEAR_TEST_PURPOSE = "UNCLEAR_TEST_PURPOSE"            # Test sin propósito claro
@@ -117,6 +118,7 @@ class ViolationType(Enum):
 
             # Alta (Fase 6)
             ViolationType.HARDCODED_CONFIGURATION: Severity.HIGH,
+            ViolationType.SHARED_MUTABLE_STATE: Severity.HIGH,
 
             # Baja
             ViolationType.POOR_TEST_NAMING: Severity.LOW,
@@ -154,6 +156,8 @@ class ViolationType(Enum):
                 "El test usa except genérico (except: o except Exception:) que oculta fallos reales",
             ViolationType.HARDCODED_CONFIGURATION:
                 "Configuración hardcodeada (URLs, timeouts, sleeps) que debería externalizarse",
+            ViolationType.SHARED_MUTABLE_STATE:
+                "Estado mutable compartido a nivel de módulo que crea dependencias entre tests",
 
             # Semánticas (Fase 5)
             ViolationType.UNCLEAR_TEST_PURPOSE:
@@ -203,6 +207,9 @@ class ViolationType(Enum):
             ViolationType.HARDCODED_CONFIGURATION:
                 "Externalizar configuración a variables de entorno, fixtures de pytest, o archivos "
                 "de configuración. Usar conftest.py para URLs base y timeouts.",
+            ViolationType.SHARED_MUTABLE_STATE:
+                "Eliminar variables mutables a nivel de módulo. Usar fixtures de pytest con scope "
+                "apropiado para compartir estado de forma controlada.",
 
             # Semánticas (Fase 5)
             ViolationType.UNCLEAR_TEST_PURPOSE:

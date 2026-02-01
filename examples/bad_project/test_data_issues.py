@@ -7,9 +7,14 @@ Violations present:
 - LONG_TEST_FUNCTION: test_very_long_checkout (>50 lines)
 - BROAD_EXCEPTION_HANDLING: except genérico (Phase 6)
 - HARDCODED_CONFIGURATION: localhost URL, time.sleep (Phase 6)
+- SHARED_MUTABLE_STATE: variable mutable a nivel de módulo (Phase 6)
 """
 
 import time
+
+# VIOLATION: SHARED_MUTABLE_STATE — estado mutable compartido entre tests
+test_results = []
+shared_cache = {}
 
 
 def test_1():
@@ -95,3 +100,10 @@ def test_with_hardcoded_config():
     base_url = "http://localhost:8080/api"  # VIOLATION: HARDCODED_CONFIGURATION
     time.sleep(3)                           # VIOLATION: HARDCODED_CONFIGURATION
     assert base_url is not None
+
+
+def test_shared_state_usage():
+    """VIOLATION: SHARED_MUTABLE_STATE — usa global."""
+    global test_results  # VIOLATION: SHARED_MUTABLE_STATE
+    test_results.append("passed")
+    assert len(test_results) > 0

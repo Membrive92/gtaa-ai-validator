@@ -7,6 +7,7 @@ Verifica archivos de test en busca de problemas de calidad de código:
 - Convenciones de nomenclatura pobres (test_1, test_2, test_a)
 - Manejo de excepciones genérico (except: / except Exception:)
 - Configuración hardcodeada (URLs base, sleeps, timeouts)
+- Estado mutable compartido a nivel de módulo
 
 Estas violaciones indican pobre mantenibilidad y diseño de tests,
 incluso si no rompen directamente la separación de capas gTAA.
@@ -89,6 +90,7 @@ class QualityChecker(BaseChecker):
             violations.extend(self._check_test_naming(file_path, tree))
             violations.extend(self._check_broad_exception_handling(file_path, tree))
             violations.extend(self._check_hardcoded_configuration(file_path, source_code))
+            violations.extend(self._check_shared_mutable_state(file_path, tree))
 
         except SyntaxError:
             pass
@@ -261,6 +263,69 @@ class QualityChecker(BaseChecker):
                         code_snippet=stripped,
                     )
                 )
+
+        return violations
+
+    def _check_shared_mutable_state(
+        self, file_path: Path, tree: ast.Module
+    ) -> List[Violation]:
+        """Detectar estado mutable compartido a nivel de módulo y uso de global."""
+        violations: List[Violation] = []
+
+        # Check module-level mutable assignments (list, dict, set literals)
+        for node in ast.iter_child_nodes(tree):
+            if not isinstance(node, ast.Assign):
+                continue
+            for target in node.targets:
+                if not isinstance(target, ast.Name):
+                    continue
+                # Skip UPPERCASE constants and private vars
+                if target.id.isupper() or target.id.startswith("_"):
+                    continue
+                # Check if value is mutable literal: [], {}, set()
+                val = node.value
+                is_mutable = (
+                    isinstance(val, ast.List)
+                    or isinstance(val, ast.Dict)
+                    or isinstance(val, ast.Set)
+                    or (isinstance(val, ast.Call)
+                        and isinstance(val.func, ast.Name)
+                        and val.func.id in ("list", "dict", "set"))
+                )
+                if is_mutable:
+                    violations.append(
+                        Violation(
+                            violation_type=ViolationType.SHARED_MUTABLE_STATE,
+                            severity=Severity.HIGH,
+                            file_path=file_path,
+                            line_number=node.lineno,
+                            message=(
+                                f"Variable mutable '{target.id}' a nivel de módulo. "
+                                f"Los tests comparten este estado, creando dependencias implícitas."
+                            ),
+                            code_snippet=f"{target.id} = ...",
+                        )
+                    )
+
+        # Check 'global' keyword usage inside test functions
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef) and node.name.startswith("test_"):
+                for child in ast.walk(node):
+                    if isinstance(child, ast.Global):
+                        for name in child.names:
+                            violations.append(
+                                Violation(
+                                    violation_type=ViolationType.SHARED_MUTABLE_STATE,
+                                    severity=Severity.HIGH,
+                                    file_path=file_path,
+                                    line_number=child.lineno,
+                                    message=(
+                                        f"Uso de 'global {name}' en test. "
+                                        f"Los tests deben ser independientes sin estado global."
+                                    ),
+                                    code_snippet=f"global {name}",
+                                )
+                            )
 
         return violations
 
