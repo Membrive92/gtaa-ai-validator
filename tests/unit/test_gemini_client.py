@@ -158,6 +158,9 @@ class TestGeminiValidTypes:
     def test_valid_types_includes_aaa(self):
         assert "MISSING_AAA_STRUCTURE" in GeminiLLMClient.VALID_TYPES
 
+    def test_valid_types_includes_mixed_abstraction(self):
+        assert "MIXED_ABSTRACTION_LEVEL" in GeminiLLMClient.VALID_TYPES
+
     @patch("gtaa_validator.llm.gemini_client.genai.Client")
     def test_parse_missing_aaa_structure(self, mock_genai_client):
         client = GeminiLLMClient(api_key="test-key")

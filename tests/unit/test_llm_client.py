@@ -255,3 +255,50 @@ def test_unittest_style():
         assert len(aaa) == 0
 
 
+# =========================================================================
+# MIXED_ABSTRACTION_LEVEL heuristic
+# =========================================================================
+
+class TestMixedAbstractionLevel:
+
+    def test_method_with_xpath_detected(self, mock_client):
+        source = '''\
+class LoginPage:
+    def login(self):
+        self.driver.find_element("//input[@id='user']")
+'''
+        results = mock_client.analyze_file(source, "pages/login_page.py")
+        mixed = [v for v in results if v["type"] == "MIXED_ABSTRACTION_LEVEL"]
+        assert len(mixed) == 1
+
+    def test_method_with_by_selector_detected(self, mock_client):
+        source = '''\
+class LoginPage:
+    def submit_form(self):
+        self.driver.find_element(By.ID, "submit")
+'''
+        results = mock_client.analyze_file(source, "pages/login_page.py")
+        mixed = [v for v in results if v["type"] == "MIXED_ABSTRACTION_LEVEL"]
+        assert len(mixed) == 1
+
+    def test_private_method_not_detected(self, mock_client):
+        source = '''\
+class LoginPage:
+    def _find_button(self):
+        self.driver.find_element(By.ID, "submit")
+'''
+        results = mock_client.analyze_file(source, "pages/login_page.py")
+        mixed = [v for v in results if v["type"] == "MIXED_ABSTRACTION_LEVEL"]
+        assert len(mixed) == 0
+
+    def test_clean_method_not_detected(self, mock_client):
+        source = '''\
+class LoginPage:
+    def login(self):
+        self.username_input.fill("user")
+'''
+        results = mock_client.analyze_file(source, "pages/login_page.py")
+        mixed = [v for v in results if v["type"] == "MIXED_ABSTRACTION_LEVEL"]
+        assert len(mixed) == 0
+
+

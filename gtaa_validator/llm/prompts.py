@@ -33,6 +33,7 @@ Busca SOLO estos tipos de violaciones:
 - `IMPLICIT_TEST_DEPENDENCY`: Tests que dependen del orden de ejecución o comparten estado mutable.
 - `MISSING_WAIT_STRATEGY`: Interacciones con UI (click, fill, etc.) sin espera explícita previa.
 - `MISSING_AAA_STRUCTURE`: Test que no sigue la estructura Arrange-Act-Assert. El código mezcla preparación, acción y verificación sin separación clara.
+- `MIXED_ABSTRACTION_LEVEL`: Método de Page Object que mezcla keywords de negocio (login, add_to_cart) con selectores de UI directos (XPath, CSS selectors, By.ID).
 
 Responde SOLO con un JSON array. Si no hay violaciones, responde con `[]`.
 Cada violación debe tener este formato:

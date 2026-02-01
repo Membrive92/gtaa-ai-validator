@@ -100,6 +100,7 @@ class ViolationType(Enum):
 
     # Violaciones semánticas adicionales (FASE 6 — detectadas por LLM)
     MISSING_AAA_STRUCTURE = "MISSING_AAA_STRUCTURE"          # Test sin estructura Arrange-Act-Assert
+    MIXED_ABSTRACTION_LEVEL = "MIXED_ABSTRACTION_LEVEL"      # Keywords de negocio con selectores directos
 
     def get_severity(self) -> Severity:
         """Devuelve el nivel de severidad para este tipo de violación."""
@@ -134,6 +135,7 @@ class ViolationType(Enum):
 
             # Semánticas (Fase 6)
             ViolationType.MISSING_AAA_STRUCTURE: Severity.MEDIUM,
+            ViolationType.MIXED_ABSTRACTION_LEVEL: Severity.MEDIUM,
         }
         return severity_map[self]
 
@@ -178,6 +180,8 @@ class ViolationType(Enum):
             # Semánticas (Fase 6)
             ViolationType.MISSING_AAA_STRUCTURE:
                 "El test no sigue la estructura Arrange-Act-Assert, dificultando su comprensión",
+            ViolationType.MIXED_ABSTRACTION_LEVEL:
+                "El método mezcla keywords de negocio con selectores de UI directos (XPath, CSS)",
         }
         return descriptions[self]
 
@@ -239,6 +243,9 @@ class ViolationType(Enum):
             ViolationType.MISSING_AAA_STRUCTURE:
                 "Estructurar el test en tres bloques claros: Arrange (preparar datos), "
                 "Act (ejecutar acción) y Assert (verificar resultado). Separar con líneas en blanco.",
+            ViolationType.MIXED_ABSTRACTION_LEVEL:
+                "Separar los selectores de UI en métodos privados o propiedades del Page Object. "
+                "Los métodos públicos deben usar nombres de negocio sin exponer detalles de implementación.",
         }
         return recommendations[self]
 

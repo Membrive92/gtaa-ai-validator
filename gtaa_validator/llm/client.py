@@ -37,6 +37,7 @@ class MockLLMClient:
         if is_page_object:
             violations.extend(self._check_page_object_too_much(tree, file_content))
             violations.extend(self._check_missing_wait_strategy(tree, file_content))
+            violations.extend(self._check_mixed_abstraction_level(tree, file_content))
 
         return violations
 
@@ -262,6 +263,47 @@ class MockLLMClient:
                     ),
                     "code_snippet": line_text,
                 })
+
+        return violations
+
+    def _check_mixed_abstraction_level(
+        self, tree: ast.Module, source: str
+    ) -> List[dict]:
+        """Métodos públicos en Page Objects con selectores directos → MIXED_ABSTRACTION_LEVEL."""
+        import re as _re
+        violations = []
+        lines = source.splitlines()
+        selector_patterns = [
+            r'//[\w\[\]@=\'"]+',       # XPath
+            r'css=',                     # CSS selector prefix
+            r'By\.\w+',                  # Selenium By.*
+            r'\[data-[\w-]+',            # data attributes
+            r'#[\w-]+',                  # CSS id selector
+        ]
+        selector_regex = _re.compile('|'.join(selector_patterns))
+
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.ClassDef):
+                continue
+            for item in node.body:
+                if not isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    continue
+                # Only public methods (not starting with _)
+                if item.name.startswith("_"):
+                    continue
+                func_lines = lines[item.lineno - 1:item.end_lineno] if hasattr(item, "end_lineno") and item.end_lineno else lines[item.lineno - 1:item.lineno + 10]
+                func_source = "\n".join(func_lines)
+                if selector_regex.search(func_source):
+                    line_text = lines[item.lineno - 1].strip() if item.lineno <= len(lines) else ""
+                    violations.append({
+                        "type": "MIXED_ABSTRACTION_LEVEL",
+                        "line": item.lineno,
+                        "message": (
+                            f"El método '{item.name}' mezcla lógica de negocio con "
+                            "selectores de UI directos"
+                        ),
+                        "code_snippet": line_text,
+                    })
 
         return violations
 
