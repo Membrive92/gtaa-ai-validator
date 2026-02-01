@@ -6,6 +6,7 @@ Verifica archivos de test en busca de problemas de calidad de código:
 - Funciones de test largas (>50 líneas)
 - Convenciones de nomenclatura pobres (test_1, test_2, test_a)
 - Manejo de excepciones genérico (except: / except Exception:)
+- Configuración hardcodeada (URLs base, sleeps, timeouts)
 
 Estas violaciones indican pobre mantenibilidad y diseño de tests,
 incluso si no rompen directamente la separación de capas gTAA.
@@ -45,6 +46,11 @@ class QualityChecker(BaseChecker):
         r"^test_[0-9]+$|^test_[a-z]$|^test_case[0-9]*$"
     )
 
+    # Patrones de configuración hardcodeada
+    LOCALHOST_PATTERN = re.compile(r"https?://localhost[:\d/]|https?://127\.0\.0\.1[:\d/]")
+    SLEEP_PATTERN = re.compile(r"time\.sleep\s*\(\s*\d")
+    ABSOLUTE_PATH_PATTERN = re.compile(r'["\'][A-Z]:\\|["\']/home/|["\']/usr/|["\']/tmp/')
+
     MAX_TEST_LINES = 50
 
     def can_check(self, file_path: Path) -> bool:
@@ -82,6 +88,7 @@ class QualityChecker(BaseChecker):
             violations.extend(self._check_long_functions(file_path, tree))
             violations.extend(self._check_test_naming(file_path, tree))
             violations.extend(self._check_broad_exception_handling(file_path, tree))
+            violations.extend(self._check_hardcoded_configuration(file_path, source_code))
 
         except SyntaxError:
             pass
@@ -202,6 +209,56 @@ class QualityChecker(BaseChecker):
                             f"Capturar excepciones específicas para no ocultar fallos reales."
                         ),
                         code_snippet=kind,
+                    )
+                )
+
+        return violations
+
+    def _check_hardcoded_configuration(
+        self, file_path: Path, source_code: str
+    ) -> List[Violation]:
+        """Detectar configuración hardcodeada (localhost URLs, sleeps, paths absolutos)."""
+        violations: List[Violation] = []
+
+        for i, line in enumerate(source_code.splitlines(), start=1):
+            # Skip comments
+            stripped = line.strip()
+            if stripped.startswith("#"):
+                continue
+
+            if self.LOCALHOST_PATTERN.search(line):
+                violations.append(
+                    Violation(
+                        violation_type=ViolationType.HARDCODED_CONFIGURATION,
+                        severity=Severity.HIGH,
+                        file_path=file_path,
+                        line_number=i,
+                        message="URL localhost hardcodeada. Externalizar en configuración o fixtures.",
+                        code_snippet=stripped,
+                    )
+                )
+
+            if self.SLEEP_PATTERN.search(line):
+                violations.append(
+                    Violation(
+                        violation_type=ViolationType.HARDCODED_CONFIGURATION,
+                        severity=Severity.HIGH,
+                        file_path=file_path,
+                        line_number=i,
+                        message="time.sleep() hardcodeado. Usar esperas condicionales o configuración centralizada.",
+                        code_snippet=stripped,
+                    )
+                )
+
+            if self.ABSOLUTE_PATH_PATTERN.search(line):
+                violations.append(
+                    Violation(
+                        violation_type=ViolationType.HARDCODED_CONFIGURATION,
+                        severity=Severity.HIGH,
+                        file_path=file_path,
+                        line_number=i,
+                        message="Path absoluto hardcodeado. Usar paths relativos o configuración.",
+                        code_snippet=stripped,
                     )
                 )
 

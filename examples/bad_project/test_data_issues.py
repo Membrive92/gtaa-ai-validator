@@ -6,7 +6,10 @@ Violations present:
 - HARDCODED_TEST_DATA: emails, URLs, phone numbers, passwords
 - LONG_TEST_FUNCTION: test_very_long_checkout (>50 lines)
 - BROAD_EXCEPTION_HANDLING: except genérico (Phase 6)
+- HARDCODED_CONFIGURATION: localhost URL, time.sleep (Phase 6)
 """
+
+import time
 
 
 def test_1():
@@ -85,3 +88,10 @@ def test_with_broad_exception():
     except Exception:  # VIOLATION: BROAD_EXCEPTION_HANDLING
         result = None
     assert result is None
+
+
+def test_with_hardcoded_config():
+    """VIOLATION: HARDCODED_CONFIGURATION — localhost y sleep."""
+    base_url = "http://localhost:8080/api"  # VIOLATION: HARDCODED_CONFIGURATION
+    time.sleep(3)                           # VIOLATION: HARDCODED_CONFIGURATION
+    assert base_url is not None

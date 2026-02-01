@@ -266,6 +266,60 @@ def test_something():
 
 
 # =========================================================================
+# Hardcoded configuration
+# =========================================================================
+
+class TestHardcodedConfiguration:
+
+    def test_localhost_url_detected(self, checker, write_test_file):
+        path = write_test_file("test_example.py", '''\
+def test_api():
+    url = "http://localhost:8080/api"
+''')
+        violations = checker.check(path)
+        hc = [v for v in violations if v.violation_type == ViolationType.HARDCODED_CONFIGURATION]
+        assert len(hc) >= 1
+        assert hc[0].severity == Severity.HIGH
+
+    def test_sleep_detected(self, checker, write_test_file):
+        path = write_test_file("test_example.py", '''\
+import time
+def test_wait():
+    time.sleep(5)
+''')
+        violations = checker.check(path)
+        hc = [v for v in violations if v.violation_type == ViolationType.HARDCODED_CONFIGURATION]
+        assert len(hc) >= 1
+
+    def test_absolute_path_detected(self, checker, write_test_file):
+        path = write_test_file("test_example.py", '''\
+def test_file():
+    path = "/home/user/data/test.csv"
+''')
+        violations = checker.check(path)
+        hc = [v for v in violations if v.violation_type == ViolationType.HARDCODED_CONFIGURATION]
+        assert len(hc) >= 1
+
+    def test_comment_ignored(self, checker, write_test_file):
+        path = write_test_file("test_example.py", '''\
+def test_ok():
+    # http://localhost:8080 is the base URL
+    assert True
+''')
+        violations = checker.check(path)
+        hc = [v for v in violations if v.violation_type == ViolationType.HARDCODED_CONFIGURATION]
+        assert len(hc) == 0
+
+    def test_no_config_no_violation(self, checker, write_test_file):
+        path = write_test_file("test_example.py", '''\
+def test_math():
+    assert 2 + 2 == 4
+''')
+        violations = checker.check(path)
+        assert not any(v.violation_type == ViolationType.HARDCODED_CONFIGURATION for v in violations)
+
+
+# =========================================================================
 # Edge cases
 # =========================================================================
 

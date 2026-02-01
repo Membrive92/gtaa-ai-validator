@@ -89,6 +89,7 @@ class ViolationType(Enum):
 
     # Violaciones estáticas adicionales (FASE 6)
     BROAD_EXCEPTION_HANDLING = "BROAD_EXCEPTION_HANDLING"    # except Exception genérico en tests
+    HARDCODED_CONFIGURATION = "HARDCODED_CONFIGURATION"      # URLs, timeouts, paths hardcodeados
 
     # Violaciones semánticas (FASE 5 — detectadas por LLM)
     UNCLEAR_TEST_PURPOSE = "UNCLEAR_TEST_PURPOSE"            # Test sin propósito claro
@@ -113,6 +114,9 @@ class ViolationType(Enum):
             ViolationType.DUPLICATE_LOCATOR: Severity.MEDIUM,
             ViolationType.LONG_TEST_FUNCTION: Severity.MEDIUM,
             ViolationType.BROAD_EXCEPTION_HANDLING: Severity.MEDIUM,
+
+            # Alta (Fase 6)
+            ViolationType.HARDCODED_CONFIGURATION: Severity.HIGH,
 
             # Baja
             ViolationType.POOR_TEST_NAMING: Severity.LOW,
@@ -148,6 +152,8 @@ class ViolationType(Enum):
                 "La función de test tiene un nombre genérico (test_1, test_2, etc.)",
             ViolationType.BROAD_EXCEPTION_HANDLING:
                 "El test usa except genérico (except: o except Exception:) que oculta fallos reales",
+            ViolationType.HARDCODED_CONFIGURATION:
+                "Configuración hardcodeada (URLs, timeouts, sleeps) que debería externalizarse",
 
             # Semánticas (Fase 5)
             ViolationType.UNCLEAR_TEST_PURPOSE:
@@ -194,6 +200,9 @@ class ViolationType(Enum):
             ViolationType.BROAD_EXCEPTION_HANDLING:
                 "Capturar excepciones específicas (ValueError, TimeoutError, etc.) en lugar de "
                 "except genérico. Los tests deben fallar visiblemente ante errores inesperados.",
+            ViolationType.HARDCODED_CONFIGURATION:
+                "Externalizar configuración a variables de entorno, fixtures de pytest, o archivos "
+                "de configuración. Usar conftest.py para URLs base y timeouts.",
 
             # Semánticas (Fase 5)
             ViolationType.UNCLEAR_TEST_PURPOSE:
