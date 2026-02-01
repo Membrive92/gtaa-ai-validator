@@ -1,10 +1,11 @@
 """
-Test file with quality violations for Phase 3.
+Test file with quality violations for Phase 3 and 6.
 
 Violations present:
 - POOR_TEST_NAMING: test_1, test_2 (generic names)
 - HARDCODED_TEST_DATA: emails, URLs, phone numbers, passwords
 - LONG_TEST_FUNCTION: test_very_long_checkout (>50 lines)
+- BROAD_EXCEPTION_HANDLING: except genérico (Phase 6)
 """
 
 
@@ -75,3 +76,12 @@ def test_very_long_checkout():
     step_47 = "Verify logged out"
     step_48 = "Verify redirect to login"
     assert step_48 is not None
+
+
+def test_with_broad_exception():
+    """VIOLATION: BROAD_EXCEPTION_HANDLING — except genérico oculta fallos."""
+    try:
+        result = do_something()
+    except Exception:  # VIOLATION: BROAD_EXCEPTION_HANDLING
+        result = None
+    assert result is None

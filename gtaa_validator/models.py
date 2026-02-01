@@ -87,6 +87,9 @@ class ViolationType(Enum):
     # Violaciones de severidad BAJA
     POOR_TEST_NAMING = "POOR_TEST_NAMING"                  # Nombres genéricos de test (test_1, test_2)
 
+    # Violaciones estáticas adicionales (FASE 6)
+    BROAD_EXCEPTION_HANDLING = "BROAD_EXCEPTION_HANDLING"    # except Exception genérico en tests
+
     # Violaciones semánticas (FASE 5 — detectadas por LLM)
     UNCLEAR_TEST_PURPOSE = "UNCLEAR_TEST_PURPOSE"            # Test sin propósito claro
     PAGE_OBJECT_DOES_TOO_MUCH = "PAGE_OBJECT_DOES_TOO_MUCH" # Page Object con demasiadas responsabilidades
@@ -109,6 +112,7 @@ class ViolationType(Enum):
             ViolationType.BUSINESS_LOGIC_IN_POM: Severity.MEDIUM,
             ViolationType.DUPLICATE_LOCATOR: Severity.MEDIUM,
             ViolationType.LONG_TEST_FUNCTION: Severity.MEDIUM,
+            ViolationType.BROAD_EXCEPTION_HANDLING: Severity.MEDIUM,
 
             # Baja
             ViolationType.POOR_TEST_NAMING: Severity.LOW,
@@ -142,6 +146,8 @@ class ViolationType(Enum):
                 "La función de test es demasiado larga (>50 líneas), reduciendo la mantenibilidad",
             ViolationType.POOR_TEST_NAMING:
                 "La función de test tiene un nombre genérico (test_1, test_2, etc.)",
+            ViolationType.BROAD_EXCEPTION_HANDLING:
+                "El test usa except genérico (except: o except Exception:) que oculta fallos reales",
 
             # Semánticas (Fase 5)
             ViolationType.UNCLEAR_TEST_PURPOSE:
@@ -185,6 +191,9 @@ class ViolationType(Enum):
             ViolationType.POOR_TEST_NAMING:
                 "Usar nombres descriptivos: test_usuario_puede_hacer_login_con_credenciales_validas() "
                 "en lugar de test_1().",
+            ViolationType.BROAD_EXCEPTION_HANDLING:
+                "Capturar excepciones específicas (ValueError, TimeoutError, etc.) en lugar de "
+                "except genérico. Los tests deben fallar visiblemente ante errores inesperados.",
 
             # Semánticas (Fase 5)
             ViolationType.UNCLEAR_TEST_PURPOSE:

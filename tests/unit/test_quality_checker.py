@@ -210,6 +210,62 @@ def test_user_can_login_with_valid_credentials():
 
 
 # =========================================================================
+# Broad exception handling
+# =========================================================================
+
+class TestBroadExceptionHandling:
+
+    def test_bare_except_detected(self, checker, write_test_file):
+        path = write_test_file("test_example.py", '''\
+def test_something():
+    try:
+        do_stuff()
+    except:
+        pass
+''')
+        violations = checker.check(path)
+        broad = [v for v in violations if v.violation_type == ViolationType.BROAD_EXCEPTION_HANDLING]
+        assert len(broad) == 1
+        assert broad[0].severity == Severity.MEDIUM
+        assert "except:" in broad[0].code_snippet
+
+    def test_except_exception_detected(self, checker, write_test_file):
+        path = write_test_file("test_example.py", '''\
+def test_something():
+    try:
+        do_stuff()
+    except Exception:
+        pass
+''')
+        violations = checker.check(path)
+        broad = [v for v in violations if v.violation_type == ViolationType.BROAD_EXCEPTION_HANDLING]
+        assert len(broad) == 1
+        assert "except Exception:" in broad[0].code_snippet
+
+    def test_specific_except_ok(self, checker, write_test_file):
+        path = write_test_file("test_example.py", '''\
+def test_something():
+    try:
+        do_stuff()
+    except ValueError:
+        pass
+''')
+        violations = checker.check(path)
+        assert not any(v.violation_type == ViolationType.BROAD_EXCEPTION_HANDLING for v in violations)
+
+    def test_multiple_specific_except_ok(self, checker, write_test_file):
+        path = write_test_file("test_example.py", '''\
+def test_something():
+    try:
+        do_stuff()
+    except (TypeError, KeyError):
+        pass
+''')
+        violations = checker.check(path)
+        assert not any(v.violation_type == ViolationType.BROAD_EXCEPTION_HANDLING for v in violations)
+
+
+# =========================================================================
 # Edge cases
 # =========================================================================
 

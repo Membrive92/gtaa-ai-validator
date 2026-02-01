@@ -5,6 +5,7 @@ Verifica archivos de test en busca de problemas de calidad de código:
 - Datos de test hardcodeados (emails, URLs, números de teléfono, contraseñas)
 - Funciones de test largas (>50 líneas)
 - Convenciones de nomenclatura pobres (test_1, test_2, test_a)
+- Manejo de excepciones genérico (except: / except Exception:)
 
 Estas violaciones indican pobre mantenibilidad y diseño de tests,
 incluso si no rompen directamente la separación de capas gTAA.
@@ -80,6 +81,7 @@ class QualityChecker(BaseChecker):
             violations.extend(self._check_hardcoded_data(file_path, tree))
             violations.extend(self._check_long_functions(file_path, tree))
             violations.extend(self._check_test_naming(file_path, tree))
+            violations.extend(self._check_broad_exception_handling(file_path, tree))
 
         except SyntaxError:
             pass
@@ -165,6 +167,41 @@ class QualityChecker(BaseChecker):
                             f"en lugar de '{node.name}'."
                         ),
                         code_snippet=f"def {node.name}(...):",
+                    )
+                )
+
+        return violations
+
+    def _check_broad_exception_handling(
+        self, file_path: Path, tree: ast.Module
+    ) -> List[Violation]:
+        """Detectar except genérico (except: o except Exception:) en tests."""
+        violations: List[Violation] = []
+
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.ExceptHandler):
+                continue
+
+            # except: (bare) — node.type is None
+            # except Exception: — node.type is ast.Name with id "Exception"
+            is_bare = node.type is None
+            is_broad = (
+                isinstance(node.type, ast.Name) and node.type.id == "Exception"
+            )
+
+            if is_bare or is_broad:
+                kind = "except:" if is_bare else "except Exception:"
+                violations.append(
+                    Violation(
+                        violation_type=ViolationType.BROAD_EXCEPTION_HANDLING,
+                        severity=Severity.MEDIUM,
+                        file_path=file_path,
+                        line_number=node.lineno,
+                        message=(
+                            f"Manejo de excepción genérico '{kind}' detectado. "
+                            f"Capturar excepciones específicas para no ocultar fallos reales."
+                        ),
+                        code_snippet=kind,
                     )
                 )
 
