@@ -21,6 +21,7 @@ Uso:
 """
 
 import ast
+import fnmatch
 import time
 from pathlib import Path
 from typing import List, Optional
@@ -32,6 +33,8 @@ from gtaa_validator.checkers.definition_checker import DefinitionChecker
 from gtaa_validator.checkers.structure_checker import StructureChecker
 from gtaa_validator.checkers.adaptation_checker import AdaptationChecker
 from gtaa_validator.checkers.quality_checker import QualityChecker
+from gtaa_validator.file_classifier import FileClassifier
+from gtaa_validator.config import ProjectConfig, load_config
 
 
 class StaticAnalyzer:
@@ -52,16 +55,20 @@ class StaticAnalyzer:
         verbose: Si se debe imprimir información detallada del progreso
     """
 
-    def __init__(self, project_path: Path, verbose: bool = False):
+    def __init__(self, project_path: Path, verbose: bool = False,
+                 config: Optional[ProjectConfig] = None):
         """
         Inicializar el StaticAnalyzer.
 
         Args:
             project_path: Ruta al directorio raíz del proyecto
             verbose: Si es True, imprimir progreso detallado del análisis
+            config: Configuración del proyecto (si None, se carga de .gtaa.yaml)
         """
         self.project_path = Path(project_path).resolve()
         self.verbose = verbose
+        self.config = config if config is not None else load_config(self.project_path)
+        self.classifier = FileClassifier()
         self.checkers: List[BaseChecker] = self._initialize_checkers()
 
     def _initialize_checkers(self) -> List[BaseChecker]:
@@ -190,7 +197,14 @@ class StaticAnalyzer:
             )
 
             if not should_exclude:
-                python_files.append(py_file)
+                # Filtrar por ignore_paths de la configuración
+                relative_str = str(py_file.relative_to(self.project_path)).replace("\\", "/")
+                ignored = any(
+                    fnmatch.fnmatch(relative_str, pattern)
+                    for pattern in self.config.ignore_paths
+                )
+                if not ignored:
+                    python_files.append(py_file)
 
         # Ordenar para un orden consistente
         python_files.sort()
@@ -219,6 +233,7 @@ class StaticAnalyzer:
 
         # Parsear AST una sola vez para todos los checkers
         tree: Optional[ast.Module] = None
+        source_code = ""
         try:
             with open(file_path, "r", encoding="utf-8") as f:
                 source_code = f.read()
@@ -227,9 +242,21 @@ class StaticAnalyzer:
             # Si el parseo falla, dejar que los checkers individuales lo manejen
             pass
 
+        # Clasificar archivo como API, UI o unknown + detectar framework
+        file_type = "unknown"
+        if tree is not None:
+            classification = self.classifier.classify_detailed(file_path, source_code, tree)
+            file_type = classification.file_type
+
+        if self.verbose:
+            if file_type != "unknown":
+                relative = self._get_relative_path(file_path)
+                fw_info = f" (frameworks: {', '.join(classification.frameworks)})" if classification.frameworks else ""
+                print(f"    [Clasificación] {relative} → {file_type}{fw_info}")
+
         for checker in applicable:
             try:
-                checker_violations = checker.check(file_path, tree)
+                checker_violations = checker.check(file_path, tree, file_type=file_type)
                 violations.extend(checker_violations)
 
                 if self.verbose and checker_violations:
