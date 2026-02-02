@@ -44,7 +44,8 @@ class BaseChecker(ABC):
         self.name = self.__class__.__name__
 
     @abstractmethod
-    def check(self, file_path: Path, tree: Optional[ast.Module] = None) -> List[Violation]:
+    def check(self, file_path: Path, tree: Optional[ast.Module] = None,
+              file_type: str = "unknown") -> List[Violation]:
         """
         Verificar un archivo en busca de violaciones gTAA.
 
@@ -55,6 +56,8 @@ class BaseChecker(ABC):
             file_path: Ruta al archivo a verificar
             tree: Árbol AST pre-parseado (opcional). Si se proporciona, el checker
                   debe usarlo en lugar de parsear el archivo de nuevo.
+            file_type: Clasificación del archivo ('api', 'ui' o 'unknown').
+                  Los checkers pueden usar esto para saltar reglas no aplicables.
 
         Returns:
             Lista de objetos Violation encontrados en el archivo (lista vacía si no hay violaciones)

@@ -68,7 +68,8 @@ class QualityChecker(BaseChecker):
             or any(part in ("test", "tests") for part in file_path.parts)
         )
 
-    def check(self, file_path: Path, tree: Optional[ast.Module] = None) -> List[Violation]:
+    def check(self, file_path: Path, tree: Optional[ast.Module] = None,
+              file_type: str = "unknown") -> List[Violation]:
         """
         Verificar un archivo de test en busca de violaciones de calidad.
 

@@ -39,7 +39,8 @@ class StructureChecker(BaseChecker):
         """StructureChecker nunca se ejecuta sobre archivos individuales."""
         return False
 
-    def check(self, file_path: Path, tree: Optional[ast.Module] = None) -> List[Violation]:
+    def check(self, file_path: Path, tree: Optional[ast.Module] = None,
+              file_type: str = "unknown") -> List[Violation]:
         """No se usa — StructureChecker solo implementa check_project()."""
         return []
 

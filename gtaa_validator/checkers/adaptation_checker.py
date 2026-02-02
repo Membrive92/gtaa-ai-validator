@@ -72,7 +72,8 @@ class AdaptationChecker(BaseChecker):
 
         return (in_page_dir or is_page_file) and not in_test_dir
 
-    def check(self, file_path: Path, tree: Optional[ast.Module] = None) -> List[Violation]:
+    def check(self, file_path: Path, tree: Optional[ast.Module] = None,
+              file_type: str = "unknown") -> List[Violation]:
         """
         Verificar un archivo de Page Object en busca de violaciones.
 

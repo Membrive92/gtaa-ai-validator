@@ -102,22 +102,23 @@ class DefinitionChecker(BaseChecker):
         )
         return is_test_file
 
-    def check(self, file_path: Path, tree: Optional[ast.Module] = None) -> List[Violation]:
+    def check(self, file_path: Path, tree: Optional[ast.Module] = None,
+              file_type: str = "unknown") -> List[Violation]:
         """
         Verificar un archivo de test en busca de violaciones ADAPTATION_IN_DEFINITION.
-
-        Este método:
-        1. Usa el AST pre-parseado si se proporciona, si no lee y parsea el archivo
-        2. Usa un visitor para encontrar violaciones
-        3. Devuelve la lista de violaciones encontradas
 
         Args:
             file_path: Ruta al archivo de test a verificar
             tree: Árbol AST pre-parseado (opcional)
+            file_type: Clasificación del archivo ('api', 'ui' o 'unknown')
 
         Returns:
             Lista de objetos Violation (vacía si no hay violaciones)
         """
+        # API tests no usan Page Objects — ADAPTATION_IN_DEFINITION no aplica
+        if file_type == "api":
+            return []
+
         self.violations = []
         self.current_file = file_path
 
