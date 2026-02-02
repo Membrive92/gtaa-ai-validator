@@ -138,6 +138,30 @@ Diagramas de flujo de la Fase 6: Ampliación de Cobertura de Violaciones (13 →
 - Ampliación de prompts LLM vs prompts separados
 - Análisis de falsos positivos por framework
 
+### [PHASE7_FLOW_DIAGRAMS.md](PHASE7_FLOW_DIAGRAMS.md)
+
+Diagramas de flujo de la Fase 7: Soporte para proyectos mixtos (API + UI testing).
+
+**Contenido**:
+- FileClassifier: clasificación de archivos por scoring (imports AST, código regex, path)
+- ClassificationResult y detección automática de frameworks (Playwright auto-wait)
+- ProjectConfig y configuración .gtaa.yaml por proyecto
+- Integración en StaticAnalyzer (file_type en checkers)
+- Integración en SemanticAnalyzer (has_auto_wait en LLM)
+- Auto-wait de Playwright: detección automática vs YAML manual
+- CLI: opción --config
+- Mapa de violaciones filtradas por file_type
+- Mapa de 40 tests nuevos (234 → 274)
+- 6 decisiones arquitectónicas (ADR 22-27)
+
+**Conceptos nuevos explicados**:
+- Clasificación per-file vs per-project
+- Scoring ponderado con tres señales (imports, código, path)
+- Regla conservadora: UI siempre gana en archivos mixtos
+- Detección automática de auto-wait vs configuración manual
+- Degradación elegante de configuración YAML
+- .gtaa.yaml vs .env para configuración de reglas
+
 ### [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md)
 
 Registro de decisiones arquitectónicas (ADR) que explica **por qué** se eligió cada enfoque técnico.
@@ -164,6 +188,12 @@ Registro de decisiones arquitectónicas (ADR) que explica **por qué** se eligi�
 19. Detección de estado mutable compartido: dos fases complementarias
 20. Ampliación de violaciones semánticas: prompts ampliados frente a prompts separados
 21. Heurísticas mock: búsqueda textual frente a visitor AST para detección de asserts
+22. Clasificación a nivel de archivo vs proyecto
+23. Scoring ponderado para clasificación
+24. UI siempre gana en archivos mixtos
+25. Auto-wait automático vs solo YAML
+26. .gtaa.yaml vs .env para configuración de reglas
+27. PyYAML con degradación elegante
 
 **Para quién**:
 - Evaluadores del TFM que quieran entender las decisiones de diseño
@@ -173,13 +203,6 @@ Registro de decisiones arquitectónicas (ADR) que explica **por qué** se eligi�
 ---
 
 ## Documentación Futura (Planeada)
-
-### PHASE7_FLOW_DIAGRAMS.md (Fase 7)
-Diagramas de flujo de la Fase 7: Soporte para proyectos con API testing.
-- Clasificador de archivos (API vs UI tests)
-- Configuración por proyecto (.gtaa.yaml)
-- Reglas condicionales por tipo de test
-- Reducción de falsos positivos
 
 ### PHASE8_FLOW_DIAGRAMS.md (Fase 8)
 Diagramas de flujo de la Fase 8: Optimización y documentación final.
@@ -207,8 +230,9 @@ Guía para contribuir al proyecto (estructura de código, estándares, pull requ
 4. Lee [PHASE4_FLOW_DIAGRAMS.md](PHASE4_FLOW_DIAGRAMS.md) para los reportes HTML/JSON
 5. Lee [PHASE5_FLOW_DIAGRAMS.md](PHASE5_FLOW_DIAGRAMS.md) para el análisis semántico con AI
 6. Lee [PHASE6_FLOW_DIAGRAMS.md](PHASE6_FLOW_DIAGRAMS.md) para la ampliación a 18 violaciones
-7. Lee [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md) para las justificaciones técnicas
-8. Ejecuta el código mientras lees: `python -m gtaa_validator examples/bad_project --ai --verbose`
+7. Lee [PHASE7_FLOW_DIAGRAMS.md](PHASE7_FLOW_DIAGRAMS.md) para el soporte de proyectos mixtos API + UI
+8. Lee [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md) para las justificaciones técnicas
+9. Ejecuta el código mientras lees: `python -m gtaa_validator examples/bad_project --ai --verbose`
 
 ### Para Desarrollar
 1. Consulta [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md) para entender los patrones (Strategy, Visitor, Facade)
@@ -251,4 +275,4 @@ Este directorio se actualizará con:
 - Guías de uso avanzadas
 - Ejemplos adicionales
 
-**Última actualización**: 1 Febrero 2026
+**Última actualización**: 2 Febrero 2026

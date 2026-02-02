@@ -31,6 +31,12 @@ El formato sigue la estructura de un ADR (Architecture Decision Record) adaptado
 19. [Detección de estado mutable compartido: dos fases complementarias](#19-detección-de-estado-mutable-compartido-dos-fases-complementarias)
 20. [Ampliación de violaciones semánticas: prompts ampliados frente a prompts separados](#20-ampliación-de-violaciones-semánticas-prompts-ampliados-frente-a-prompts-separados)
 21. [Heurísticas mock: búsqueda textual frente a visitor AST para detección de asserts](#21-heurísticas-mock-búsqueda-textual-frente-a-visitor-ast-para-detección-de-asserts)
+22. [Clasificación a nivel de archivo frente a nivel de proyecto](#22-clasificación-a-nivel-de-archivo-frente-a-nivel-de-proyecto)
+23. [Scoring ponderado para clasificación de archivos](#23-scoring-ponderado-para-clasificación-de-archivos)
+24. [UI siempre gana en archivos mixtos](#24-ui-siempre-gana-en-archivos-mixtos)
+25. [Auto-wait automático frente a solo configuración YAML](#25-auto-wait-automático-frente-a-solo-configuración-yaml)
+26. [.gtaa.yaml frente a .env para configuración de reglas](#26-gtaayaml-frente-a-env-para-configuración-de-reglas)
+27. [PyYAML con degradación elegante](#27-pyyaml-con-degradación-elegante)
 
 ---
 
@@ -1166,6 +1172,321 @@ has_assert = any(kw in func_source for kw in assert_keywords)
 
 ---
 
+## 22. Clasificación a nivel de archivo frente a nivel de proyecto
+
+### Problema
+
+La Fase 7 introduce soporte para proyectos mixtos que combinan tests de API y tests de UI. Violaciones como `ADAPTATION_IN_DEFINITION` y `MISSING_WAIT_STRATEGY` solo aplican a archivos de UI, pero no a archivos de API. Se necesita un mecanismo para determinar qué tipo de test contiene cada archivo.
+
+### Alternativa evaluada: Clasificación a nivel de proyecto
+
+```python
+# Clasificar todo el proyecto como "api" o "ui"
+project_type = classifier.classify_project(project_path)
+if project_type == "api":
+    skip_all_ui_checks()
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Pierde granularidad | Un proyecto con `tests/api/` y `tests/ui/` sería clasificado como uno solo |
+| Falsos negativos | Si el proyecto es "api", los tests de UI no recibirían checks de UI |
+| No refleja la realidad | Los proyectos reales mezclan ambos tipos de test |
+
+### Solución elegida: Clasificación per-file
+
+```python
+class FileClassifier:
+    def classify(self, file_path: Path, source: str, tree: ast.Module) -> str:
+        """Clasifica cada archivo individualmente como 'api', 'ui' o 'unknown'."""
+        api_score, ui_score = 0, 0
+        # Analiza imports, código y path de ESTE archivo
+        ...
+        if api_score > 0 and ui_score == 0:
+            return "api"
+        elif ui_score > 0:
+            return "ui"
+        return "unknown"
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Granularidad máxima | Cada archivo se evalúa independientemente |
+| Preciso | Un archivo con `import requests` es API aunque el proyecto tenga Selenium |
+| Sin configuración | Funciona automáticamente sin necesidad de `.gtaa.yaml` |
+| Conservador | `unknown` se trata como UI (no pierde violaciones) |
+
+---
+
+## 23. Scoring ponderado para clasificación de archivos
+
+### Problema
+
+La clasificación de archivos necesita combinar múltiples señales: imports del AST, patrones de código (regex) y patrones de path. Se requiere un mecanismo que pondere estas señales según su fiabilidad.
+
+### Alternativa evaluada: Reglas binarias (if/elif)
+
+```python
+# Si tiene import requests → API
+if has_api_import:
+    return "api"
+# Si tiene import selenium → UI
+elif has_ui_import:
+    return "ui"
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| No combina señales | Un archivo con `response.status_code` pero sin imports API no se clasifica |
+| Reglas frágiles | Requiere encadenar condiciones OR/AND para cubrir combinaciones |
+| Difícil de extender | Cada nueva señal requiere reestructurar los condicionales |
+
+### Solución elegida: Scoring con pesos diferenciados
+
+```python
+# Pesos por tipo de señal (mayor = más fiable)
+# Imports AST:  +5 (más fiable, semántico)
+# Código regex: +2 (menos fiable, puede estar en strings)
+# Path:         +3 (fiable, convención de equipo)
+
+for node in ast.walk(tree):
+    if isinstance(node, (ast.Import, ast.ImportFrom)):
+        if module_name in self.API_IMPORTS:
+            api_score += 5
+        elif module_name in self.UI_IMPORTS:
+            ui_score += 5
+
+for pattern in self.API_CODE_PATTERNS:
+    if re.search(pattern, source):
+        api_score += 2
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Combina señales débiles | `response.status_code` (2) + `/api/` en path (3) = API score 5 |
+| Pesos semánticos | Imports (AST) pesan más que regex porque son más fiables |
+| Extensible | Añadir nueva señal = añadir al set y asignar peso |
+| Umbral simple | `api_score > 0 and ui_score == 0` es claro y fácil de razonar |
+
+---
+
+## 24. UI siempre gana en archivos mixtos
+
+### Problema
+
+Algunos archivos pueden tener señales de API y UI simultáneamente (ej. un test de UI que hace una llamada HTTP para setup). Cuando ambos scores son positivos, se necesita una regla de desempate.
+
+### Alternativa evaluada: Usar el score mayor
+
+```python
+if api_score > ui_score:
+    return "api"
+elif ui_score > api_score:
+    return "ui"
+else:
+    return "unknown"
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Riesgo de falsos negativos | Si un test de UI tiene `import requests` para setup, podría clasificarse como API |
+| Pierde violaciones | Un archivo API no recibe `ADAPTATION_IN_DEFINITION` ni `MISSING_WAIT_STRATEGY` |
+| Menos seguro | Los falsos negativos son peores que los falsos positivos en un validador |
+
+### Solución elegida: UI siempre gana (regla conservadora)
+
+```python
+if api_score > 0 and ui_score == 0:
+    return "api"    # Solo API si NO hay señales UI
+elif ui_score > 0:
+    return "ui"     # UI siempre gana si hay cualquier señal UI
+return "unknown"    # Sin señales → tratado como UI
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Sin falsos negativos | Si hay cualquier señal UI, se aplican todos los checks |
+| Principio de precaución | Mejor reportar una violación extra que perder una real |
+| Simple de razonar | La regla es: "solo es API si NO tiene nada de UI" |
+| Alineado con el propósito | Un validador debe detectar problemas, no ocultarlos |
+
+---
+
+## 25. Auto-wait automático frente a solo configuración YAML
+
+### Problema
+
+Playwright tiene auto-wait integrado en todas sus acciones (click, fill, etc.), lo que hace que `MISSING_WAIT_STRATEGY` sea un falso positivo para proyectos Playwright. Se necesita un mecanismo para detectar esto y suprimir la violación.
+
+### Alternativa evaluada: Solo configuración YAML
+
+```yaml
+# .gtaa.yaml
+exclude_checks:
+  - MISSING_WAIT_STRATEGY  # Manual: el usuario debe saber configurarlo
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Fricción innecesaria | Playwright siempre tiene auto-wait — no es una decisión del equipo |
+| Olvido del usuario | Un proyecto Playwright sin `.gtaa.yaml` recibiría falsos positivos |
+| Acoplado a conocimiento | El usuario necesita saber que Playwright tiene auto-wait |
+
+### Solución elegida: Detección automática + YAML para casos custom
+
+```python
+# ClassificationResult.has_auto_wait detecta automáticamente
+AUTO_WAIT_FRAMEWORKS = {"playwright"}
+
+@property
+def has_auto_wait(self) -> bool:
+    return bool(self.detected_frameworks & self.AUTO_WAIT_FRAMEWORKS)
+
+# YAML complementa para frameworks custom no detectables
+# .gtaa.yaml: frameworks_auto_wait: ["cypress-python"]
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Zero config para Playwright | Funciona sin `.gtaa.yaml` si hay `from playwright...` |
+| YAML como complemento | Frameworks custom pueden declarar auto-wait manualmente |
+| Basado en hechos | Playwright tiene auto-wait por diseño — es detectable sin configuración |
+| Extensible | Nuevos frameworks se añaden al set `AUTO_WAIT_FRAMEWORKS` |
+
+---
+
+## 26. .gtaa.yaml frente a .env para configuración de reglas
+
+### Problema
+
+La Fase 7 necesita un mecanismo para que los equipos configuren exclusiones de reglas (`exclude_checks`), paths ignorados (`ignore_paths`) y patrones custom de archivos API. Se necesita decidir dónde almacenar esta configuración.
+
+### Alternativa evaluada: Reutilizar `.env`
+
+```bash
+# .env
+GEMINI_API_KEY=sk-xxx
+GTAA_EXCLUDE_CHECKS=MISSING_WAIT_STRATEGY,POOR_TEST_NAMING
+GTAA_IGNORE_PATHS=tests/legacy/**
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Semántica incorrecta | `.env` es para secretos (API keys), no para configuración de equipo |
+| No se commitea | `.env` está en `.gitignore` — las exclusiones no se comparten |
+| Formato plano | Variables de entorno no soportan listas/objetos bien |
+
+### Alternativa evaluada: `pyproject.toml` con sección `[tool.gtaa]`
+
+```toml
+[tool.gtaa]
+exclude_checks = ["MISSING_WAIT_STRATEGY"]
+ignore_paths = ["tests/legacy/**"]
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Acoplado a Python | `pyproject.toml` es específico del ecosistema Python |
+| Archivo compartido | Mezcla configuración de build con configuración del validador |
+
+### Solución elegida: Archivo `.gtaa.yaml` dedicado
+
+```yaml
+# .gtaa.yaml — configuración de equipo (se commitea)
+exclude_checks:
+  - MISSING_WAIT_STRATEGY    # Ej: Playwright auto-waits
+ignore_paths:
+  - "tests/legacy/**"
+api_test_patterns:
+  - "**/test_api_*.py"
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Semántico | El nombre `.gtaa.yaml` indica claramente su propósito |
+| Commitable | Configuración de equipo que debe versionarse |
+| YAML legible | Soporta listas y objetos de forma natural |
+| Autocontenido | No mezcla con configuración de build ni secretos |
+| Agnóstico | No depende del ecosistema Python — útil si se porta a otro lenguaje |
+
+---
+
+## 27. PyYAML con degradación elegante
+
+### Problema
+
+El módulo `config.py` necesita parsear archivos `.gtaa.yaml`. Se requiere una dependencia de YAML y una estrategia para manejar errores (archivo inexistente, YAML inválido, campos faltantes).
+
+### Alternativa evaluada: Fallo estricto (raise en error)
+
+```python
+def load_config(project_path: Path) -> ProjectConfig:
+    config_path = project_path / ".gtaa.yaml"
+    with open(config_path) as f:
+        data = yaml.safe_load(f)  # Raises si no existe o es inválido
+    return ProjectConfig(**data)   # Raises si faltan campos
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Bloquea análisis | Un YAML con error de sintaxis impide usar el validador |
+| Obligatorio | Requiere que `.gtaa.yaml` exista en todos los proyectos |
+| Frágil | Un campo faltante o tipo incorrecto causa crash |
+
+### Solución elegida: Degradación elegante con defaults vacíos
+
+```python
+def load_config(project_path: Path, config_path: Optional[Path] = None) -> ProjectConfig:
+    path = config_path or project_path / ".gtaa.yaml"
+    if not path.exists():
+        return ProjectConfig()  # Defaults vacíos
+    try:
+        with open(path) as f:
+            data = yaml.safe_load(f) or {}
+        return ProjectConfig(
+            exclude_checks=data.get("exclude_checks", []),
+            ignore_paths=data.get("ignore_paths", []),
+            api_test_patterns=data.get("api_test_patterns", []),
+        )
+    except Exception:
+        return ProjectConfig()  # YAML inválido → defaults
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Zero config | El validador funciona sin `.gtaa.yaml` |
+| Robusto | YAML inválido no bloquea el análisis |
+| Parcial | Un YAML con solo `exclude_checks` funciona — los demás campos usan defaults |
+| Consistente | Mismo patrón que el manejo de errores LLM (ADR 15: degradación elegante) |
+
+---
+
 ## Resumen de decisiones
 
 | Decisión | Solución elegida | Alternativa descartada | Justificación principal |
@@ -1188,7 +1509,13 @@ has_assert = any(kw in func_source for kw in assert_keywords)
 | Estado mutable compartido | `iter_child_nodes` + `walk` | Solo `ast.walk` | Sin falsos positivos en variables locales, cobertura completa |
 | Nuevas violaciones LLM | Ampliar prompt existente | Prompts separados | Misma cantidad de llamadas API, contexto compartido |
 | Detección de asserts mock | Búsqueda textual | AST visitor | Cobertura amplia (assert + assertEqual + assert_called), simple |
+| Clasificación de archivos | Per-file | Per-project | Granularidad máxima, proyectos mixtos reales |
+| Scoring de clasificación | Pesos diferenciados (5/2/3) | Reglas binarias if/elif | Combina señales débiles, extensible |
+| Archivos mixtos (API+UI) | UI siempre gana | Score mayor gana | Sin falsos negativos, principio de precaución |
+| Detección auto-wait | Automática + YAML complemento | Solo YAML manual | Zero config para Playwright, extensible |
+| Configuración de reglas | `.gtaa.yaml` dedicado | `.env` / `pyproject.toml` | Semántico, commitable, agnóstico al lenguaje |
+| Parseo YAML | Degradación elegante (defaults) | Fallo estricto (raise) | Zero config, robusto, consistente con ADR 15 |
 
 ---
 
-*Última actualización: 1 de febrero de 2026*
+*Última actualización: 2 de febrero de 2026*

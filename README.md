@@ -5,14 +5,14 @@
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Estado](https://img.shields.io/badge/estado-en%20desarrollo-yellow)](https://github.com/Membrive92/gtaa-ai-validator)
-[![Fase](https://img.shields.io/badge/fase-6%2F8-blue)](https://github.com/Membrive92/gtaa-ai-validator)
-[![Progreso](https://img.shields.io/badge/progreso-75%25-yellow)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Fase](https://img.shields.io/badge/fase-7%2F8-blue)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Progreso](https://img.shields.io/badge/progreso-87%25-green)](https://github.com/Membrive92/gtaa-ai-validator)
 
 > **📌 TRABAJO DE FIN DE MÁSTER - EN DESARROLLO INCREMENTAL**
 >
 > Autor: Jose Antonio Membrive Guillen
 > Año: 2025-2026
-> **Estado:** Fase 6/8 Completa | Última actualización: 1 Febrero 2026
+> **Estado:** Fase 7/8 Completa | Última actualización: 2 Febrero 2026
 
 ---
 
@@ -32,7 +32,7 @@
 | **✅ Fase 4** | **Reportes HTML/JSON profesionales** | **COMPLETO** | **31/01/2026** |
 | **✅ Fase 5** | **Análisis semántico AI (Gemini Flash + Mock)** | **COMPLETO** | **01/02/2026** |
 | **✅ Fase 6** | **Ampliación cobertura (18 violaciones) + Documentación** | **COMPLETO** | **01/02/2026** |
-| **⏳ Fase 7** | **Soporte para proyectos con API testing (falsos positivos)** | **PENDIENTE** | — |
+| **✅ Fase 7** | **Soporte para proyectos mixtos (API + UI) + auto-wait Playwright** | **COMPLETO** | **02/02/2026** |
 | **⏳ Fase 8** | **Optimización y documentación final** | **PENDIENTE** | — |
 
 ### 📊 Funcionalidades Implementadas vs Planeadas
@@ -46,12 +46,12 @@
 | ✅ Detección de 18 tipos de violaciones gTAA | Implementado | Fase 2-6 — 4 checkers + LLM |
 | ✅ Sistema de scoring (0-100) | Implementado | Penalización por severidad |
 | ✅ Proyectos de ejemplo (bueno/malo) | Implementado | En directorio examples/ |
-| ✅ Tests unitarios + integración (234 tests) | Implementado | pytest con unit/ e integration/ |
-| ✅ Documentación técnica con diagramas | Implementado | docs/ con flujos Fase 1-6 |
+| ✅ Tests unitarios + integración (274 tests) | Implementado | pytest con unit/ e integration/ |
+| ✅ Documentación técnica con diagramas | Implementado | docs/ con flujos Fase 1-7 |
 | ✅ Reportes HTML dashboard | Implementado | Fase 4 — SVG inline, autocontenido |
 | ✅ Reportes JSON para CI/CD | Implementado | Fase 4 — `--json` / `--html` |
 | ✅ Análisis semántico con LLM | Implementado | Fase 5 — Gemini Flash API + MockLLM fallback |
-| ⏳ Soporte API testing (falsos positivos) | Pendiente | Fase 7 — .gtaa.yaml, clasificador de archivos |
+| ✅ Soporte proyectos mixtos (API + UI) | Implementado | Fase 7 — FileClassifier, .gtaa.yaml, auto-wait Playwright |
 | ⏳ Optimización y documentación final | Pendiente | Fase 8 — prompts, CI/CD, docs TFM |
 
 **Leyenda:** ✅ Implementado | ⏳ Pendiente
@@ -166,7 +166,7 @@ Sistema híbrido que combina **3 técnicas de IA** para detectar automáticament
 - **Python 3.8+** - Lenguaje principal
 - **AST (Abstract Syntax Tree)** - Análisis sintáctico de código
 - **Google Gemini Flash API** - LLM para análisis semántico (Fase 5)
-- **PyYAML** - Configuración por proyecto .gtaa.yaml (⏳ Fase 7)
+- **PyYAML** - Configuración por proyecto .gtaa.yaml (✅ Fase 7)
 
 ### Librerías principales
 ```python
@@ -225,7 +225,7 @@ pip install -e .
 
 ---
 
-### ✅ Funcionalidad ACTUAL (Fase 6)
+### ✅ Funcionalidad ACTUAL (Fase 7)
 
 **Funcionalidad disponible en la versión actual:**
 
@@ -239,6 +239,9 @@ python -m gtaa_validator /path/to/project --verbose
 # Análisis semántico AI (requiere GEMINI_API_KEY en .env)
 python -m gtaa_validator /path/to/project --ai --verbose
 
+# Configuración por proyecto (.gtaa.yaml)
+python -m gtaa_validator /path/to/project --config /path/.gtaa.yaml
+
 # Exportar reportes
 python -m gtaa_validator examples/bad_project --html report.html
 python -m gtaa_validator examples/bad_project --json report.json
@@ -249,7 +252,7 @@ python -m gtaa_validator examples/bad_project --verbose
 python -m gtaa_validator examples/good_project
 
 # Ejecutar tests
-pytest tests/               # Todos (234 tests)
+pytest tests/               # Todos (274 tests)
 pytest tests/unit/          # Solo unitarios
 pytest tests/integration/   # Solo integración
 ```
@@ -262,13 +265,16 @@ pytest tests/integration/   # Solo integración
 - ✅ Análisis semántico AI con Gemini Flash API (6 tipos de violación semántica)
 - ✅ Sugerencias AI contextuales para cada violación (enriquecimiento)
 - ✅ Fallback automático a MockLLMClient cuando no hay API key
+- ✅ Clasificador de archivos API/UI con scoring ponderado (imports AST + código regex + path)
+- ✅ Detección automática de Playwright auto-wait (salta MISSING_WAIT_STRATEGY)
+- ✅ Configuración por proyecto .gtaa.yaml (exclude_checks, ignore_paths, api_test_patterns)
 - ✅ Sistema de scoring 0-100 basado en severidad de violaciones
 - ✅ Modo verbose con detalles: archivo, línea, código, mensaje, sugerencias AI
 - ✅ Exit code 1 si hay violaciones críticas (útil para CI/CD)
 - ✅ Reporte HTML dashboard autocontenido con SVG inline (score gauge, gráficos, tablas)
 - ✅ Reporte JSON estructurado para integración CI/CD
-- ✅ Flags `--json`, `--html` y `--ai` compatibles entre sí
-- ✅ 234 tests automatizados
+- ✅ Flags `--json`, `--html`, `--ai` y `--config` compatibles entre sí
+- ✅ 274 tests automatizados
 
 **Ejemplo de salida (con --ai):**
 ```
@@ -344,36 +350,43 @@ El archivo [examples/README.md](examples/README.md) incluye:
 
 ---
 
-### ⏳ Funcionalidad FUTURA — Fase 7: Soporte API Testing
+### ✅ Funcionalidad Implementada — Fase 7: Soporte Proyectos Mixtos
 
-**Problema**: Proyectos mixtos con tests de API y front-end generan falsos positivos. Tests de API no necesitan Page Objects, wait strategies ni capa de adaptación UI.
-
-**Funcionalidades planificadas:**
+**Problema resuelto**: Proyectos mixtos con tests de API y front-end generaban falsos positivos. Tests de API no necesitan Page Objects ni wait strategies.
 
 #### Clasificador de archivos (API vs UI)
 ```python
-# ⏳ PRÓXIMAMENTE - Detección automática del tipo de test
-# Heurísticas: imports (requests, httpx), patrones (response.json()), ausencia de Selenium/Playwright
+# Detección automática por archivo usando 3 señales:
+# 1. Imports AST (requests, selenium, playwright) — peso 5
+# 2. Patrones de código regex (response.status_code) — peso 2
+# 3. Patrones de ruta (/api/, test_api_) — peso 3
+# Regla conservadora: UI siempre gana en archivos mixtos
+```
+
+#### Detección automática de auto-wait (Playwright)
+```python
+# Playwright tiene auto-wait nativo → MISSING_WAIT_STRATEGY se salta
+# automáticamente sin necesidad de configuración YAML.
+# Selenium sigue requiriendo waits explícitos → se analiza normalmente.
 ```
 
 #### Configuración por proyecto (.gtaa.yaml)
 ```yaml
-# ⏳ PRÓXIMAMENTE - Personalización de reglas por proyecto
+# Personalización de reglas para frameworks custom
 exclude_checks:
-  - MISSING_WAIT_STRATEGY  # Playwright auto-waits
+  - MISSING_WAIT_STRATEGY  # Para frameworks custom con auto-waits
 ignore_paths:
-  - tests/api/**           # API tests sin capa UI
+  - "tests/legacy/**"      # Excluir tests legacy del análisis
 api_test_patterns:
-  - "**/test_api_*.py"
-  - "**/api/**"
+  - "**/test_api_*.py"     # Patrones adicionales para API tests
 ```
 
 #### Reglas condicionales por tipo de test
 ```
-# ⏳ PRÓXIMAMENTE - Violaciones aplicables solo a tests UI
-# ADAPTATION_IN_DEFINITION → solo UI tests
-# MISSING_WAIT_STRATEGY → solo UI tests
-# MISSING_LAYER_STRUCTURE → configurable (pages/ no requerido si solo API)
+# Violaciones filtradas automáticamente:
+# ADAPTATION_IN_DEFINITION → se salta en archivos API (no usan POM)
+# MISSING_WAIT_STRATEGY    → se salta en archivos API y en Playwright
+# Las 16 violaciones restantes aplican a todos los archivos
 ```
 
 ---
@@ -415,6 +428,8 @@ gtaa-ai-validator/
 │   ├── __init__.py                     # Inicialización del paquete
 │   ├── __main__.py                     # Entry point CLI
 │   ├── models.py                       # Modelos de datos (Violation, Report)
+│   ├── file_classifier.py             # Clasificador API/UI (Fase 7)
+│   ├── config.py                      # ProjectConfig + .gtaa.yaml (Fase 7)
 │   │
 │   ├── analyzers/                      # 🔍 Motores de análisis
 │   │   ├── static_analyzer.py          # Orquestador estático (Facade Pattern)
@@ -436,7 +451,7 @@ gtaa-ai-validator/
 │       ├── adaptation_checker.py       # Test Adaptation Layer (AST + Regex)
 │       └── quality_checker.py          # Calidad de tests (AST + Regex)
 │
-├── tests/                              # 🧪 Tests automatizados (234 tests)
+├── tests/                              # 🧪 Tests automatizados (274 tests)
 │   ├── conftest.py                     # Fixtures compartidas
 │   ├── unit/                           # Tests unitarios
 │   │   ├── test_models.py             # Modelos de datos
@@ -448,7 +463,9 @@ gtaa-ai-validator/
 │   │   ├── test_html_reporter.py      # HtmlReporter
 │   │   ├── test_llm_client.py         # MockLLMClient
 │   │   ├── test_gemini_client.py      # GeminiLLMClient
-│   │   └── test_semantic_analyzer.py  # SemanticAnalyzer
+│   │   ├── test_semantic_analyzer.py  # SemanticAnalyzer
+│   │   ├── test_classifier.py        # FileClassifier (Fase 7)
+│   │   └── test_config.py            # ProjectConfig (Fase 7)
 │   └── integration/                    # Tests de integración
 │       ├── test_static_analyzer.py    # Pipeline completo
 │       └── test_reporters.py          # Análisis → JSON/HTML
@@ -462,13 +479,14 @@ gtaa-ai-validator/
 │
 └── docs/                               # 📚 Documentación técnica
     ├── README.md                       # Índice de documentación
-    ├── ARCHITECTURE_DECISIONS.md       # Decisiones arquitectónicas (21 ADR)
+    ├── ARCHITECTURE_DECISIONS.md       # Decisiones arquitectónicas (27 ADR)
     ├── PHASE1_FLOW_DIAGRAMS.md         # Diagramas Fase 1 (CLI y fundación)
     ├── PHASE2_FLOW_DIAGRAMS.md         # Diagramas Fase 2 (análisis estático)
     ├── PHASE3_FLOW_DIAGRAMS.md         # Diagramas Fase 3 (9 violaciones)
     ├── PHASE4_FLOW_DIAGRAMS.md         # Diagramas Fase 4 (reportes)
     ├── PHASE5_FLOW_DIAGRAMS.md         # Diagramas Fase 5 (análisis semántico AI)
-    └── PHASE6_FLOW_DIAGRAMS.md         # Diagramas Fase 6 (18 violaciones)
+    ├── PHASE6_FLOW_DIAGRAMS.md         # Diagramas Fase 6 (18 violaciones)
+    └── PHASE7_FLOW_DIAGRAMS.md         # Diagramas Fase 7 (proyectos mixtos)
 ```
 
 > **Nota sobre `docs/`**: La documentación técnica se distribuye en múltiples documentos independientes, uno por cada fase del proyecto y uno para las decisiones arquitectónicas. Esta separación responde a un criterio de **transparencia y trazabilidad**: cada documento refleja el estado del proyecto en el momento de su elaboración, permitiendo seguir la evolución del diseño y las decisiones técnicas a lo largo del desarrollo. El índice general se encuentra en [`docs/README.md`](docs/README.md).
@@ -545,7 +563,7 @@ Puntuación = max(0, 100 - suma de penalizaciones)
 ## 🎓 Contexto Académico (TFM)
 
 ### Objetivos del TFM
-1. ✅ Desarrollar sistema de IA para validación arquitectónica (Fase 6/8 completa)
+1. ✅ Desarrollar sistema de IA para validación arquitectónica (Fase 7/8 completa)
 2. ✅ Integrar LLM real para análisis semántico (Gemini Flash - Fase 5)
 3. ✅ Ampliar cobertura a 18 tipos de violación basados en catálogo CT-TAE (Fase 6)
 4. ✅ Crear dataset etiquetado para la comunidad (ejemplos con ground truth)
@@ -554,7 +572,7 @@ Puntuación = max(0, 100 - suma de penalizaciones)
 - **Abstract Syntax Tree (AST)** para análisis estático (✅ Implementado)
 - **Regex patterns** para detección de datos y locators (✅ Implementado)
 - **Large Language Models** (Gemini Flash - ✅ Fase 5)
-- **Clasificador de archivos** (heurísticas API vs UI - ⏳ Fase 7)
+- **Clasificador de archivos** (heurísticas API vs UI - ✅ Fase 7)
 
 ### Metodología
 **Desarrollo Incremental:**
@@ -564,7 +582,7 @@ Puntuación = max(0, 100 - suma de penalizaciones)
 - ✅ Fase 4: Reportes HTML/JSON profesionales - **COMPLETA**
 - ✅ Fase 5: Análisis semántico AI (Gemini Flash + Mock) - **COMPLETA**
 - ✅ Fase 6: Ampliación cobertura (18 violaciones) + Documentación - **COMPLETA**
-- ⏳ Fase 7: Soporte para proyectos con API testing (falsos positivos) - **PENDIENTE**
+- ✅ Fase 7: Soporte para proyectos mixtos (API + UI) + auto-wait Playwright - **COMPLETA**
 - ⏳ Fase 8: Optimización y documentación final - **PENDIENTE**
 
 ---
@@ -595,6 +613,7 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 - **[Diagramas de Flujo - Fase 4](docs/PHASE4_FLOW_DIAGRAMS.md)** ✅ — Reportes JSON/HTML, SVG inline, agrupación por checker
 - **[Diagramas de Flujo - Fase 5](docs/PHASE5_FLOW_DIAGRAMS.md)** ✅ — Análisis semántico AI, Gemini Flash, prompt engineering, parsing LLM
 - **[Diagramas de Flujo - Fase 6](docs/PHASE6_FLOW_DIAGRAMS.md)** ✅ — Ampliación a 18 violaciones, nuevos checkers, heurísticas mock
+- **[Diagramas de Flujo - Fase 7](docs/PHASE7_FLOW_DIAGRAMS.md)** ✅ — Proyectos mixtos API+UI, FileClassifier, .gtaa.yaml, auto-wait Playwright
 - **[Índice de documentación](docs/README.md)** ✅
 
 ---
@@ -707,13 +726,24 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 
 ---
 
-### Versión 0.7.0 - Fase 7 (Pendiente) ⏳
+### Versión 0.7.0 - Fase 7 (2 Febrero 2026) ✅
 
-**Planificado:**
-- ⏳ Clasificador de archivos: detección automática API vs UI tests
-- ⏳ Configuración por proyecto: `.gtaa.yaml` con exclusiones y paths
-- ⏳ Reglas condicionales: violaciones aplicables solo a tests UI
-- ⏳ Reducción de falsos positivos en proyectos mixtos (API + front-end)
+**Implementado:**
+- ✅ FileClassifier: clasificación automática API/UI/unknown por archivo (scoring ponderado)
+- ✅ ClassificationResult con detección de frameworks (Playwright, Selenium)
+- ✅ Detección automática de auto-wait (Playwright): salta MISSING_WAIT_STRATEGY sin YAML
+- ✅ ProjectConfig: configuración por proyecto via .gtaa.yaml (exclude_checks, ignore_paths, api_test_patterns)
+- ✅ Degradación elegante: funciona sin .gtaa.yaml, YAML inválido → defaults
+- ✅ DefinitionChecker salta ADAPTATION_IN_DEFINITION en archivos API
+- ✅ MockLLMClient y GeminiLLMClient: has_auto_wait para skip MISSING_WAIT_STRATEGY
+- ✅ Prompts LLM ampliados con contexto de clasificación y auto-wait
+- ✅ CLI: opción --config para especificar .gtaa.yaml manualmente
+- ✅ PyYAML>=6.0 como dependencia
+- ✅ Ejemplo API test en examples/bad_project/tests/api/
+- ✅ 40 tests nuevos (23 classifier + 8 config + 4 definition_checker + 5 otros)
+- ✅ Documentación: PHASE7_FLOW_DIAGRAMS.md + ADR 22-27
+
+**Próximos pasos:** Fase 8 - Optimización y documentación final
 
 ---
 
@@ -723,12 +753,12 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 - ⏳ Optimización de prompts LLM (reducir tokens, mejorar precisión)
 - ⏳ Integración CI/CD (`--min-score`, exit codes)
 - ⏳ Documentación TFM final
-- ⏳ PHASE7_FLOW_DIAGRAMS.md + PHASE8_FLOW_DIAGRAMS.md
+- ⏳ PHASE8_FLOW_DIAGRAMS.md
 
 ---
 
 <div align="center">
 
-**Estado del proyecto:** Fase 6/8 | 18 violaciones | 234 tests
+**Estado del proyecto:** Fase 7/8 | 18 violaciones | 274 tests
 
 </div>
