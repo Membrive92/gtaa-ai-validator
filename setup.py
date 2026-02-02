@@ -43,6 +43,7 @@ setup(
         "click>=8.0.0",
         "google-genai>=1.0.0",
         "python-dotenv>=1.0.0",
+        "PyYAML>=6.0",
     ],
     entry_points={
         "console_scripts": [
