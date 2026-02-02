@@ -22,10 +22,17 @@ ANALYZE_FILE_PROMPT = """Analiza el siguiente archivo Python de un proyecto de t
 y detecta violaciones semánticas.
 
 **Archivo**: `{file_path}`
+**Clasificación del archivo**: {file_type} (api = test de API, ui = test de UI, unknown = no clasificado)
 **Contenido**:
 ```python
 {file_content}
 ```
+
+**Auto-wait del framework**: {has_auto_wait}
+
+**IMPORTANTE**:
+- Si el archivo es de tipo "api", NO reportes MISSING_WAIT_STRATEGY (las esperas de UI no aplican a tests de API).
+- Si el framework tiene auto-wait (has_auto_wait = sí), NO reportes MISSING_WAIT_STRATEGY (el framework gestiona las esperas automáticamente, ej. Playwright).
 
 Busca SOLO estos tipos de violaciones:
 - `UNCLEAR_TEST_PURPOSE`: Test cuyo nombre y/o docstring no describen claramente qué comportamiento valida.

@@ -17,7 +17,9 @@ class MockLLMClient:
     permitiendo tests deterministas y demostración sin API key.
     """
 
-    def analyze_file(self, file_content: str, file_path: str) -> List[dict]:
+    def analyze_file(self, file_content: str, file_path: str,
+                     file_type: str = "unknown",
+                     has_auto_wait: bool = False) -> List[dict]:
         """Detecta violaciones semánticas usando heurísticas."""
         violations = []
 
@@ -36,7 +38,9 @@ class MockLLMClient:
 
         if is_page_object:
             violations.extend(self._check_page_object_too_much(tree, file_content))
-            violations.extend(self._check_missing_wait_strategy(tree, file_content))
+            # MISSING_WAIT_STRATEGY no aplica a archivos API ni frameworks con auto-wait
+            if file_type != "api" and not has_auto_wait:
+                violations.extend(self._check_missing_wait_strategy(tree, file_content))
             violations.extend(self._check_mixed_abstraction_level(tree, file_content))
 
         return violations

@@ -26,6 +26,7 @@ from gtaa_validator.reporters.html_reporter import HtmlReporter
 from gtaa_validator.analyzers.semantic_analyzer import SemanticAnalyzer
 from gtaa_validator.llm.client import MockLLMClient
 from gtaa_validator.llm.gemini_client import GeminiLLMClient
+from gtaa_validator.config import load_config
 
 
 @click.command()
@@ -34,7 +35,9 @@ from gtaa_validator.llm.gemini_client import GeminiLLMClient
 @click.option('--json', 'json_path', type=click.Path(), default=None, help='Exportar reporte JSON al fichero indicado')
 @click.option('--html', 'html_path', type=click.Path(), default=None, help='Exportar reporte HTML al fichero indicado')
 @click.option('--ai', is_flag=True, help='Activar análisis semántico AI')
-def main(project_path: str, verbose: bool, json_path: str, html_path: str, ai: bool):
+@click.option('--config', 'config_path', type=click.Path(exists=True), default=None,
+              help='Ruta al archivo de configuración .gtaa.yaml')
+def main(project_path: str, verbose: bool, json_path: str, html_path: str, ai: bool, config_path: str):
     """
     Valida el cumplimiento de la arquitectura gTAA en un proyecto de test automation.
 
@@ -56,8 +59,13 @@ def main(project_path: str, verbose: bool, json_path: str, html_path: str, ai: b
         click.echo(f"ERROR: {project_path} no es un directorio", err=True)
         sys.exit(1)
 
+    # Cargar configuración del proyecto
+    config = None
+    if config_path:
+        config = load_config(Path(config_path).parent)
+
     # Crear analizador y ejecutar análisis
-    analyzer = StaticAnalyzer(project_path, verbose=verbose)
+    analyzer = StaticAnalyzer(project_path, verbose=verbose, config=config)
 
     if not verbose:
         click.echo("Ejecutando análisis estático...")

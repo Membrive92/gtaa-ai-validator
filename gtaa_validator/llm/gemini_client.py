@@ -41,11 +41,15 @@ class GeminiLLMClient:
         self.model = model
         self.client = genai.Client(api_key=api_key)
 
-    def analyze_file(self, file_content: str, file_path: str) -> List[dict]:
+    def analyze_file(self, file_content: str, file_path: str,
+                     file_type: str = "unknown",
+                     has_auto_wait: bool = False) -> List[dict]:
         """Envía código a Gemini para detectar violaciones semánticas."""
         prompt = ANALYZE_FILE_PROMPT.format(
             file_path=file_path,
             file_content=file_content,
+            file_type=file_type,
+            has_auto_wait="sí" if has_auto_wait else "no",
         )
 
         try:

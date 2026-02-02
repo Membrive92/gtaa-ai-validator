@@ -10,12 +10,14 @@ El SemanticAnalyzer recibe un Report ya generado por StaticAnalyzer
 y lo enriquece con análisis semántico.
 """
 
+import ast
 from pathlib import Path
 from typing import List, Union
 
 from gtaa_validator.models import Report, Violation, ViolationType, Severity
 from gtaa_validator.llm.client import MockLLMClient
 from gtaa_validator.llm.gemini_client import GeminiLLMClient
+from gtaa_validator.file_classifier import FileClassifier
 
 
 # Directorios excluidos del análisis (mismos que StaticAnalyzer)
@@ -41,6 +43,7 @@ class SemanticAnalyzer:
         self.project_path = project_path
         self.llm_client = llm_client
         self.verbose = verbose
+        self.classifier = FileClassifier()
 
     def analyze(self, report: Report) -> Report:
         """
@@ -63,8 +66,21 @@ class SemanticAnalyzer:
             except (OSError, UnicodeDecodeError):
                 continue
 
+            # Clasificar archivo para contextualizar el análisis LLM
+            file_type = "unknown"
+            has_auto_wait = False
+            try:
+                tree = ast.parse(content, filename=str(file_path))
+                classification = self.classifier.classify_detailed(file_path, content, tree)
+                file_type = classification.file_type
+                has_auto_wait = classification.has_auto_wait
+            except SyntaxError:
+                pass
+
             file_str = str(file_path)
-            raw_violations = self.llm_client.analyze_file(content, file_str)
+            raw_violations = self.llm_client.analyze_file(
+                content, file_str, file_type=file_type, has_auto_wait=has_auto_wait
+            )
 
             for raw in raw_violations:
                 vtype_name = raw.get("type", "")
