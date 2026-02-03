@@ -29,8 +29,9 @@ AUTO_WAIT_FRAMEWORKS: Set[str] = {"playwright"}
 @dataclass
 class ClassificationResult:
     """Resultado de la clasificación de un archivo."""
-    file_type: str  # 'api', 'ui' o 'unknown'
+    file_type: str  # 'api', 'ui', 'bdd_step' o 'unknown'
     frameworks: Set[str] = field(default_factory=set)  # ej. {'playwright'}, {'selenium'}
+    is_bdd: bool = False  # True si es un step definition BDD
 
     @property
     def has_auto_wait(self) -> bool:
@@ -63,6 +64,11 @@ class FileClassifier:
         # "axios", "supertest", "node-fetch",
         # Java (para futuro)
         # "io.restassured", "okhttp3",
+    }
+
+    # --- Señales de imports BDD (módulos raíz) ---
+    BDD_IMPORTS: Set[str] = {
+        "behave", "pytest_bdd",
     }
 
     # --- Señales de imports UI (módulos raíz) ---
@@ -118,9 +124,10 @@ class FileClassifier:
         ui_score = 0
 
         # 1. Análisis de imports via AST (más preciso que regex)
-        api_imports, ui_imports = self._analyze_imports(tree)
+        api_imports, ui_imports, bdd_imports = self._analyze_imports(tree)
         api_score += len(api_imports) * self.IMPORT_WEIGHT
         ui_score += len(ui_imports) * self.IMPORT_WEIGHT
+        is_bdd = len(bdd_imports) > 0
 
         # 2. Patrones de código API (regex)
         for pattern in self.API_CODE_PATTERNS:
@@ -144,17 +151,19 @@ class FileClassifier:
         return ClassificationResult(
             file_type=file_type,
             frameworks=ui_imports,  # Los UI imports son los frameworks detectados
+            is_bdd=is_bdd,
         )
 
     def _analyze_imports(self, tree: ast.Module):
         """
-        Extrae imports del AST y los clasifica como API o UI.
+        Extrae imports del AST y los clasifica como API, UI o BDD.
 
         Returns:
-            Tupla (api_imports_encontrados, ui_imports_encontrados)
+            Tupla (api_imports_encontrados, ui_imports_encontrados, bdd_imports_encontrados)
         """
         api_found = set()
         ui_found = set()
+        bdd_found = set()
 
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
@@ -164,6 +173,8 @@ class FileClassifier:
                         api_found.add(root_module)
                     if root_module in self.UI_IMPORTS:
                         ui_found.add(root_module)
+                    if root_module in self.BDD_IMPORTS:
+                        bdd_found.add(root_module)
 
             elif isinstance(node, ast.ImportFrom):
                 if node.module:
@@ -172,5 +183,7 @@ class FileClassifier:
                         api_found.add(root_module)
                     if root_module in self.UI_IMPORTS:
                         ui_found.add(root_module)
+                    if root_module in self.BDD_IMPORTS:
+                        bdd_found.add(root_module)
 
-        return api_found, ui_found
+        return api_found, ui_found, bdd_found
