@@ -16,6 +16,7 @@ from gtaa_validator.checkers.definition_checker import DefinitionChecker
 from gtaa_validator.checkers.structure_checker import StructureChecker
 from gtaa_validator.checkers.adaptation_checker import AdaptationChecker
 from gtaa_validator.checkers.quality_checker import QualityChecker
+from gtaa_validator.checkers.bdd_checker import BDDChecker
 from gtaa_validator.models import Severity
 
 
@@ -26,16 +27,16 @@ from gtaa_validator.models import Severity
 class TestInitialization:
     """Tests for StaticAnalyzer construction."""
 
-    def test_initializes_four_checkers(self, bad_project_path):
-        """Phase 3 creates 4 checkers."""
+    def test_initializes_five_checkers(self, bad_project_path):
+        """Phase 8 creates 5 checkers (4 original + BDDChecker)."""
         analyzer = StaticAnalyzer(bad_project_path)
-        assert len(analyzer.checkers) == 4
+        assert len(analyzer.checkers) == 5
 
     def test_checker_types(self, bad_project_path):
         """All expected checker types are present."""
         analyzer = StaticAnalyzer(bad_project_path)
         types = {type(c) for c in analyzer.checkers}
-        assert types == {DefinitionChecker, StructureChecker, AdaptationChecker, QualityChecker}
+        assert types == {DefinitionChecker, StructureChecker, AdaptationChecker, QualityChecker, BDDChecker}
 
     def test_resolves_path(self, bad_project_path):
         """project_path is resolved to absolute."""
@@ -46,7 +47,7 @@ class TestInitialization:
         """get_summary() returns analyzer configuration."""
         analyzer = StaticAnalyzer(bad_project_path)
         summary = analyzer.get_summary()
-        assert summary["checker_count"] == 4
+        assert summary["checker_count"] == 5
         assert "DefinitionChecker" in summary["checkers"]
         assert "StructureChecker" in summary["checkers"]
 
@@ -63,7 +64,7 @@ class TestFileDiscovery:
         analyzer = StaticAnalyzer(bad_project_path)
         files = analyzer._discover_python_files()
         assert len(files) > 0
-        assert all(f.suffix == ".py" for f in files)
+        assert all(f.suffix in (".py", ".feature") for f in files)
 
     def test_excludes_venv(self, tmp_path):
         """Files inside venv/ are excluded."""
