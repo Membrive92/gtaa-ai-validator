@@ -5,14 +5,14 @@
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Estado](https://img.shields.io/badge/estado-en%20desarrollo-yellow)](https://github.com/Membrive92/gtaa-ai-validator)
-[![Fase](https://img.shields.io/badge/fase-7%2F8-blue)](https://github.com/Membrive92/gtaa-ai-validator)
-[![Progreso](https://img.shields.io/badge/progreso-87%25-green)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Fase](https://img.shields.io/badge/fase-8%2F10-blue)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Progreso](https://img.shields.io/badge/progreso-80%25-green)](https://github.com/Membrive92/gtaa-ai-validator)
 
 > **📌 TRABAJO DE FIN DE MÁSTER - EN DESARROLLO INCREMENTAL**
 >
 > Autor: Jose Antonio Membrive Guillen
 > Año: 2025-2026
-> **Estado:** Fase 7/8 Completa | Última actualización: 2 Febrero 2026
+> **Estado:** Fase 8/10 Completa | Última actualización: 3 Febrero 2026
 
 ---
 
@@ -33,7 +33,9 @@
 | **✅ Fase 5** | **Análisis semántico AI (Gemini Flash + Mock)** | **COMPLETO** | **01/02/2026** |
 | **✅ Fase 6** | **Ampliación cobertura (18 violaciones) + Documentación** | **COMPLETO** | **01/02/2026** |
 | **✅ Fase 7** | **Soporte para proyectos mixtos (API + UI) + auto-wait Playwright** | **COMPLETO** | **02/02/2026** |
-| **⏳ Fase 8** | **Optimización y documentación final** | **PENDIENTE** | — |
+| **✅ Fase 8** | **Soporte Gherkin/BDD (Behave + pytest-bdd)** | **COMPLETO** | **03/02/2026** |
+| **⏳ Fase 9** | **Soporte Multilenguaje (Java + JavaScript)** | **PENDIENTE** | — |
+| **⏳ Fase 10** | **Optimización y documentación final** | **PENDIENTE** | — |
 
 ### 📊 Funcionalidades Implementadas vs Planeadas
 
@@ -43,16 +45,18 @@
 | ✅ Descubrimiento de archivos test | Implementado | Soporta patrones test_*.py y *_test.py |
 | ✅ Validación de entrada | Implementado | Verifica existencia de directorio |
 | ✅ Análisis AST de código Python | Implementado | Visitor Pattern + ast.walk |
-| ✅ Detección de 18 tipos de violaciones gTAA | Implementado | Fase 2-6 — 4 checkers + LLM |
+| ✅ Detección de 23 tipos de violaciones gTAA | Implementado | Fase 2-8 — 5 checkers + LLM |
 | ✅ Sistema de scoring (0-100) | Implementado | Penalización por severidad |
 | ✅ Proyectos de ejemplo (bueno/malo) | Implementado | En directorio examples/ |
-| ✅ Tests unitarios + integración (274 tests) | Implementado | pytest con unit/ e integration/ |
+| ✅ Tests unitarios + integración (317 tests) | Implementado | pytest con unit/ e integration/ |
 | ✅ Documentación técnica con diagramas | Implementado | docs/ con flujos Fase 1-7 |
 | ✅ Reportes HTML dashboard | Implementado | Fase 4 — SVG inline, autocontenido |
 | ✅ Reportes JSON para CI/CD | Implementado | Fase 4 — `--json` / `--html` |
 | ✅ Análisis semántico con LLM | Implementado | Fase 5 — Gemini Flash API + MockLLM fallback |
 | ✅ Soporte proyectos mixtos (API + UI) | Implementado | Fase 7 — FileClassifier, .gtaa.yaml, auto-wait Playwright |
-| ⏳ Optimización y documentación final | Pendiente | Fase 8 — prompts, CI/CD, docs TFM |
+| ✅ Soporte Gherkin/BDD (Behave + pytest-bdd) | Implementado | Fase 8 — GherkinParser, BDDChecker, 5 violaciones BDD |
+| ⏳ Soporte Multilenguaje (Java + JavaScript) | Pendiente | Fase 9 — tree-sitter, javalang |
+| ⏳ Optimización y documentación final | Pendiente | Fase 10 — prompts, CI/CD, docs TFM |
 
 **Leyenda:** ✅ Implementado | ⏳ Pendiente
 
@@ -147,14 +151,14 @@ La gTAA organiza el framework de automatización en capas con responsabilidades 
 
 Sistema híbrido que combina **3 técnicas de IA** para detectar automáticamente violaciones arquitectónicas:
 
-1. **🔍 Análisis Estático**: Pattern matching con AST y regex (12 violaciones)
+1. **🔍 Análisis Estático**: Pattern matching con AST y regex (17 violaciones)
 2. **🧠 Análisis Semántico (LLM)**: Gemini Flash para detección profunda (6 violaciones)
 
 ### 🏆 Contribuciones Planificadas (TFM)
 
 - 🎯 **Primera herramienta** que valida automáticamente gTAA (objetivo del TFM)
 - ✅ **Sistema híbrido** que combina reglas estáticas + IA semántica (implementado Fase 5)
-- ✅ **Detecta 18 tipos** de violaciones arquitectónicas (12 estáticas + 6 semánticas)
+- ✅ **Detecta 23 tipos** de violaciones arquitectónicas (17 estáticas + 6 semánticas)
 - ✅ **Reportes visuales** en HTML y JSON para CI/CD (implementado Fase 4)
 - ✅ **Cobertura ampliada** con 5 nuevas violaciones basadas en catálogo CT-TAE (Fase 6)
 
@@ -225,12 +229,12 @@ pip install -e .
 
 ---
 
-### ✅ Funcionalidad ACTUAL (Fase 7)
+### ✅ Funcionalidad ACTUAL (Fase 8)
 
 **Funcionalidad disponible en la versión actual:**
 
 ```bash
-# Análisis estático con detección de 12 tipos de violaciones estáticas
+# Análisis estático con detección de 17 tipos de violaciones estáticas (incluye BDD)
 python -m gtaa_validator /path/to/your/selenium-project
 
 # Modo verbose para ver detalles de cada violación
@@ -252,13 +256,13 @@ python -m gtaa_validator examples/bad_project --verbose
 python -m gtaa_validator examples/good_project
 
 # Ejecutar tests
-pytest tests/               # Todos (274 tests)
+pytest tests/               # Todos (317 tests)
 pytest tests/unit/          # Solo unitarios
 pytest tests/integration/   # Solo integración
 ```
 
 **Capacidades implementadas:**
-- ✅ 4 checkers detectando 12 tipos de violaciones estáticas
+- ✅ 5 checkers detectando 17 tipos de violaciones estáticas (incluye BDDChecker)
 - ✅ Análisis AST con Visitor Pattern (BrowserAPICallVisitor, AssertionVisitor, BusinessLogicVisitor, HardcodedDataVisitor)
 - ✅ Análisis de estructura de proyecto (directorios requeridos)
 - ✅ Detección por regex (emails, URLs, teléfonos, passwords, locators duplicados, configuración hardcodeada)
@@ -274,7 +278,10 @@ pytest tests/integration/   # Solo integración
 - ✅ Reporte HTML dashboard autocontenido con SVG inline (score gauge, gráficos, tablas)
 - ✅ Reporte JSON estructurado para integración CI/CD
 - ✅ Flags `--json`, `--html`, `--ai` y `--config` compatibles entre sí
-- ✅ 274 tests automatizados
+- ✅ Soporte BDD: analiza archivos .feature y step definitions (Behave, pytest-bdd)
+- ✅ GherkinParser regex-based sin dependencias externas
+- ✅ 5 violaciones BDD: detalles técnicos en Gherkin, browser calls en steps, complejidad, falta de Then, duplicados
+- ✅ 317 tests automatizados
 
 **Ejemplo de salida (con --ai):**
 ```
@@ -316,10 +323,15 @@ El proyecto incluye ejemplos completamente documentados en el directorio [exampl
 ```
 examples/
 ├── README.md                  # Documentación detallada de cada ejemplo
-├── bad_project/               # Proyecto con ~35 violaciones (todos los tipos)
+├── bad_project/               # Proyecto con ~45 violaciones (todos los tipos)
 │   ├── test_login.py          # 8 violaciones (Selenium directo)
 │   ├── test_search.py         # 7 violaciones (Playwright directo)
 │   ├── test_data_issues.py    # Datos hardcoded, nombres genéricos, función larga
+│   ├── features/              # Archivos .feature con violaciones BDD
+│   │   └── login.feature      # XPath en Gherkin, scenarios sin Then
+│   ├── steps/                 # Step definitions con violaciones
+│   │   ├── login_steps.py     # Browser calls directos
+│   │   └── search_steps.py    # Step pattern duplicado
 │   └── pages/
 │       └── checkout_page.py   # POM con asserts, imports prohibidos, lógica
 └── good_project/              # Proyecto con arquitectura gTAA correcta
@@ -391,24 +403,50 @@ api_test_patterns:
 
 ---
 
-### ⏳ Funcionalidad FUTURA — Fase 8: Optimización y Documentación Final
+### ✅ Funcionalidad Implementada — Fase 8: Soporte Gherkin/BDD
 
-**Funcionalidades planificadas:**
+**Problema resuelto**: Proyectos BDD con Behave o pytest-bdd no tenían validación arquitectónica. Los archivos .feature y step definitions quedaban fuera del análisis.
 
-#### Optimización de prompts LLM
-```
-# ⏳ Reducir tokens, mejorar precisión, evaluar cost/benefit
-```
-
-#### Integración CI/CD
-```bash
-# ⏳ PRÓXIMAMENTE - Validación en pipelines
-python -m gtaa_validator . --min-score 70 --format json
+#### GherkinParser (regex-based)
+```python
+# Parser ligero sin dependencias externas (Gherkin tiene sintaxis regular)
+# Extrae: Feature, Scenario, Background, Scenario Outline
+# Steps con keywords: Given/When/Then/And/But
+# And/But heredan el keyword anterior para has_given/has_when/has_then
 ```
 
-#### Documentación TFM final
+#### BDDChecker (5 tipos de violación)
+```python
+# 1. GHERKIN_IMPLEMENTATION_DETAIL: XPath, CSS, URLs, SQL en .feature
+# 2. STEP_DEF_DIRECT_BROWSER_CALL: page.locator(), driver.find_element() en steps
+# 3. STEP_DEF_TOO_COMPLEX: step definition > 15 líneas
+# 4. MISSING_THEN_STEP: scenario sin verificación
+# 5. DUPLICATE_STEP_PATTERN: misma regex en múltiples step files (check_project)
 ```
-# ⏳ Revisión de estructura, documentación académica, PHASE7/8_FLOW_DIAGRAMS.md
+
+#### Detección automática de step definitions
+```python
+# Por ruta: steps/, step_defs/, step_definitions/
+# Por nombre: step_*.py, *_steps.py
+# Por AST: decoradores @given/@when/@then
+```
+
+---
+
+### ⏳ Funcionalidad FUTURA — Fase 9-10
+
+#### Fase 9: Soporte Multilenguaje
+```
+# ⏳ JavaScript/TypeScript con tree-sitter
+# ⏳ Java con javalang
+# ⏳ Frameworks: Cypress, Playwright JS, WebdriverIO, Selenium Java
+```
+
+#### Fase 10: Optimización y Documentación Final
+```
+# ⏳ Optimización de prompts LLM
+# ⏳ Integración CI/CD (--min-score)
+# ⏳ Documentación TFM final
 ```
 
 ---
@@ -431,6 +469,10 @@ gtaa-ai-validator/
 │   ├── file_classifier.py             # Clasificador API/UI (Fase 7)
 │   ├── config.py                      # ProjectConfig + .gtaa.yaml (Fase 7)
 │   │
+│   ├── parsers/                        # 📝 Parsers especializados (Fase 8)
+│   │   ├── __init__.py                 # Exporta GherkinParser
+│   │   └── gherkin_parser.py           # Parser regex-based para .feature
+│   │
 │   ├── analyzers/                      # 🔍 Motores de análisis
 │   │   ├── static_analyzer.py          # Orquestador estático (Facade Pattern)
 │   │   └── semantic_analyzer.py        # Orquestador semántico AI (Fase 5)
@@ -449,9 +491,10 @@ gtaa-ai-validator/
 │       ├── definition_checker.py       # Test Definition Layer (AST Visitor)
 │       ├── structure_checker.py        # Estructura del proyecto (Filesystem)
 │       ├── adaptation_checker.py       # Test Adaptation Layer (AST + Regex)
-│       └── quality_checker.py          # Calidad de tests (AST + Regex)
+│       ├── quality_checker.py          # Calidad de tests (AST + Regex)
+│       └── bdd_checker.py              # BDD/Gherkin (Fase 8)
 │
-├── tests/                              # 🧪 Tests automatizados (274 tests)
+├── tests/                              # 🧪 Tests automatizados (317 tests)
 │   ├── conftest.py                     # Fixtures compartidas
 │   ├── unit/                           # Tests unitarios
 │   │   ├── test_models.py             # Modelos de datos
@@ -459,6 +502,8 @@ gtaa-ai-validator/
 │   │   ├── test_structure_checker.py  # StructureChecker
 │   │   ├── test_adaptation_checker.py # AdaptationChecker
 │   │   ├── test_quality_checker.py    # QualityChecker
+│   │   ├── test_bdd_checker.py        # BDDChecker (Fase 8)
+│   │   ├── test_gherkin_parser.py     # GherkinParser (Fase 8)
 │   │   ├── test_json_reporter.py      # JsonReporter
 │   │   ├── test_html_reporter.py      # HtmlReporter
 │   │   ├── test_llm_client.py         # MockLLMClient
@@ -479,14 +524,15 @@ gtaa-ai-validator/
 │
 └── docs/                               # 📚 Documentación técnica
     ├── README.md                       # Índice de documentación
-    ├── ARCHITECTURE_DECISIONS.md       # Decisiones arquitectónicas (27 ADR)
+    ├── ARCHITECTURE_DECISIONS.md       # Decisiones arquitectónicas (32 ADR)
     ├── PHASE1_FLOW_DIAGRAMS.md         # Diagramas Fase 1 (CLI y fundación)
     ├── PHASE2_FLOW_DIAGRAMS.md         # Diagramas Fase 2 (análisis estático)
     ├── PHASE3_FLOW_DIAGRAMS.md         # Diagramas Fase 3 (9 violaciones)
     ├── PHASE4_FLOW_DIAGRAMS.md         # Diagramas Fase 4 (reportes)
     ├── PHASE5_FLOW_DIAGRAMS.md         # Diagramas Fase 5 (análisis semántico AI)
     ├── PHASE6_FLOW_DIAGRAMS.md         # Diagramas Fase 6 (18 violaciones)
-    └── PHASE7_FLOW_DIAGRAMS.md         # Diagramas Fase 7 (proyectos mixtos)
+    ├── PHASE7_FLOW_DIAGRAMS.md         # Diagramas Fase 7 (proyectos mixtos)
+    └── PHASE8_FLOW_DIAGRAMS.md         # Diagramas Fase 8 (BDD/Gherkin)
 ```
 
 > **Nota sobre `docs/`**: La documentación técnica se distribuye en múltiples documentos independientes, uno por cada fase del proyecto y uno para las decisiones arquitectónicas. Esta separación responde a un criterio de **transparencia y trazabilidad**: cada documento refleja el estado del proyecto en el momento de su elaboración, permitiendo seguir la evolución del diseño y las decisiones técnicas a lo largo del desarrollo. El índice general se encuentra en [`docs/README.md`](docs/README.md).
@@ -497,22 +543,27 @@ gtaa-ai-validator/
 
 ### 1. 🔍 Detección de Violaciones Arquitectónicas
 
-#### 4 Checkers — 12 tipos de violaciones estáticas
+#### 5 Checkers — 17 tipos de violaciones estáticas
 
 | Severidad | Tipo | Checker | Técnica |
 |-----------|------|---------|---------|
 | 🔴 CRÍTICA | `ADAPTATION_IN_DEFINITION` | DefinitionChecker | AST Visitor (BrowserAPICallVisitor) |
 | 🔴 CRÍTICA | `MISSING_LAYER_STRUCTURE` | StructureChecker | Sistema de archivos (iterdir) |
+| 🔴 CRÍTICA | `STEP_DEF_DIRECT_BROWSER_CALL` | BDDChecker | AST (browser APIs en step defs) |
 | 🟡 ALTA | `HARDCODED_TEST_DATA` | QualityChecker | AST Visitor + Regex |
 | 🟡 ALTA | `ASSERTION_IN_POM` | AdaptationChecker | AST Visitor |
 | 🟡 ALTA | `FORBIDDEN_IMPORT` | AdaptationChecker | ast.walk |
 | 🟡 ALTA | `HARDCODED_CONFIGURATION` | QualityChecker | Regex (localhost, sleep, paths) |
 | 🟡 ALTA | `SHARED_MUTABLE_STATE` | QualityChecker | AST (Assign + Global) |
+| 🟡 ALTA | `GHERKIN_IMPLEMENTATION_DETAIL` | BDDChecker | Regex (XPath, CSS, URLs en .feature) |
 | 🟠 MEDIA | `BUSINESS_LOGIC_IN_POM` | AdaptationChecker | AST Visitor |
 | 🟠 MEDIA | `DUPLICATE_LOCATOR` | AdaptationChecker | Regex + Registro cross-file |
 | 🟠 MEDIA | `LONG_TEST_FUNCTION` | QualityChecker | ast.walk + lineno |
 | 🟠 MEDIA | `BROAD_EXCEPTION_HANDLING` | QualityChecker | AST (ExceptHandler) |
+| 🟠 MEDIA | `STEP_DEF_TOO_COMPLEX` | BDDChecker | AST (líneas > 15 en step def) |
+| 🟠 MEDIA | `MISSING_THEN_STEP` | BDDChecker | GherkinParser (scenario sin Then) |
 | 🟢 BAJA | `POOR_TEST_NAMING` | QualityChecker | ast.walk + Regex |
+| 🟢 BAJA | `DUPLICATE_STEP_PATTERN` | BDDChecker | Regex cross-file (check_project) |
 
 ### 2. 📊 Sistema de Puntuación (0-100)
 
@@ -563,10 +614,11 @@ Puntuación = max(0, 100 - suma de penalizaciones)
 ## 🎓 Contexto Académico (TFM)
 
 ### Objetivos del TFM
-1. ✅ Desarrollar sistema de IA para validación arquitectónica (Fase 7/8 completa)
+1. ✅ Desarrollar sistema de IA para validación arquitectónica (Fase 8/10 completa)
 2. ✅ Integrar LLM real para análisis semántico (Gemini Flash - Fase 5)
-3. ✅ Ampliar cobertura a 18 tipos de violación basados en catálogo CT-TAE (Fase 6)
+3. ✅ Ampliar cobertura a 23 tipos de violación basados en catálogo CT-TAE (Fase 6-8)
 4. ✅ Crear dataset etiquetado para la comunidad (ejemplos con ground truth)
+5. ✅ Soporte BDD/Gherkin para validación de capa Gherkin (Fase 8)
 
 ### Tecnologías de IA a Utilizar
 - **Abstract Syntax Tree (AST)** para análisis estático (✅ Implementado)
@@ -583,7 +635,9 @@ Puntuación = max(0, 100 - suma de penalizaciones)
 - ✅ Fase 5: Análisis semántico AI (Gemini Flash + Mock) - **COMPLETA**
 - ✅ Fase 6: Ampliación cobertura (18 violaciones) + Documentación - **COMPLETA**
 - ✅ Fase 7: Soporte para proyectos mixtos (API + UI) + auto-wait Playwright - **COMPLETA**
-- ⏳ Fase 8: Optimización y documentación final - **PENDIENTE**
+- ✅ Fase 8: Soporte Gherkin/BDD (Behave + pytest-bdd) - **COMPLETA**
+- ⏳ Fase 9: Soporte Multilenguaje (Java + JavaScript) - **PENDIENTE**
+- ⏳ Fase 10: Optimización y documentación final - **PENDIENTE**
 
 ---
 
@@ -606,7 +660,7 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 - [ISTQB CT-TAE Syllabus v2016](https://www.istqb.org/)
 
 ### Documentación Técnica del Proyecto
-- **[Decisiones Arquitectónicas (ADR)](docs/ARCHITECTURE_DECISIONS.md)** ✅ — Patrones de diseño, paradigmas, justificaciones técnicas
+- **[Decisiones Arquitectónicas (ADR)](docs/ARCHITECTURE_DECISIONS.md)** ✅ — 32 ADRs: patrones de diseño, paradigmas, justificaciones técnicas
 - **[Diagramas de Flujo - Fase 1](docs/PHASE1_FLOW_DIAGRAMS.md)** ✅ — Fundación del proyecto, CLI con Click, descubrimiento de archivos
 - **[Diagramas de Flujo - Fase 2](docs/PHASE2_FLOW_DIAGRAMS.md)** ✅ — Motor de análisis estático, BrowserAPICallVisitor, scoring
 - **[Diagramas de Flujo - Fase 3](docs/PHASE3_FLOW_DIAGRAMS.md)** ✅ — 4 checkers, 9 violaciones, AST visitors, cross-file state
@@ -614,6 +668,7 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 - **[Diagramas de Flujo - Fase 5](docs/PHASE5_FLOW_DIAGRAMS.md)** ✅ — Análisis semántico AI, Gemini Flash, prompt engineering, parsing LLM
 - **[Diagramas de Flujo - Fase 6](docs/PHASE6_FLOW_DIAGRAMS.md)** ✅ — Ampliación a 18 violaciones, nuevos checkers, heurísticas mock
 - **[Diagramas de Flujo - Fase 7](docs/PHASE7_FLOW_DIAGRAMS.md)** ✅ — Proyectos mixtos API+UI, FileClassifier, .gtaa.yaml, auto-wait Playwright
+- **[Diagramas de Flujo - Fase 8](docs/PHASE8_FLOW_DIAGRAMS.md)** ✅ — Soporte BDD/Gherkin, GherkinParser, BDDChecker, 5 violaciones BDD
 - **[Índice de documentación](docs/README.md)** ✅
 
 ---
@@ -747,18 +802,52 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 
 ---
 
-### Versión 0.8.0 - Fase 8 (Pendiente) ⏳
+### Versión 0.8.0 - Fase 8 (3 Febrero 2026) ✅
+
+**Implementado:**
+- ✅ GherkinParser: parser regex-based para archivos .feature (sin dependencias externas)
+- ✅ Soporte para Feature, Scenario, Scenario Outline, Background
+- ✅ Herencia de keywords And/But para detección precisa de has_then
+- ✅ BDDChecker: 5 nuevos tipos de violación BDD
+- ✅ GHERKIN_IMPLEMENTATION_DETAIL: XPath, CSS selectors, URLs, SQL en .feature
+- ✅ STEP_DEF_DIRECT_BROWSER_CALL: browser APIs directamente en step definitions
+- ✅ STEP_DEF_TOO_COMPLEX: step definition > 15 líneas
+- ✅ MISSING_THEN_STEP: scenario sin step Then (sin verificación)
+- ✅ DUPLICATE_STEP_PATTERN: misma regex en múltiples step files (check_project cross-file)
+- ✅ Detección automática de step definitions (por ruta y AST)
+- ✅ Extensión de StaticAnalyzer para incluir .feature en file discovery
+- ✅ LLM layer actualizado con 5 nuevos tipos de violación
+- ✅ Ejemplos BDD en bad_project (features/ y steps/)
+- ✅ 43 tests nuevos (27 GherkinParser + 16 BDDChecker)
+- ✅ Documentación: PHASE8_FLOW_DIAGRAMS.md + ADR 28-32
+
+**Próximos pasos:** Fase 9 - Soporte Multilenguaje (Java + JavaScript)
+
+---
+
+### Versión 0.9.0 - Fase 9 (Pendiente) ⏳
+
+**Planificado:**
+- ⏳ JSParser con tree-sitter para JavaScript/TypeScript
+- ⏳ JavaParser con javalang para Java
+- ⏳ Frameworks: Cypress, Playwright JS, WebdriverIO, Selenium Java
+- ⏳ JSChecker y JavaChecker
+- ⏳ Tests y ejemplos multilenguaje
+
+---
+
+### Versión 1.0.0 - Fase 10 (Pendiente) ⏳
 
 **Planificado:**
 - ⏳ Optimización de prompts LLM (reducir tokens, mejorar precisión)
 - ⏳ Integración CI/CD (`--min-score`, exit codes)
 - ⏳ Documentación TFM final
-- ⏳ PHASE8_FLOW_DIAGRAMS.md
+- ⏳ PHASE9_FLOW_DIAGRAMS.md + PHASE10_FLOW_DIAGRAMS.md
 
 ---
 
 <div align="center">
 
-**Estado del proyecto:** Fase 7/8 | 18 violaciones | 274 tests
+**Estado del proyecto:** Fase 8/10 | 23 violaciones | 317 tests
 
 </div>

@@ -37,6 +37,11 @@ El formato sigue la estructura de un ADR (Architecture Decision Record) adaptado
 25. [Auto-wait automático frente a solo configuración YAML](#25-auto-wait-automático-frente-a-solo-configuración-yaml)
 26. [.gtaa.yaml frente a .env para configuración de reglas](#26-gtaayaml-frente-a-env-para-configuración-de-reglas)
 27. [PyYAML con degradación elegante](#27-pyyaml-con-degradación-elegante)
+28. [Parser Gherkin: regex frente a dependencia externa](#28-parser-gherkin-regex-frente-a-dependencia-externa)
+29. [Herencia de keywords And/But para detección de Then](#29-herencia-de-keywords-andbut-para-detección-de-then)
+30. [Detección de step definitions: path frente a AST](#30-detección-de-step-definitions-path-frente-a-ast)
+31. [Detección de step patterns duplicados: check_project cross-file](#31-detección-de-step-patterns-duplicados-check_project-cross-file)
+32. [Patrones de detalle de implementación en Gherkin](#32-patrones-de-detalle-de-implementación-en-gherkin)
 
 ---
 
@@ -1487,6 +1492,276 @@ def load_config(project_path: Path, config_path: Optional[Path] = None) -> Proje
 
 ---
 
+## 28. Parser Gherkin: regex frente a dependencia externa
+
+### Problema
+
+La Fase 8 añade soporte para archivos `.feature` (Gherkin) en proyectos BDD (Behave, pytest-bdd). Se necesita un parser que extraiga Features, Scenarios, Background y Steps con sus keywords (Given/When/Then/And/But).
+
+### Alternativa evaluada: gherkin-official (dependencia externa)
+
+```python
+from gherkin.parser import Parser
+parser = Parser()
+gherkin_document = parser.parse(feature_content)
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Dependencia adicional | Añade `gherkin-official` a requirements.txt |
+| Complejidad del output | Genera un AST complejo con pickles, backgrounds, etc. |
+| Overengineering | Solo necesitamos líneas de steps para regex, no un AST completo |
+
+### Solución elegida: Parser regex propio
+
+```python
+class GherkinParser:
+    FEATURE_RE = re.compile(r'^\s*Feature:\s*(.+)', re.IGNORECASE)
+    SCENARIO_RE = re.compile(r'^\s*Scenario:\s*(.+)', re.IGNORECASE)
+    STEP_RE = re.compile(r'^\s*(Given|When|Then|And|But)\s+(.+)', re.IGNORECASE)
+
+    def parse(self, content: str) -> Optional[GherkinFeature]:
+        # Línea por línea, regex simples
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Sin dependencias | Gherkin tiene sintaxis muy regular — regex son suficientes |
+| Ligero | ~180 líneas de código vs una dependencia externa |
+| Control total | Extraemos exactamente lo que necesitamos (keyword, text, line) |
+| Testeable | Fácil de mockear y testear sin dependencias externas |
+| Seguridad | Minimizar dependencias externas reduce la superficie de ataque y el riesgo de vulnerabilidades en librerías de terceros (supply chain security) |
+
+---
+
+## 29. Herencia de keywords And/But para detección de Then
+
+### Problema
+
+En Gherkin, `And` y `But` heredan el keyword del step anterior. Un scenario como:
+
+```gherkin
+Given I am logged in
+And I have items in cart     # ← This is effectively a "Given"
+When I checkout
+Then I see confirmation
+And I receive email          # ← This is effectively a "Then"
+```
+
+La propiedad `has_then` debe detectar correctamente si el scenario tiene verificación, incluso cuando el `Then` está seguido de `And`.
+
+### Alternativa evaluada: Buscar keyword literal "Then"
+
+```python
+def has_then(self):
+    return any(step.keyword == "Then" for step in self.steps)
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Pierde And/But | Un scenario con `Then X` + `And Y` + `And Z` solo contaría el primer Then |
+| Falsos negativos | Un scenario con `Given`, `When`, `Then`, `And` sería marcado incorrectamente |
+
+### Solución elegida: Rastreo de keyword efectivo
+
+```python
+def _has_effective_keyword(self, keyword: str) -> bool:
+    effective = None
+    for step in self.steps:
+        if step.keyword in ("Given", "When", "Then"):
+            effective = step.keyword
+        # And/But heredan el keyword del step anterior
+        if effective == keyword:
+            return True
+    return False
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Semántica correcta | `And` después de `Then` cuenta como `Then` |
+| Detección precisa | `has_then` es True si hay al menos un step con keyword efectivo Then |
+| Estándar Gherkin | Sigue la semántica oficial de Gherkin |
+
+---
+
+## 30. Detección de step definitions: path frente a AST
+
+### Problema
+
+El BDDChecker necesita identificar qué archivos Python son step definitions (contienen `@given`, `@when`, `@then`) para aplicar las reglas BDD. Se necesita un mecanismo de detección.
+
+### Alternativa evaluada: Solo inspección AST de decoradores
+
+```python
+def is_step_definition(file_path: Path, tree: ast.Module) -> bool:
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef):
+            for decorator in node.decorator_list:
+                if decorator.func.id in ("given", "when", "then"):
+                    return True
+    return False
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Requiere parsear AST | Hay que leer y parsear cada archivo para determinar si es step def |
+| Costoso | En `can_check()` esto se ejecuta para TODOS los archivos |
+| No disponible | `can_check()` recibe solo el path, no el AST |
+
+### Solución elegida: Detección por path + validación AST posterior
+
+```python
+def _is_step_definition_path(self, file_path: Path) -> bool:
+    parts = [p.lower() for p in file_path.parts]
+    name = file_path.name.lower()
+    return (
+        "steps" in parts
+        or "step_defs" in parts
+        or "step_definitions" in parts
+        or name.endswith("_steps.py")
+    )
+
+def _is_step_function(self, node: ast.FunctionDef) -> bool:
+    # Validación AST solo para funciones dentro de archivos candidatos
+    step_decorators = {"given", "when", "then", "step"}
+    for decorator in node.decorator_list:
+        if isinstance(decorator, ast.Call):
+            if decorator.func.id.lower() in step_decorators:
+                return True
+    return False
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Filtrado rápido | `can_check()` usa solo el path — O(1) |
+| Convención estándar | Behave y pytest-bdd usan `steps/` por convención |
+| Validación precisa | Las funciones individuales se validan por AST en `check()` |
+| Dos niveles | Path filtra archivos, AST filtra funciones dentro de ellos |
+
+---
+
+## 31. Detección de step patterns duplicados: check_project cross-file
+
+### Problema
+
+En proyectos BDD, dos archivos de step definitions pueden definir el mismo pattern (ej. `@given("I am on the login page")`), causando conflictos en runtime. Se necesita detectar duplicados entre archivos.
+
+### Alternativa evaluada: Detección en `check()` por archivo
+
+```python
+def check(self, file_path, tree, ...):
+    patterns = self._extract_patterns(tree)
+    for pattern in patterns:
+        if pattern in self._global_patterns:
+            # Violación
+        self._global_patterns.add(pattern)
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Orden-dependiente | El primer archivo no detecta el duplicado — solo el segundo |
+| Estado persistente | `_global_patterns` acumula entre ejecuciones si no se resetea |
+| No idempotente | Ejecutar dos veces da resultados diferentes |
+
+### Solución elegida: check_project con recolección previa
+
+```python
+def check_project(self, project_path: Path) -> List[Violation]:
+    self._step_patterns = {}  # Reset en cada ejecución
+
+    # Fase 1: Recolectar todos los patterns
+    for py_file in project_path.rglob("*.py"):
+        if self._is_step_definition_path(py_file):
+            self._collect_step_patterns(py_file)
+
+    # Fase 2: Detectar duplicados
+    for pattern, files in self._step_patterns.items():
+        if len(files) > 1:
+            for dup_file in files[1:]:
+                violations.append(Violation(
+                    type=DUPLICATE_STEP_PATTERN,
+                    file_path=dup_file,
+                    message=f"Pattern duplicado. También en: {files[0]}"
+                ))
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Idempotente | Reset del dict en cada ejecución |
+| Vista global | Conoce todos los patterns antes de reportar |
+| Reporte en archivo correcto | El "segundo" archivo (duplicado) recibe la violación |
+| Contexto útil | El mensaje indica dónde está el original |
+
+---
+
+## 32. Patrones de detalle de implementación en Gherkin
+
+### Problema
+
+Los archivos `.feature` deben usar lenguaje de negocio, no detalles técnicos. Se necesita detectar XPath, CSS selectors, URLs, SQL y otros detalles de implementación en los steps.
+
+### Alternativa evaluada: Lista de palabras prohibidas
+
+```python
+FORBIDDEN_WORDS = ["xpath", "css", "selector", "localhost", "http"]
+for word in FORBIDDEN_WORDS:
+    if word in step.text.lower():
+        # Violación
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Falsos positivos | "I search for CSS tutorial" contendría "css" |
+| Falsos negativos | `//input[@id='user']` no contiene ninguna palabra prohibida explícita |
+| No distingue contexto | "localhost" en un step sobre configuración local es legítimo |
+
+### Solución elegida: Regex específicas por tipo
+
+```python
+IMPLEMENTATION_PATTERNS = [
+    re.compile(r'//[\w\[\]@=\'"\.]+'),           # XPath
+    re.compile(r'css='),                          # CSS prefix
+    re.compile(r'#[\w-]{3,}'),                    # CSS ID (#username)
+    re.compile(r'\.[\w-]{3,}\b'),                 # CSS class (.btn-primary)
+    re.compile(r'By\.\w+'),                       # Selenium By.*
+    re.compile(r'\[data-[\w-]+'),                 # data attributes
+    re.compile(r'https?://\S+'),                  # URLs
+    re.compile(r'SELECT\s+.+\s+FROM', re.I),     # SQL SELECT
+    re.compile(r'INSERT\s+INTO', re.I),          # SQL INSERT
+    re.compile(r'localhost:\d+'),                 # localhost URLs
+    re.compile(r'<[\w/]+>'),                      # HTML tags
+]
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Precisión | `//input[@id]` detecta XPath real, no "xpath" como palabra |
+| Mínimos falsos positivos | Los patterns son específicos (ej. `#` requiere 3+ chars) |
+| Extensible | Añadir nuevo patrón es una línea |
+| Cobertura amplia | XPath, CSS, SQL, URLs, HTML — todos los técnicos comunes |
+
+---
+
 ## Resumen de decisiones
 
 | Decisión | Solución elegida | Alternativa descartada | Justificación principal |
@@ -1515,7 +1790,12 @@ def load_config(project_path: Path, config_path: Optional[Path] = None) -> Proje
 | Detección auto-wait | Automática + YAML complemento | Solo YAML manual | Zero config para Playwright, extensible |
 | Configuración de reglas | `.gtaa.yaml` dedicado | `.env` / `pyproject.toml` | Semántico, commitable, agnóstico al lenguaje |
 | Parseo YAML | Degradación elegante (defaults) | Fallo estricto (raise) | Zero config, robusto, consistente con ADR 15 |
+| Parser Gherkin | Regex propio | gherkin-official (dependencia) | Sin dependencias, ligero, control total |
+| Herencia And/But | Rastreo de keyword efectivo | Búsqueda literal "Then" | Semántica correcta de Gherkin |
+| Detección step defs | Path + validación AST | Solo AST | Filtrado rápido en can_check(), convención estándar |
+| Duplicados step pattern | check_project cross-file | Detección en check() por archivo | Idempotente, vista global, reporte en archivo correcto |
+| Detalles implementación | Regex específicas por tipo | Lista de palabras prohibidas | Precisión, mínimos falsos positivos, cobertura amplia |
 
 ---
 
-*Última actualización: 2 de febrero de 2026*
+*Última actualización: 3 de febrero de 2026*
