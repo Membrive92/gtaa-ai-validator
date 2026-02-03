@@ -102,6 +102,13 @@ class ViolationType(Enum):
     MISSING_AAA_STRUCTURE = "MISSING_AAA_STRUCTURE"          # Test sin estructura Arrange-Act-Assert
     MIXED_ABSTRACTION_LEVEL = "MIXED_ABSTRACTION_LEVEL"      # Keywords de negocio con selectores directos
 
+    # Violaciones BDD/Gherkin (FASE 8)
+    GHERKIN_IMPLEMENTATION_DETAIL = "GHERKIN_IMPLEMENTATION_DETAIL"  # Detalles técnicos en .feature
+    STEP_DEF_DIRECT_BROWSER_CALL = "STEP_DEF_DIRECT_BROWSER_CALL"  # Browser API en step definitions
+    STEP_DEF_TOO_COMPLEX = "STEP_DEF_TOO_COMPLEX"                  # Step definition > 15 líneas
+    MISSING_THEN_STEP = "MISSING_THEN_STEP"                        # Scenario sin step Then
+    DUPLICATE_STEP_PATTERN = "DUPLICATE_STEP_PATTERN"              # Misma regex en múltiples steps
+
     def get_severity(self) -> Severity:
         """Devuelve el nivel de severidad para este tipo de violación."""
         severity_map = {
@@ -136,6 +143,13 @@ class ViolationType(Enum):
             # Semánticas (Fase 6)
             ViolationType.MISSING_AAA_STRUCTURE: Severity.MEDIUM,
             ViolationType.MIXED_ABSTRACTION_LEVEL: Severity.MEDIUM,
+
+            # BDD/Gherkin (Fase 8)
+            ViolationType.GHERKIN_IMPLEMENTATION_DETAIL: Severity.HIGH,
+            ViolationType.STEP_DEF_DIRECT_BROWSER_CALL: Severity.CRITICAL,
+            ViolationType.STEP_DEF_TOO_COMPLEX: Severity.MEDIUM,
+            ViolationType.MISSING_THEN_STEP: Severity.MEDIUM,
+            ViolationType.DUPLICATE_STEP_PATTERN: Severity.LOW,
         }
         return severity_map[self]
 
@@ -182,6 +196,19 @@ class ViolationType(Enum):
                 "El test no sigue la estructura Arrange-Act-Assert, dificultando su comprensión",
             ViolationType.MIXED_ABSTRACTION_LEVEL:
                 "El método mezcla keywords de negocio con selectores de UI directos (XPath, CSS)",
+
+            # BDD/Gherkin (Fase 8)
+            ViolationType.GHERKIN_IMPLEMENTATION_DETAIL:
+                "El archivo .feature contiene detalles de implementación (XPath, CSS, URLs, SQL) "
+                "que deberían estar solo en step definitions",
+            ViolationType.STEP_DEF_DIRECT_BROWSER_CALL:
+                "La step definition llama directamente a APIs del navegador en lugar de usar Page Objects",
+            ViolationType.STEP_DEF_TOO_COMPLEX:
+                "La step definition es demasiado compleja (>15 líneas), debería delegar a Page Objects",
+            ViolationType.MISSING_THEN_STEP:
+                "El Scenario no tiene step Then (sin verificación de resultado esperado)",
+            ViolationType.DUPLICATE_STEP_PATTERN:
+                "La misma expresión regular de step está definida en múltiples archivos",
         }
         return descriptions[self]
 
@@ -246,6 +273,24 @@ class ViolationType(Enum):
             ViolationType.MIXED_ABSTRACTION_LEVEL:
                 "Separar los selectores de UI en métodos privados o propiedades del Page Object. "
                 "Los métodos públicos deben usar nombres de negocio sin exponer detalles de implementación.",
+
+            # BDD/Gherkin (Fase 8)
+            ViolationType.GHERKIN_IMPLEMENTATION_DETAIL:
+                "Reescribir los steps usando lenguaje de negocio. En lugar de "
+                "'When I click on //div[@id=\"submit\"]', usar 'When I submit the form'. "
+                "Los detalles técnicos pertenecen a las step definitions.",
+            ViolationType.STEP_DEF_DIRECT_BROWSER_CALL:
+                "Crear Page Objects que encapsulen las interacciones del navegador. "
+                "Los step definitions deben llamar a page.login() en lugar de driver.find_element().",
+            ViolationType.STEP_DEF_TOO_COMPLEX:
+                "Extraer la lógica a métodos de Page Object. Los step definitions deben ser "
+                "delegadores simples que conectan Gherkin con la capa de adaptación.",
+            ViolationType.MISSING_THEN_STEP:
+                "Añadir al menos un step Then que verifique el resultado esperado. "
+                "Un Scenario sin verificación no valida ningún comportamiento.",
+            ViolationType.DUPLICATE_STEP_PATTERN:
+                "Consolidar los step definitions duplicados en un único archivo compartido. "
+                "Usar un directorio steps/common/ para steps reutilizables.",
         }
         return recommendations[self]
 
