@@ -12,11 +12,14 @@ de test automation y detectar violaciones arquitectónicas.
 
 El patrón gTAA define estas capas:
 - **Capa de Definición (tests/)**: Contiene los tests. Solo debe orquestar acciones y verificar resultados.
+- **Capa de Definición BDD (.feature)**: Archivos Gherkin con lenguaje de negocio (Given/When/Then).
 - **Capa de Adaptación (pages/)**: Contiene Page Objects que encapsulan la interacción con la UI.
-- **Capa de Ejecución**: El framework de testing (pytest, Selenium, Playwright).
+- **Capa de Adaptación BDD (steps/)**: Step definitions que conectan Gherkin con Page Objects.
+- **Capa de Ejecución**: El framework de testing (pytest, Selenium, Playwright, Behave).
 
 Los tests deben ser independientes, claros y mantenibles. Los Page Objects deben tener \
-responsabilidad única y no contener lógica de test."""
+responsabilidad única y no contener lógica de test. Los step definitions deben delegar \
+a Page Objects, no llamar directamente a APIs del navegador."""
 
 ANALYZE_FILE_PROMPT = """Analiza el siguiente archivo Python de un proyecto de test automation \
 y detecta violaciones semánticas.
@@ -41,6 +44,8 @@ Busca SOLO estos tipos de violaciones:
 - `MISSING_WAIT_STRATEGY`: Interacciones con UI (click, fill, etc.) sin espera explícita previa.
 - `MISSING_AAA_STRUCTURE`: Test que no sigue la estructura Arrange-Act-Assert. El código mezcla preparación, acción y verificación sin separación clara.
 - `MIXED_ABSTRACTION_LEVEL`: Método de Page Object que mezcla keywords de negocio (login, add_to_cart) con selectores de UI directos (XPath, CSS selectors, By.ID).
+- `STEP_DEF_DIRECT_BROWSER_CALL`: Step definition (función con @given/@when/@then) que llama directamente a APIs del navegador (driver.find_element, page.locator) en lugar de usar Page Objects.
+- `STEP_DEF_TOO_COMPLEX`: Step definition con demasiadas líneas de código (>15). Debería delegar a Page Objects.
 
 Responde SOLO con un JSON array. Si no hay violaciones, responde con `[]`.
 Cada violación debe tener este formato:

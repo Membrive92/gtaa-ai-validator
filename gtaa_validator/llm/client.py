@@ -90,6 +90,26 @@ class MockLLMClient:
                 "Sin la estructura de capas, no hay separación entre definición, "
                 "adaptación y ejecución. Crea los directorios tests/ y pages/."
             ),
+            "GHERKIN_IMPLEMENTATION_DETAIL": (
+                "Los archivos .feature deben usar lenguaje de negocio, no detalles técnicos. "
+                "Mueve los selectores y URLs a las step definitions o Page Objects."
+            ),
+            "STEP_DEF_DIRECT_BROWSER_CALL": (
+                f"La step definition llama directamente al navegador con '{snippet}'. "
+                "Crea un Page Object que encapsule esta interacción."
+            ),
+            "STEP_DEF_TOO_COMPLEX": (
+                "Una step definition larga indica que hace demasiado. Extrae la lógica "
+                "a métodos de Page Object y deja el step como simple delegador."
+            ),
+            "MISSING_THEN_STEP": (
+                "Un Scenario sin step Then no verifica ningún resultado. Añade "
+                "al menos un Then que valide el comportamiento esperado."
+            ),
+            "DUPLICATE_STEP_PATTERN": (
+                "Este step pattern está duplicado en otro archivo. Consolida "
+                "en un archivo compartido de steps para evitar mantenimiento doble."
+            ),
         }
 
         if vtype in enrichments:

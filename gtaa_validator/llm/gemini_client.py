@@ -33,6 +33,9 @@ class GeminiLLMClient:
         "MISSING_WAIT_STRATEGY",
         "MISSING_AAA_STRUCTURE",
         "MIXED_ABSTRACTION_LEVEL",
+        # BDD (Fase 8)
+        "STEP_DEF_DIRECT_BROWSER_CALL",
+        "STEP_DEF_TOO_COMPLEX",
     }
 
     def __init__(self, api_key: str, model: str = "gemini-2.5-flash-lite"):
