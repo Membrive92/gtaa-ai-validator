@@ -1,10 +1,15 @@
 # Core dependencies for gTAA AI Validator
+# Requires Python >= 3.10
+
 # FASE 1: CLI interface
 click>=8.0.0
 
-# Additional dependencies will be added in later phases:
-# FASE 4: jinja2>=3.0.0  (HTML reports)
 # FASE 5: Testing
 pytest>=7.0.0
+
 # FASE 7: Configuración por proyecto
 PyYAML>=6.0
+
+# FASE 9: Multi-lang parsing (Java, JavaScript/TypeScript, C#)
+tree-sitter-language-pack>=0.4.0
+tree-sitter-c-sharp>=0.23.0

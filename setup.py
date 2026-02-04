@@ -32,18 +32,19 @@ setup(
         "Topic :: Software Development :: Quality Assurance",
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "Operating System :: OS Independent",
     ],
-    python_requires=">=3.8",
+    python_requires=">=3.10",
     install_requires=[
         "click>=8.0.0",
         "google-genai>=1.0.0",
         "python-dotenv>=1.0.0",
         "PyYAML>=6.0",
+        "tree-sitter-language-pack>=0.4.0",  # Multi-lang parsing (Fase 9)
+        "tree-sitter-c-sharp>=0.23.0",  # C# parsing (Fase 9)
     ],
     entry_points={
         "console_scripts": [
