@@ -232,17 +232,17 @@ def test_broken(
         assert violations == []
 
     def test_self_driver_attribute(self, checker, write_py_file):
-        """self.driver.find_element() is detected (nested attribute)."""
+        """self.driver.find_element() IS detected as violation (Phase 9+)."""
         path = write_py_file("test_example.py", """
 def test_with_self():
     self.driver.find_element("id", "username")
 """)
-        # _get_object_name recursively resolves self.driver → "self"
-        # "self" is NOT in BROWSER_OBJECTS, so this should NOT be a violation
-        # This tests the actual behavior of the current implementation
+        # Phase 9+: self.driver.find_element() resolves to driver.find_element()
+        # 'driver' IS in BROWSER_OBJECTS, so this IS a violation
+        # This is correct gTAA behavior: test code should use Page Objects
         violations = checker.check(path)
-        # self is NOT in BROWSER_OBJECTS, so no violation
-        assert len(violations) == 0
+        assert len(violations) == 1
+        assert violations[0].violation_type == ViolationType.ADAPTATION_IN_DEFINITION
 
     def test_correct_line_numbers(self, checker, write_py_file):
         """Line numbers in violations match the actual source lines."""

@@ -2,7 +2,7 @@
 Tests for gtaa_validator.analyzers.static_analyzer
 
 Covers:
-- Checker initialization (Phase 3: 4 checkers)
+- Checker initialization (Phase 9+: 5 language-agnostic checkers)
 - File discovery and exclusion
 - End-to-end analysis using examples/bad_project and examples/good_project
 - Report metadata correctness
@@ -28,7 +28,7 @@ class TestInitialization:
     """Tests for StaticAnalyzer construction."""
 
     def test_initializes_five_checkers(self, bad_project_path):
-        """Phase 8 creates 5 checkers (4 original + BDDChecker)."""
+        """Phase 9+: 5 language-agnostic checkers that work for all languages."""
         analyzer = StaticAnalyzer(bad_project_path)
         assert len(analyzer.checkers) == 5
 
@@ -36,7 +36,9 @@ class TestInitialization:
         """All expected checker types are present."""
         analyzer = StaticAnalyzer(bad_project_path)
         types = {type(c) for c in analyzer.checkers}
-        assert types == {DefinitionChecker, StructureChecker, AdaptationChecker, QualityChecker, BDDChecker}
+        assert types == {
+            DefinitionChecker, StructureChecker, AdaptationChecker, QualityChecker, BDDChecker
+        }
 
     def test_resolves_path(self, bad_project_path):
         """project_path is resolved to absolute."""
@@ -50,6 +52,9 @@ class TestInitialization:
         assert summary["checker_count"] == 5
         assert "DefinitionChecker" in summary["checkers"]
         assert "StructureChecker" in summary["checkers"]
+        assert "AdaptationChecker" in summary["checkers"]
+        assert "QualityChecker" in summary["checkers"]
+        assert "BDDChecker" in summary["checkers"]
 
 
 # =========================================================================
