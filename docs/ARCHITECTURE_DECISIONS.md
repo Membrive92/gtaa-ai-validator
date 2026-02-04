@@ -42,6 +42,11 @@ El formato sigue la estructura de un ADR (Architecture Decision Record) adaptado
 30. [Detección de step definitions: path frente a AST](#30-detección-de-step-definitions-path-frente-a-ast)
 31. [Detección de step patterns duplicados: check_project cross-file](#31-detección-de-step-patterns-duplicados-check_project-cross-file)
 32. [Patrones de detalle de implementación en Gherkin](#32-patrones-de-detalle-de-implementación-en-gherkin)
+33. [Multilenguaje: tree-sitter-language-pack frente a parsers separados](#33-multilenguaje-tree-sitter-language-pack-frente-a-parsers-separados)
+34. [Checkers language-agnostic frente a checkers por lenguaje](#34-checkers-language-agnostic-frente-a-checkers-por-lenguaje)
+35. [ParseResult como interfaz unificada frente a AST nativo](#35-parseresult-como-interfaz-unificada-frente-a-ast-nativo)
+36. [Factory function frente a dispatcher manual para parsers](#36-factory-function-frente-a-dispatcher-manual-para-parsers)
+37. [Python AST nativo frente a tree-sitter para Python](#37-python-ast-nativo-frente-a-tree-sitter-para-python)
 
 ---
 
@@ -1762,6 +1767,586 @@ IMPLEMENTATION_PATTERNS = [
 
 ---
 
+## 33. Multilenguaje: tree-sitter-language-pack frente a parsers separados
+
+### Problema
+
+La Fase 9 añade soporte para proyectos de test automation en Java, JavaScript/TypeScript y C#. Se necesita un mecanismo de parsing que funcione para múltiples lenguajes sin añadir una dependencia por cada lenguaje.
+
+### Alternativa evaluada: Parsers separados por lenguaje
+
+```python
+# Dependencias separadas
+import javalang        # Java
+import esprima         # JavaScript
+import tree_sitter     # TypeScript (requiere bindings)
+import csharp_parser   # C# (hipotético)
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Múltiples dependencias | Cada lenguaje requiere una librería diferente con API distinta |
+| Mantenimiento fragmentado | Cada parser tiene ciclo de releases independiente |
+| APIs inconsistentes | `javalang` devuelve objetos Java-like, `esprima` devuelve JSON, etc. |
+| Sin TypeScript nativo | `esprima` no soporta TypeScript; requiere transpilación previa |
+
+### Alternativa evaluada: Parser genérico (pygments/tokenizers)
+
+```python
+import pygments
+tokens = pygments.lex(source, JavaLexer())
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Solo tokenización | Pygments genera tokens, no un AST con jerarquía |
+| Sin contexto sintáctico | No distingue si un token está dentro de una función o clase |
+| No detecta estructuras | No puede extraer métodos, decoradores ni herencias |
+
+### Solución elegida: tree-sitter-language-pack
+
+```python
+from tree_sitter_language_pack import get_parser
+parser = get_parser("java")       # Java
+parser = get_parser("javascript") # JavaScript
+parser = get_parser("typescript") # TypeScript
+# C# usa paquete separado: tree-sitter-c-sharp
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Una dependencia | `tree-sitter-language-pack` incluye 165+ lenguajes en un solo paquete |
+| API unificada | `parser.parse(source)` funciona igual para todos los lenguajes |
+| Pre-built wheels | No requiere compilar bindings; instalación trivial con `pip install` |
+| TypeScript nativo | Soporta TypeScript sin transpilación |
+| AST completo | Genera árbol sintáctico navegable con tipos de nodo consistentes |
+| Licencia permisiva | MIT/Apache 2.0, compatible con uso comercial y académico |
+
+**Caso especial — C#:**
+
+C# no está incluido en `tree-sitter-language-pack` y requiere el paquete separado `tree-sitter-c-sharp`. La API es idéntica, solo cambia el import:
+
+```python
+import tree_sitter_c_sharp as tscs
+from tree_sitter import Parser, Language
+parser = Parser(Language(tscs.language()))
+```
+
+**Requisito Python ≥ 3.10:**
+
+`tree-sitter-language-pack` requiere Python 3.10+ debido a dependencias internas de `tree-sitter` 0.25.x. El proyecto actualiza `python_requires` en `setup.py` de 3.8 a 3.10.
+
+---
+
+## 34. Checkers language-agnostic frente a checkers por lenguaje
+
+### Problema
+
+Con soporte para 4 lenguajes (Python, Java, JS/TS, C#), surge la pregunta: ¿crear checkers separados por lenguaje o hacer los checkers existentes language-agnostic?
+
+### Alternativa evaluada: Un checker por lenguaje
+
+```
+gtaa_validator/checkers/
+├── definition_checker.py      # Python
+├── adaptation_checker.py      # Python
+├── quality_checker.py         # Python
+├── java_checker.py            # Java (NUEVO)
+├── js_checker.py              # JavaScript/TypeScript (NUEVO)
+├── csharp_checker.py          # C# (NUEVO)
+```
+
+```python
+class JavaChecker(BaseChecker):
+    def can_check(self, file_path):
+        return file_path.suffix == ".java"
+
+    def check(self, file_path, tree, file_type):
+        # Reimplementar TODA la lógica de violaciones para Java:
+        # - ADAPTATION_IN_DEFINITION
+        # - HARDCODED_TEST_DATA
+        # - ASSERTION_IN_POM
+        # - POOR_TEST_NAMING
+        # - LONG_TEST_FUNCTION
+        # - etc.
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Duplicación masiva | Cada checker reimplementa la misma lógica (email regex, naming patterns, etc.) |
+| Mantenimiento × 4 | Añadir una violación nueva requiere modificar 4 archivos |
+| Inconsistencias | Fácil que Java detecte `HARDCODED_TEST_DATA` con una regex y C# con otra |
+| Pruebas × 4 | Cada checker necesita su propio conjunto de tests casi idénticos |
+| Viola DRY | "Don't Repeat Yourself" — el código de detección es el mismo, solo cambia el AST |
+
+### Solución elegida: Checkers language-agnostic con ParseResult unificado
+
+```
+gtaa_validator/checkers/
+├── definition_checker.py      # Todos los lenguajes
+├── adaptation_checker.py      # Todos los lenguajes
+├── quality_checker.py         # Todos los lenguajes
+├── structure_checker.py       # Proyecto (sin cambios)
+├── bdd_checker.py             # Gherkin (sin cambios)
+```
+
+```python
+class DefinitionChecker(BaseChecker):
+    # Métodos browser por lenguaje
+    BROWSER_METHODS_PYTHON = {"find_element", "find_elements", "get", ...}
+    BROWSER_METHODS_JAVA = {"findElement", "findElements", "get", ...}
+    BROWSER_METHODS_JS = {"locator", "getByRole", "getByText", "$", ...}
+    BROWSER_METHODS_CSHARP = {"FindElement", "FindElements", "Navigate", ...}
+
+    def _get_browser_methods(self, extension: str) -> Set[str]:
+        """Retorna los métodos browser según la extensión del archivo."""
+        if extension == ".py":
+            return self.BROWSER_METHODS_PYTHON
+        elif extension == ".java":
+            return self.BROWSER_METHODS_JAVA
+        elif extension in {".js", ".ts", ".jsx", ".tsx"}:
+            return self.BROWSER_METHODS_JS
+        elif extension == ".cs":
+            return self.BROWSER_METHODS_CSHARP
+        return set()
+
+    def check(self, file_path, result: ParseResult, file_type):
+        extension = file_path.suffix.lower()
+        browser_methods = self._get_browser_methods(extension)
+        # Lógica ÚNICA que funciona con cualquier ParseResult
+        for call in result.calls:
+            if call.method_name in browser_methods:
+                # Crear violación...
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| DRY cumplido | La lógica de detección está en UN lugar; solo los patrones varían |
+| Mantenimiento centralizado | Añadir violación = modificar 1 archivo, no 4 |
+| Consistencia garantizada | Todos los lenguajes usan el mismo algoritmo |
+| Tests compartidos | Un test parametrizado cubre todos los lenguajes |
+| Open/Closed | Añadir lenguaje = añadir entrada a los dicts, no reescribir clases |
+
+**Arquitectura resultante:**
+
+```
+                    ParseResult (interfaz unificada)
+                           │
+           ┌───────────────┼───────────────┐
+           │               │               │
+    PythonParser      JavaParser      JSParser      CSharpParser
+    (ast nativo)     (tree-sitter)  (tree-sitter)  (tree-sitter)
+           │               │               │               │
+           └───────────────┴───────────────┴───────────────┘
+                           │
+                           ▼
+              ┌────────────────────────────┐
+              │   Checkers Language-Agnostic   │
+              │   (DefinitionChecker, etc.)    │
+              │   Reciben ParseResult          │
+              │   Usan dicts por extensión     │
+              └────────────────────────────┘
+```
+
+Esta arquitectura sigue el **Principio de Inversión de Dependencias**: los checkers de alto nivel dependen de la abstracción `ParseResult`, no de los parsers concretos.
+
+### Refactor realizado
+
+Los checkers `DefinitionChecker`, `AdaptationChecker` y `QualityChecker` existían desde la Fase 2 y funcionaban exclusivamente con Python AST. El refactor de Fase 9 los transformó en checkers language-agnostic:
+
+**ANTES (Fase 2-8) — Solo Python:**
+
+```python
+class DefinitionChecker(BaseChecker):
+    """Checker acoplado a ast.Module de Python."""
+
+    BROWSER_METHODS = {"find_element", "find_elements", "get", ...}
+
+    def can_check(self, file_path: Path) -> bool:
+        return file_path.suffix == ".py"
+
+    def check(self, file_path: Path, tree: ast.Module, file_type: str):
+        # Recorre ast.Module directamente
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call):
+                if isinstance(node.func, ast.Attribute):
+                    if node.func.attr in self.BROWSER_METHODS:
+                        # Crear violación...
+```
+
+**DESPUÉS (Fase 9) — Todos los lenguajes:**
+
+```python
+class DefinitionChecker(BaseChecker):
+    """Checker desacoplado que trabaja con ParseResult."""
+
+    # Patrones por lenguaje
+    BROWSER_METHODS_PYTHON = {"find_element", "find_elements", "get", ...}
+    BROWSER_METHODS_JAVA = {"findElement", "findElements", "get", ...}
+    BROWSER_METHODS_JS = {"locator", "getByRole", "$", ...}
+    BROWSER_METHODS_CSHARP = {"FindElement", "FindElements", ...}
+
+    def can_check(self, file_path: Path) -> bool:
+        # Ahora acepta múltiples extensiones
+        return file_path.suffix.lower() in {
+            ".py", ".java", ".js", ".ts", ".tsx", ".jsx", ".cs"
+        }
+
+    def check(self, file_path: Path, result: ParseResult, file_type: str):
+        extension = file_path.suffix.lower()
+        browser_methods = self._get_browser_methods(extension)
+
+        # Trabaja con ParseResult abstracto, no con AST concreto
+        for call in result.calls:
+            if call.method_name in browser_methods:
+                # Crear violación...
+```
+
+**Cambios clave del refactor:**
+
+| Aspecto | Antes | Después |
+|---------|-------|---------|
+| Parámetro de entrada | `tree: ast.Module` | `result: ParseResult` |
+| Extensiones soportadas | Solo `.py` | `.py`, `.java`, `.js`, `.ts`, `.cs`, etc. |
+| Patrones de detección | `BROWSER_METHODS` (único) | `BROWSER_METHODS_*` (por lenguaje) |
+| Recorrido de código | `ast.walk(tree)` | `for call in result.calls` |
+| Acoplamiento | Alto (a `ast` module) | Bajo (a `ParseResult` abstracción) |
+
+---
+
+## 35. ParseResult como interfaz unificada frente a AST nativo
+
+### Problema
+
+Cada lenguaje tiene su propia representación de AST:
+- Python: `ast.Module` con nodos `ast.FunctionDef`, `ast.Call`, etc.
+- Java (tree-sitter): nodos `class_declaration`, `method_invocation`, etc.
+- JS/TS (tree-sitter): nodos `function_declaration`, `call_expression`, etc.
+
+Los checkers necesitan una forma uniforme de acceder a funciones, clases, llamadas e imports sin conocer el lenguaje.
+
+### Alternativa evaluada: Pasar AST nativo + helper functions
+
+```python
+def check(self, file_path, tree, file_type):
+    if isinstance(tree, ast.Module):
+        functions = [n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)]
+    elif is_java_tree(tree):
+        functions = extract_java_methods(tree)
+    elif is_js_tree(tree):
+        functions = extract_js_functions(tree)
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Lógica condicional en checkers | Cada checker necesita switch por tipo de AST |
+| Helpers dispersos | Las funciones de extracción estarían en módulos separados |
+| Tipos inconsistentes | `ast.FunctionDef` vs `tree_sitter.Node` tienen APIs diferentes |
+| Duplicación de extracción | Si 3 checkers necesitan funciones, cada uno extrae |
+
+### Solución elegida: ParseResult como estructura de datos común
+
+```python
+@dataclass
+class ParsedFunction:
+    name: str
+    line_start: int
+    line_end: int
+    decorators: List[str]
+    parameters: List[str]
+    is_async: bool
+
+@dataclass
+class ParsedCall:
+    object_name: str   # driver, page, cy
+    method_name: str   # findElement, locator, get
+    line: int
+    full_text: str
+
+@dataclass
+class ParseResult:
+    imports: List[ParsedImport]
+    classes: List[ParsedClass]
+    functions: List[ParsedFunction]
+    calls: List[ParsedCall]
+    strings: List[ParsedString]
+    language: str
+    parse_errors: List[str]
+```
+
+Cada parser (PythonParser, JavaParser, JSParser, CSharpParser) produce un `ParseResult` con la misma estructura:
+
+```python
+class PythonParser:
+    def parse(self, source: str) -> ParseResult:
+        tree = ast.parse(source)
+        return ParseResult(
+            imports=self._extract_imports(tree),
+            classes=self._extract_classes(tree),
+            functions=self._extract_functions(tree),
+            calls=self._extract_calls(tree),
+            strings=self._extract_strings(tree),
+            language="python",
+        )
+
+class JavaParser(TreeSitterBaseParser):
+    def parse(self, source: str) -> ParseResult:
+        tree = self._parser.parse(bytes(source, "utf-8"))
+        return ParseResult(
+            imports=self.extract_imports(tree.root_node, source),
+            classes=self.extract_classes(tree.root_node, source),
+            # ... misma estructura
+            language="java",
+        )
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Abstracción limpia | Los checkers solo conocen `ParseResult`, no AST nativos |
+| Tipado fuerte | `ParsedFunction`, `ParsedCall` son dataclasses con atributos definidos |
+| Responsabilidad única | Los parsers extraen; los checkers analizan |
+| Testeable | Se puede crear un `ParseResult` de prueba sin parsear código real |
+| Extensible | Añadir `ParsedDecorator` no rompe los parsers existentes |
+
+---
+
+## 36. Factory function frente a dispatcher manual para parsers
+
+### Problema
+
+El `StaticAnalyzer` necesita obtener el parser correcto según la extensión del archivo. Se necesita un mecanismo de selección que sea fácil de extender.
+
+### Alternativa evaluada: Switch/if-elif en StaticAnalyzer
+
+```python
+class StaticAnalyzer:
+    def _get_parser(self, file_path):
+        ext = file_path.suffix.lower()
+        if ext == ".py":
+            return PythonParser()
+        elif ext == ".java":
+            return JavaParser()
+        elif ext in {".js", ".ts", ".tsx"}:
+            return JSParser()
+        elif ext == ".cs":
+            return CSharpParser()
+        return None
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Acoplamiento | `StaticAnalyzer` conoce todos los parsers concretos |
+| Imports dispersos | El analizador importa cada parser individualmente |
+| Duplicación | Si otro módulo necesita parsers, reimplementa el switch |
+| No testeable aislado | No se puede mockear la selección de parser |
+
+### Solución elegida: Factory function en módulo de parsers
+
+```python
+# gtaa_validator/parsers/treesitter_base.py
+
+def get_parser_for_file(file_path: Path):
+    """
+    Factory function para obtener el parser correcto basado en la extensión.
+
+    Args:
+        file_path: Ruta al archivo
+
+    Returns:
+        Parser apropiado (PythonParser, JavaParser, JSParser, CSharpParser) o None
+    """
+    extension = file_path.suffix.lower()
+
+    # Python usa parser nativo (no tree-sitter)
+    if extension == ".py":
+        from gtaa_validator.parsers.python_parser import PythonParser
+        return PythonParser()
+
+    language = TreeSitterBaseParser.get_language_for_extension(extension)
+
+    if language is None:
+        return None
+
+    # Importar el parser específico (tree-sitter)
+    if language == "java":
+        from gtaa_validator.parsers.java_parser import JavaParser
+        return JavaParser()
+    elif language in ("javascript", "typescript"):
+        from gtaa_validator.parsers.js_parser import JSParser
+        return JSParser(language)
+    elif language == "c_sharp":
+        from gtaa_validator.parsers.csharp_parser import CSharpParser
+        return CSharpParser()
+
+    return None
+```
+
+Uso en `StaticAnalyzer`:
+
+```python
+from gtaa_validator.parsers import get_parser_for_file
+
+class StaticAnalyzer:
+    def _check_file(self, file_path):
+        parser = get_parser_for_file(file_path)
+        if parser is None:
+            return []
+
+        result = parser.parse(source)
+        # ... pasar result a checkers
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Desacoplamiento | `StaticAnalyzer` solo conoce la factory function |
+| Imports lazy | Los parsers se importan solo cuando se necesitan |
+| Punto único de extensión | Añadir lenguaje = modificar solo `get_parser_for_file()` |
+| Testeable | Se puede mockear `get_parser_for_file` en tests |
+| Reutilizable | Cualquier módulo puede usar la factory function |
+
+**Patrón Factory Method:**
+
+Esta implementación sigue el patrón Factory Method: un método que encapsula la creación de objetos, permitiendo que las subclases (o en este caso, la lógica interna) decidan qué clase instanciar.
+
+```
+        get_parser_for_file(file_path)
+                    │
+                    ▼
+    ┌───────────────────────────────────┐
+    │   Decisión basada en extensión    │
+    └───────────────────────────────────┘
+        │         │         │         │
+        ▼         ▼         ▼         ▼
+    Python    Java      JS/TS     C#
+    Parser    Parser    Parser    Parser
+```
+
+---
+
+## 37. Python AST nativo frente a tree-sitter para Python
+
+### Problema
+
+Con la adopción de `tree-sitter-language-pack` para Java, JS/TS y C#, surge la pregunta: ¿debería Python también usar tree-sitter para mantener uniformidad, o seguir usando el módulo `ast` nativo?
+
+### Alternativa evaluada: tree-sitter para todos los lenguajes (incluyendo Python)
+
+```python
+from tree_sitter_language_pack import get_parser
+
+class PythonParser(TreeSitterBaseParser):
+    def __init__(self):
+        super().__init__("python")  # tree-sitter python
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Dependencia innecesaria | Python ya incluye `ast` en la biblioteca estándar |
+| Rendimiento | `ast.parse()` es más rápido que tree-sitter para Python |
+| Madurez | El módulo `ast` está extremadamente probado y es el estándar de facto |
+| Tipo de nodos | Los checkers ya usaban `ast.FunctionDef`, `ast.Call`, etc. |
+| Complejidad añadida | tree-sitter requiere queries de sintaxis; `ast.walk()` es más simple |
+
+### Solución elegida: ast nativo para Python, tree-sitter para los demás
+
+```python
+# gtaa_validator/parsers/python_parser.py
+import ast
+
+class PythonParser:
+    """Parser Python usando ast nativo (stdlib)."""
+
+    def parse(self, source: str) -> ParseResult:
+        tree = ast.parse(source)
+        return ParseResult(
+            imports=self._extract_imports(tree),
+            classes=self._extract_classes(tree),
+            functions=self._extract_functions(tree),
+            calls=self._extract_calls(tree),
+            strings=self._extract_strings(tree),
+            language="python",
+        )
+
+    def _extract_calls(self, tree) -> List[ParsedCall]:
+        """Extrae llamadas usando ast.walk() nativo."""
+        calls = []
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call):
+                if isinstance(node.func, ast.Attribute):
+                    calls.append(ParsedCall(
+                        object_name=self._get_object_name(node.func.value),
+                        method_name=node.func.attr,
+                        line=node.lineno,
+                    ))
+        return calls
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Zero dependencias extra | `ast` es parte de Python stdlib |
+| Código existente reutilizado | Los visitors AST de Fase 2-8 se adaptaron fácilmente |
+| Rendimiento óptimo | `ast.parse()` es código C optimizado |
+| Familiaridad | El equipo ya conocía `ast` de fases anteriores |
+| Consistencia de salida | `PythonParser.parse()` produce `ParseResult` igual que los demás |
+
+**Arquitectura híbrida:**
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         PARSERS                                          │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌─────────────────┐      ┌─────────────────────────────────────────┐   │
+│  │  PythonParser   │      │       TreeSitterBaseParser              │   │
+│  │  (ast nativo)   │      │  ┌──────────┬──────────┬──────────┐    │   │
+│  │                 │      │  │JavaParser│ JSParser │CSharpParser│   │   │
+│  │  import ast     │      │  │          │          │           │    │   │
+│  │  ast.parse()    │      │  │ tree-sitter-language-pack       │    │   │
+│  │  ast.walk()     │      │  └──────────┴──────────┴──────────┘    │   │
+│  └────────┬────────┘      └──────────────────┬──────────────────────┘   │
+│           │                                   │                          │
+│           └───────────────┬───────────────────┘                          │
+│                           │                                              │
+│                           ▼                                              │
+│                    ┌─────────────┐                                       │
+│                    │ ParseResult │  ◄── Interfaz común                   │
+│                    └─────────────┘                                       │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+**Principio aplicado — Pragmatismo sobre uniformidad:**
+
+Aunque usar tree-sitter para todos los lenguajes hubiera sido más "uniforme", la decisión pragmática fue:
+- Usar la mejor herramienta para cada lenguaje
+- Python → `ast` (stdlib, maduro, conocido)
+- Java/JS/C# → tree-sitter (única opción viable sin dependencias múltiples)
+
+La uniformidad se logra en la **interfaz de salida** (`ParseResult`), no en la implementación interna.
+
+---
+
 ## Resumen de decisiones
 
 | Decisión | Solución elegida | Alternativa descartada | Justificación principal |
@@ -1795,7 +2380,12 @@ IMPLEMENTATION_PATTERNS = [
 | Detección step defs | Path + validación AST | Solo AST | Filtrado rápido en can_check(), convención estándar |
 | Duplicados step pattern | check_project cross-file | Detección en check() por archivo | Idempotente, vista global, reporte en archivo correcto |
 | Detalles implementación | Regex específicas por tipo | Lista de palabras prohibidas | Precisión, mínimos falsos positivos, cobertura amplia |
+| Parsing multilenguaje | tree-sitter-language-pack | Parsers separados por lenguaje | Una dependencia, API unificada, 165+ lenguajes, pre-built wheels |
+| Organización checkers multilenguaje | Checkers language-agnostic | Un checker por lenguaje | DRY, mantenimiento centralizado, consistencia, Open/Closed |
+| Interfaz de datos | ParseResult unificado | AST nativo por lenguaje | Abstracción limpia, tipado fuerte, responsabilidad única |
+| Selección de parser | Factory function | Switch en StaticAnalyzer | Desacoplamiento, imports lazy, punto único de extensión |
+| Parser Python | ast nativo (stdlib) | tree-sitter para Python | Zero deps extra, rendimiento, código existente reutilizado |
 
 ---
 
-*Última actualización: 3 de febrero de 2026*
+*Última actualización: 4 de febrero de 2026*

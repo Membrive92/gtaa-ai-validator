@@ -2,24 +2,24 @@
 
 **Sistema Híbrido de IA para Validación Automática de Arquitectura de Test Automation: Análisis Estático y Semántico con LLMs**
 
-[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Estado](https://img.shields.io/badge/estado-en%20desarrollo-yellow)](https://github.com/Membrive92/gtaa-ai-validator)
-[![Fase](https://img.shields.io/badge/fase-8%2F10-blue)](https://github.com/Membrive92/gtaa-ai-validator)
-[![Progreso](https://img.shields.io/badge/progreso-80%25-green)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Fase](https://img.shields.io/badge/fase-9%2F10-blue)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Progreso](https://img.shields.io/badge/progreso-90%25-green)](https://github.com/Membrive92/gtaa-ai-validator)
 
 > **📌 TRABAJO DE FIN DE MÁSTER - EN DESARROLLO INCREMENTAL**
 >
 > Autor: Jose Antonio Membrive Guillen
 > Año: 2025-2026
-> **Estado:** Fase 8/10 Completa | Última actualización: 3 Febrero 2026
+> **Estado:** Fase 9/10 Completa | Última actualización: 4 Febrero 2026
 
 ---
 
 ## ⚠️ ESTADO DEL PROYECTO
 
 > **IMPORTANTE:** Este README describe la **visión completa** del proyecto TFM.
-> El desarrollo sigue una metodología incremental con 8 fases.
+> El desarrollo sigue una metodología incremental con 10 fases.
 > Funcionalidades marcadas con ⏳ están pendientes de implementación.
 
 ### 🚀 Estado de Implementación por Fases
@@ -34,7 +34,7 @@
 | **✅ Fase 6** | **Ampliación cobertura (18 violaciones) + Documentación** | **COMPLETO** | **01/02/2026** |
 | **✅ Fase 7** | **Soporte para proyectos mixtos (API + UI) + auto-wait Playwright** | **COMPLETO** | **02/02/2026** |
 | **✅ Fase 8** | **Soporte Gherkin/BDD (Behave + pytest-bdd)** | **COMPLETO** | **03/02/2026** |
-| **⏳ Fase 9** | **Soporte Multilenguaje (Java + JavaScript)** | **PENDIENTE** | — |
+| **✅ Fase 9** | **Soporte Multilenguaje (Java + JS/TS + C#) + Refactor language-agnostic** | **COMPLETO** | **04/02/2026** |
 | **⏳ Fase 10** | **Optimización y documentación final** | **PENDIENTE** | — |
 
 ### 📊 Funcionalidades Implementadas vs Planeadas
@@ -55,7 +55,7 @@
 | ✅ Análisis semántico con LLM | Implementado | Fase 5 — Gemini Flash API + MockLLM fallback |
 | ✅ Soporte proyectos mixtos (API + UI) | Implementado | Fase 7 — FileClassifier, .gtaa.yaml, auto-wait Playwright |
 | ✅ Soporte Gherkin/BDD (Behave + pytest-bdd) | Implementado | Fase 8 — GherkinParser, BDDChecker, 5 violaciones BDD |
-| ⏳ Soporte Multilenguaje (Java + JavaScript) | Pendiente | Fase 9 — tree-sitter, javalang |
+| ✅ Soporte Multilenguaje (Java + JS/TS + C#) | Implementado | Fase 9 — tree-sitter, checkers language-agnostic, ParseResult |
 | ⏳ Optimización y documentación final | Pendiente | Fase 10 — prompts, CI/CD, docs TFM |
 
 **Leyenda:** ✅ Implementado | ⏳ Pendiente
@@ -167,17 +167,20 @@ Sistema híbrido que combina **3 técnicas de IA** para detectar automáticament
 ## 🛠️ Stack Tecnológico
 
 ### Lenguajes y Frameworks
-- **Python 3.8+** - Lenguaje principal
-- **AST (Abstract Syntax Tree)** - Análisis sintáctico de código
-- **Google Gemini Flash API** - LLM para análisis semántico (Fase 5)
+- **Python 3.10+** - Lenguaje principal (requisito tree-sitter)
+- **AST (Abstract Syntax Tree)** - Análisis sintáctico de código Python
+- **tree-sitter** - Parsing multilenguaje (Java, JS/TS, C#) (✅ Fase 9)
+- **Google Gemini Flash API** - LLM para análisis semántico (✅ Fase 5)
 - **PyYAML** - Configuración por proyecto .gtaa.yaml (✅ Fase 7)
 
 ### Librerías principales
 ```python
-click>=8.0             # Interfaz CLI
-google-genai>=1.0.0    # SDK Gemini Flash API (Fase 5)
-python-dotenv>=1.0.0   # Carga de .env para API key
-pytest>=7.0            # Framework de testing
+click>=8.0                        # Interfaz CLI
+google-genai>=1.0.0               # SDK Gemini Flash API (Fase 5)
+python-dotenv>=1.0.0              # Carga de .env para API key
+tree-sitter-language-pack>=0.4.0  # Parsing Java, JS/TS (Fase 9)
+tree-sitter-c-sharp>=0.23.0       # Parsing C# (Fase 9)
+pytest>=7.0                       # Framework de testing
 ```
 
 ### Arquitectura del sistema
@@ -206,7 +209,7 @@ pytest>=7.0            # Framework de testing
 ## 📦 Instalación y Ejecución
 
 ### Requisitos previos
-- Python 3.8 o superior
+- Python 3.10 o superior (requerido por tree-sitter)
 - pip (gestor de paquetes de Python)
 
 ### Instalación
@@ -229,13 +232,13 @@ pip install -e .
 
 ---
 
-### ✅ Funcionalidad ACTUAL (Fase 8)
+### ✅ Funcionalidad ACTUAL (Fase 9)
 
 **Funcionalidad disponible en la versión actual:**
 
 ```bash
-# Análisis estático con detección de 17 tipos de violaciones estáticas (incluye BDD)
-python -m gtaa_validator /path/to/your/selenium-project
+# Análisis estático multilenguaje (Python, Java, JS/TS, C#)
+python -m gtaa_validator /path/to/your/test-project
 
 # Modo verbose para ver detalles de cada violación
 python -m gtaa_validator /path/to/project --verbose
@@ -251,19 +254,24 @@ python -m gtaa_validator examples/bad_project --html report.html
 python -m gtaa_validator examples/bad_project --json report.json
 python -m gtaa_validator examples/bad_project --ai --html report.html --json report.json --verbose
 
-# Probar con ejemplos incluidos
+# Probar con ejemplos incluidos (Python, Java, JS, C#)
 python -m gtaa_validator examples/bad_project --verbose
 python -m gtaa_validator examples/good_project
+python -m gtaa_validator examples/java_project --verbose
+python -m gtaa_validator examples/js_project --verbose
+python -m gtaa_validator examples/csharp_project --verbose
 
 # Ejecutar tests
-pytest tests/               # Todos (317 tests)
+pytest tests/               # Todos (~380 tests)
 pytest tests/unit/          # Solo unitarios
 pytest tests/integration/   # Solo integración
 ```
 
 **Capacidades implementadas:**
+- ✅ Soporte multilenguaje: Python, Java, JavaScript/TypeScript, C#
+- ✅ Arquitectura language-agnostic: mismos checkers para todos los lenguajes (Fase 9 refactor)
 - ✅ 5 checkers detectando 17 tipos de violaciones estáticas (incluye BDDChecker)
-- ✅ Análisis AST con Visitor Pattern (BrowserAPICallVisitor, AssertionVisitor, BusinessLogicVisitor, HardcodedDataVisitor)
+- ✅ Análisis AST con Visitor Pattern (Python) y tree-sitter (Java, JS/TS, C#)
 - ✅ Análisis de estructura de proyecto (directorios requeridos)
 - ✅ Detección por regex (emails, URLs, teléfonos, passwords, locators duplicados, configuración hardcodeada)
 - ✅ Análisis semántico AI con Gemini Flash API (6 tipos de violación semántica)
@@ -433,14 +441,48 @@ api_test_patterns:
 
 ---
 
-### ⏳ Funcionalidad FUTURA — Fase 9-10
+### ✅ Funcionalidad Implementada — Fase 9: Soporte Multilenguaje
 
-#### Fase 9: Soporte Multilenguaje
+**Problema resuelto**: Solo se analizaban proyectos Python. Proyectos Java, JavaScript/TypeScript y C# no tenían validación arquitectónica.
+
+#### Parsers multilenguaje
+```python
+# Python: ast nativo (stdlib) → PythonParser
+# Java: tree-sitter-language-pack → JavaParser
+# JavaScript/TypeScript: tree-sitter-language-pack → JSParser
+# C#: tree-sitter-c-sharp → CSharpParser
 ```
-# ⏳ JavaScript/TypeScript con tree-sitter
-# ⏳ Java con javalang
-# ⏳ Frameworks: Cypress, Playwright JS, WebdriverIO, Selenium Java
+
+#### Arquitectura language-agnostic (refactor clave)
+```python
+# ANTES: Cada lenguaje tendría su propio checker (JavaChecker, JSChecker...)
+# DESPUÉS: Checkers unificados que trabajan con ParseResult
+
+# ParseResult es la interfaz común que producen todos los parsers:
+# - imports: List[ParsedImport]
+# - classes: List[ParsedClass]
+# - functions: List[ParsedFunction]
+# - calls: List[ParsedCall]
+# - strings: List[ParsedString]
+
+# Los checkers detectan por extensión:
+BROWSER_METHODS_PYTHON = {"find_element", "locator", ...}
+BROWSER_METHODS_JAVA = {"findElement", "locator", ...}
+BROWSER_METHODS_JS = {"locator", "getByRole", "$", ...}
+BROWSER_METHODS_CSHARP = {"FindElement", "Navigate", ...}
 ```
+
+#### Frameworks soportados
+```
+# Python: Selenium, Playwright, pytest, unittest
+# Java: Selenium, Playwright, TestNG, JUnit
+# JavaScript/TypeScript: Playwright, Cypress, WebdriverIO, Jest, Mocha
+# C#: Selenium, Playwright, NUnit, xUnit, MSTest
+```
+
+---
+
+### ⏳ Funcionalidad FUTURA — Fase 10
 
 #### Fase 10: Optimización y Documentación Final
 ```
@@ -469,9 +511,14 @@ gtaa-ai-validator/
 │   ├── file_classifier.py             # Clasificador API/UI (Fase 7)
 │   ├── config.py                      # ProjectConfig + .gtaa.yaml (Fase 7)
 │   │
-│   ├── parsers/                        # 📝 Parsers especializados (Fase 8)
-│   │   ├── __init__.py                 # Exporta GherkinParser
-│   │   └── gherkin_parser.py           # Parser regex-based para .feature
+│   ├── parsers/                        # 📝 Parsers multilenguaje (Fase 8-9)
+│   │   ├── __init__.py                 # Exporta parsers y get_parser_for_file()
+│   │   ├── gherkin_parser.py           # Parser regex-based para .feature
+│   │   ├── treesitter_base.py          # Parser base tree-sitter + ParseResult
+│   │   ├── python_parser.py            # Parser Python (ast nativo)
+│   │   ├── java_parser.py              # Parser Java (tree-sitter)
+│   │   ├── js_parser.py                # Parser JavaScript/TypeScript (tree-sitter)
+│   │   └── csharp_parser.py            # Parser C# (tree-sitter)
 │   │
 │   ├── analyzers/                      # 🔍 Motores de análisis
 │   │   ├── static_analyzer.py          # Orquestador estático (Facade Pattern)
@@ -494,7 +541,7 @@ gtaa-ai-validator/
 │       ├── quality_checker.py          # Calidad de tests (AST + Regex)
 │       └── bdd_checker.py              # BDD/Gherkin (Fase 8)
 │
-├── tests/                              # 🧪 Tests automatizados (317 tests)
+├── tests/                              # 🧪 Tests automatizados (~380 tests)
 │   ├── conftest.py                     # Fixtures compartidas
 │   ├── unit/                           # Tests unitarios
 │   │   ├── test_models.py             # Modelos de datos
@@ -504,6 +551,11 @@ gtaa-ai-validator/
 │   │   ├── test_quality_checker.py    # QualityChecker
 │   │   ├── test_bdd_checker.py        # BDDChecker (Fase 8)
 │   │   ├── test_gherkin_parser.py     # GherkinParser (Fase 8)
+│   │   ├── test_treesitter_base.py    # ParseResult y base (Fase 9)
+│   │   ├── test_python_parser.py      # PythonParser (Fase 9)
+│   │   ├── test_java_parser.py        # JavaParser (Fase 9)
+│   │   ├── test_js_parser.py          # JSParser (Fase 9)
+│   │   ├── test_csharp_parser.py      # CSharpParser (Fase 9)
 │   │   ├── test_json_reporter.py      # JsonReporter
 │   │   ├── test_html_reporter.py      # HtmlReporter
 │   │   ├── test_llm_client.py         # MockLLMClient
@@ -517,14 +569,17 @@ gtaa-ai-validator/
 │
 ├── examples/                           # 📝 Proyectos de ejemplo
 │   ├── README.md                       # Documentación de violaciones
-│   ├── bad_project/                    # Proyecto con ~35 violaciones
-│   └── good_project/                   # Proyecto gTAA correcto (score 100)
+│   ├── bad_project/                    # Proyecto Python con ~35 violaciones
+│   ├── good_project/                   # Proyecto Python gTAA correcto (score 100)
+│   ├── java_project/                   # Proyecto Java con violaciones (Fase 9)
+│   ├── js_project/                     # Proyecto JS/TS con violaciones (Fase 9)
+│   └── csharp_project/                 # Proyecto C# con violaciones (Fase 9)
 │
 ├── .env.example                        # 🔑 Template para API key de Gemini
 │
 └── docs/                               # 📚 Documentación técnica
     ├── README.md                       # Índice de documentación
-    ├── ARCHITECTURE_DECISIONS.md       # Decisiones arquitectónicas (32 ADR)
+    ├── ARCHITECTURE_DECISIONS.md       # Decisiones arquitectónicas (37 ADR)
     ├── PHASE1_FLOW_DIAGRAMS.md         # Diagramas Fase 1 (CLI y fundación)
     ├── PHASE2_FLOW_DIAGRAMS.md         # Diagramas Fase 2 (análisis estático)
     ├── PHASE3_FLOW_DIAGRAMS.md         # Diagramas Fase 3 (9 violaciones)
@@ -532,7 +587,8 @@ gtaa-ai-validator/
     ├── PHASE5_FLOW_DIAGRAMS.md         # Diagramas Fase 5 (análisis semántico AI)
     ├── PHASE6_FLOW_DIAGRAMS.md         # Diagramas Fase 6 (18 violaciones)
     ├── PHASE7_FLOW_DIAGRAMS.md         # Diagramas Fase 7 (proyectos mixtos)
-    └── PHASE8_FLOW_DIAGRAMS.md         # Diagramas Fase 8 (BDD/Gherkin)
+    ├── PHASE8_FLOW_DIAGRAMS.md         # Diagramas Fase 8 (BDD/Gherkin)
+    └── PHASE9_FLOW_DIAGRAMS.md         # Diagramas Fase 9 (multilenguaje + refactor)
 ```
 
 > **Nota sobre `docs/`**: La documentación técnica se distribuye en múltiples documentos independientes, uno por cada fase del proyecto y uno para las decisiones arquitectónicas. Esta separación responde a un criterio de **transparencia y trazabilidad**: cada documento refleja el estado del proyecto en el momento de su elaboración, permitiendo seguir la evolución del diseño y las decisiones técnicas a lo largo del desarrollo. El índice general se encuentra en [`docs/README.md`](docs/README.md).
@@ -660,7 +716,7 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 - [ISTQB CT-TAE Syllabus v2016](https://www.istqb.org/)
 
 ### Documentación Técnica del Proyecto
-- **[Decisiones Arquitectónicas (ADR)](docs/ARCHITECTURE_DECISIONS.md)** ✅ — 32 ADRs: patrones de diseño, paradigmas, justificaciones técnicas
+- **[Decisiones Arquitectónicas (ADR)](docs/ARCHITECTURE_DECISIONS.md)** ✅ — 37 ADRs: patrones de diseño, paradigmas, justificaciones técnicas
 - **[Diagramas de Flujo - Fase 1](docs/PHASE1_FLOW_DIAGRAMS.md)** ✅ — Fundación del proyecto, CLI con Click, descubrimiento de archivos
 - **[Diagramas de Flujo - Fase 2](docs/PHASE2_FLOW_DIAGRAMS.md)** ✅ — Motor de análisis estático, BrowserAPICallVisitor, scoring
 - **[Diagramas de Flujo - Fase 3](docs/PHASE3_FLOW_DIAGRAMS.md)** ✅ — 4 checkers, 9 violaciones, AST visitors, cross-file state
@@ -669,6 +725,7 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 - **[Diagramas de Flujo - Fase 6](docs/PHASE6_FLOW_DIAGRAMS.md)** ✅ — Ampliación a 18 violaciones, nuevos checkers, heurísticas mock
 - **[Diagramas de Flujo - Fase 7](docs/PHASE7_FLOW_DIAGRAMS.md)** ✅ — Proyectos mixtos API+UI, FileClassifier, .gtaa.yaml, auto-wait Playwright
 - **[Diagramas de Flujo - Fase 8](docs/PHASE8_FLOW_DIAGRAMS.md)** ✅ — Soporte BDD/Gherkin, GherkinParser, BDDChecker, 5 violaciones BDD
+- **[Diagramas de Flujo - Fase 9](docs/PHASE9_FLOW_DIAGRAMS.md)** ✅ — Multilenguaje, ParseResult, checkers language-agnostic, refactor DRY
 - **[Índice de documentación](docs/README.md)** ✅
 
 ---
@@ -821,33 +878,57 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 - ✅ 43 tests nuevos (27 GherkinParser + 16 BDDChecker)
 - ✅ Documentación: PHASE8_FLOW_DIAGRAMS.md + ADR 28-32
 
-**Próximos pasos:** Fase 9 - Soporte Multilenguaje (Java + JavaScript)
-
 ---
 
-### Versión 0.9.0 - Fase 9 (Pendiente) ⏳
+### Versión 0.9.0 - Fase 9 (4 Febrero 2026) ✅
 
-**Planificado:**
-- ⏳ JSParser con tree-sitter para JavaScript/TypeScript
-- ⏳ JavaParser con javalang para Java
-- ⏳ Frameworks: Cypress, Playwright JS, WebdriverIO, Selenium Java
-- ⏳ JSChecker y JavaChecker
-- ⏳ Tests y ejemplos multilenguaje
+**Implementado:**
+- ✅ **Arquitectura language-agnostic**: Checkers únicos que trabajan con ParseResult abstracto
+- ✅ TreeSitterBaseParser: wrapper base sobre tree-sitter con dataclasses comunes
+- ✅ JavaParser: parser completo para Java con tree-sitter-language-pack
+- ✅ JSParser: parser para JavaScript/TypeScript con tree-sitter-language-pack
+- ✅ CSharpParser: parser para C# con tree-sitter-c-sharp
+- ✅ ParseResult: interfaz unificada (imports, classes, functions, calls, strings)
+- ✅ Factory function `get_parser_for_file()` para selección automática de parser
+- ✅ Refactor de checkers existentes: DefinitionChecker, AdaptationChecker, QualityChecker
+- ✅ Detección multilenguaje de violaciones gTAA en Java, JS/TS, C#
+- ✅ Python 3.10+ requerido (requisito de tree-sitter 0.25.x)
+- ✅ 3 ejemplos multilenguaje: java_project/, js_project/, csharp_project/
+- ✅ Tests unitarios para todos los parsers y checkers multilenguaje
+- ✅ Documentación: PHASE9_FLOW_DIAGRAMS.md + ADR 33-37
+
+**Decisión arquitectónica clave:**
+- Checkers NO son language-specific (no JavaChecker, JSChecker separados)
+- Un solo DefinitionChecker detecta `driver.findElement()` (Java), `cy.get()` (JS), `driver.FindElement()` (C#)
+- ParseResult como contrato común elimina duplicación de código (DRY)
+- Python usa AST nativo (stdlib) por pragmatismo; Java/JS/C# usan tree-sitter
+
+**Lenguajes soportados:**
+| Lenguaje | Parser | Dependencia |
+|----------|--------|-------------|
+| Python | `ast` (stdlib) | — |
+| Java | TreeSitterBaseParser | tree-sitter-language-pack |
+| JavaScript/TypeScript | TreeSitterBaseParser | tree-sitter-language-pack |
+| C# | TreeSitterBaseParser | tree-sitter-c-sharp |
+
+**Próximos pasos:** Fase 10 - Optimización y Documentación Final
 
 ---
 
 ### Versión 1.0.0 - Fase 10 (Pendiente) ⏳
 
 **Planificado:**
-- ⏳ Optimización de prompts LLM (reducir tokens, mejorar precisión)
-- ⏳ Integración CI/CD (`--min-score`, exit codes)
+- ⏳ Optimización de prompts LLM (reducir tokens, mejorar precisión para 23+ violaciones)
+- ⏳ CLI: `--min-score` threshold mínimo para exit code
+- ⏳ CLI: `--lang` forzar lenguaje si auto-detección falla
+- ⏳ Integración CI/CD (exit codes, GitHub Actions)
 - ⏳ Documentación TFM final
-- ⏳ PHASE9_FLOW_DIAGRAMS.md + PHASE10_FLOW_DIAGRAMS.md
+- ⏳ PHASE10_FLOW_DIAGRAMS.md + ADRs finales
 
 ---
 
 <div align="center">
 
-**Estado del proyecto:** Fase 8/10 | 23 violaciones | 317 tests
+**Estado del proyecto:** Fase 9/10 | 23 violaciones | 4 lenguajes (Python, Java, JS/TS, C#)
 
 </div>
