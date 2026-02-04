@@ -8,11 +8,14 @@ El StaticAnalyzer implementa el Patrón Facade: proporciona una interfaz simple
 (método analyze()) a un subsistema complejo de checkers.
 
 Responsabilidades principales:
-- Descubrir archivos Python en el proyecto
+- Descubrir archivos en el proyecto (Python, Java, JS/TS, C#, Gherkin)
 - Ejecutar los checkers apropiados en cada archivo
 - Agregar violaciones de todos los checkers
 - Calcular la puntuación de cumplimiento
 - Generar el Report final
+
+Fase 9+: Los checkers son ahora agnósticos al lenguaje usando ParseResult.
+Los mismos checkers funcionan para Python, Java, JavaScript/TypeScript y C#.
 
 Uso:
     analyzer = StaticAnalyzer(project_path)
@@ -20,7 +23,6 @@ Uso:
     print(f"Puntuación: {report.score}")
 """
 
-import ast
 import fnmatch
 import time
 from pathlib import Path
@@ -29,13 +31,13 @@ from typing import List, Optional
 from gtaa_validator.models import Report, Violation
 from gtaa_validator.checkers.base import BaseChecker
 from gtaa_validator.checkers.definition_checker import DefinitionChecker
-
 from gtaa_validator.checkers.structure_checker import StructureChecker
 from gtaa_validator.checkers.adaptation_checker import AdaptationChecker
 from gtaa_validator.checkers.quality_checker import QualityChecker
 from gtaa_validator.checkers.bdd_checker import BDDChecker
 from gtaa_validator.file_classifier import FileClassifier
 from gtaa_validator.config import ProjectConfig, load_config
+from gtaa_validator.parsers.treesitter_base import ParseResult, get_parser_for_file
 
 
 class StaticAnalyzer:
@@ -76,18 +78,18 @@ class StaticAnalyzer:
         """
         Inicializar todos los checkers disponibles.
 
-        Fase 2: Solo DefinitionChecker
-        Fase 3: Se añaden StructureChecker, AdaptationChecker, QualityChecker
+        Fase 9+: Los checkers son agnósticos al lenguaje.
+        Funcionan con Python, Java, JavaScript/TypeScript y C#.
 
         Returns:
             Lista de instancias de checkers inicializados
         """
         checkers = [
-            DefinitionChecker(),
-            StructureChecker(),
-            AdaptationChecker(),
-            QualityChecker(),
-            BDDChecker(),
+            DefinitionChecker(),   # ADAPTATION_IN_DEFINITION (all langs)
+            StructureChecker(),    # Directory structure (Python only)
+            AdaptationChecker(),   # Page Object violations (all langs)
+            QualityChecker(),      # Quality issues (all langs)
+            BDDChecker(),          # BDD/Gherkin (Python + .feature)
         ]
 
         if self.verbose:
@@ -176,8 +178,8 @@ class StaticAnalyzer:
         """
         Descubrir todos los archivos analizables en el proyecto.
 
-        Busca archivos .py y .feature, excluyendo directorios comunes
-        que no deben analizarse (venv, .git, etc.)
+        Busca archivos de código fuente soportados, excluyendo directorios
+        comunes que no deben analizarse (venv, .git, node_modules, etc.)
 
         Returns:
             Lista de objetos Path para todos los archivos encontrados
@@ -190,10 +192,19 @@ class StaticAnalyzer:
             "node_modules",                   # Dependencias de JavaScript
             ".pytest_cache", ".tox",         # Artefactos de testing
             "build", "dist", "*.egg-info",   # Artefactos de build
+            "bin", "obj",                     # Artefactos de C#
+            "target",                         # Artefactos de Java/Maven
         }
 
-        # Extensiones a buscar (.py + .feature para BDD)
-        extensions = ("*.py", "*.feature")
+        # Extensiones a buscar (Fase 9: multi-lang)
+        extensions = (
+            "*.py",                           # Python
+            "*.feature",                      # Gherkin/BDD
+            "*.java",                         # Java
+            "*.js", "*.ts", "*.jsx", "*.tsx", # JavaScript/TypeScript
+            "*.mjs", "*.cjs",                 # ES modules
+            "*.cs",                           # C#
+        )
 
         found_files = []
 
@@ -224,8 +235,10 @@ class StaticAnalyzer:
         """
         Ejecutar todos los checkers aplicables sobre un único archivo.
 
-        Parsea el AST una sola vez y lo pasa a todos los checkers aplicables,
-        evitando el parseo redundante del mismo archivo.
+        Parsea el archivo una sola vez usando el parser apropiado y pasa
+        el ParseResult a todos los checkers, evitando parseo redundante.
+
+        Fase 9+: Usa ParseResult unificado para todos los lenguajes.
 
         Args:
             file_path: Ruta al archivo a verificar
@@ -240,23 +253,25 @@ class StaticAnalyzer:
         if not applicable:
             return violations
 
-        # Parsear AST una sola vez para todos los checkers (solo .py)
-        tree: Optional[ast.Module] = None
+        # Parsear archivo una sola vez usando el parser apropiado
+        parse_result: Optional[ParseResult] = None
         source_code = ""
         file_type = "unknown"
 
-        if file_path.suffix == ".py":
-            try:
-                with open(file_path, "r", encoding="utf-8") as f:
-                    source_code = f.read()
-                tree = ast.parse(source_code, filename=str(file_path))
-            except (SyntaxError, Exception):
-                # Si el parseo falla, dejar que los checkers individuales lo manejen
-                pass
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                source_code = f.read()
 
-            # Clasificar archivo como API, UI o unknown + detectar framework
-            if tree is not None:
-                classification = self.classifier.classify_detailed(file_path, source_code, tree)
+            # Obtener parser apropiado para el lenguaje
+            parser = get_parser_for_file(file_path)
+            if parser:
+                parse_result = parser.parse(source_code)
+
+            # Clasificar archivo (funciona con ParseResult o AST legacy)
+            if parse_result is not None:
+                classification = self.classifier.classify_detailed(
+                    file_path, source_code, parse_result
+                )
                 file_type = classification.file_type
 
                 if self.verbose and file_type != "unknown":
@@ -265,9 +280,14 @@ class StaticAnalyzer:
                     bdd_info = " [BDD]" if classification.is_bdd else ""
                     print(f"    [Clasificación] {relative} → {file_type}{fw_info}{bdd_info}")
 
+        except (SyntaxError, Exception):
+            # Si el parseo falla, dejar que los checkers individuales lo manejen
+            pass
+
         for checker in applicable:
             try:
-                checker_violations = checker.check(file_path, tree, file_type=file_type)
+                # Pasar ParseResult a los checkers (soportan tanto ParseResult como AST legacy)
+                checker_violations = checker.check(file_path, parse_result, file_type=file_type)
                 violations.extend(checker_violations)
 
                 if self.verbose and checker_violations:
