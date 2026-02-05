@@ -12,7 +12,6 @@ Análisis estático con AST:
 - Análisis semántico AI con --ai (Fase 5)
 """
 
-import os
 import click
 import sys
 from pathlib import Path
@@ -24,8 +23,7 @@ from gtaa_validator.analyzers.static_analyzer import StaticAnalyzer
 from gtaa_validator.reporters.json_reporter import JsonReporter
 from gtaa_validator.reporters.html_reporter import HtmlReporter
 from gtaa_validator.analyzers.semantic_analyzer import SemanticAnalyzer
-from gtaa_validator.llm.client import MockLLMClient
-from gtaa_validator.llm.gemini_client import GeminiLLMClient
+from gtaa_validator.llm.factory import create_llm_client
 from gtaa_validator.config import load_config
 
 
@@ -35,9 +33,13 @@ from gtaa_validator.config import load_config
 @click.option('--json', 'json_path', type=click.Path(), default=None, help='Exportar reporte JSON al fichero indicado')
 @click.option('--html', 'html_path', type=click.Path(), default=None, help='Exportar reporte HTML al fichero indicado')
 @click.option('--ai', is_flag=True, help='Activar análisis semántico AI')
+@click.option('--provider', type=click.Choice(['gemini', 'mock']), default=None,
+              help='Proveedor LLM: gemini (cloud, default si hay API key), mock (heurísticas)')
 @click.option('--config', 'config_path', type=click.Path(exists=True), default=None,
               help='Ruta al archivo de configuración .gtaa.yaml')
-def main(project_path: str, verbose: bool, json_path: str, html_path: str, ai: bool, config_path: str):
+@click.option('--max-llm-calls', type=int, default=None,
+              help='Limite de llamadas al LLM real antes de fallback a mock (default: sin limite)')
+def main(project_path: str, verbose: bool, json_path: str, html_path: str, ai: bool, provider: str, config_path: str, max_llm_calls: int):
     """
     Valida el cumplimiento de la arquitectura gTAA en un proyecto de test automation.
 
@@ -48,7 +50,7 @@ def main(project_path: str, verbose: bool, json_path: str, html_path: str, ai: b
         python -m gtaa_validator ./mi-proyecto-selenium --verbose
     """
     # Mostrar cabecera
-    click.echo("=== gTAA AI Validator - Fase 5 ===")
+    click.echo("=== gTAA AI Validator - Fase 10 ===")
     click.echo(f"Analizando proyecto: {project_path}\n")
 
     # Convertir a objeto Path y resolver a ruta absoluta
@@ -73,16 +75,23 @@ def main(project_path: str, verbose: bool, json_path: str, html_path: str, ai: b
     report = analyzer.analyze()
 
     # Análisis semántico AI (opcional)
+    semantic = None
     if ai:
-        api_key = os.environ.get("GEMINI_API_KEY", "")
-        if api_key:
-            click.echo("Usando Gemini Flash API para análisis semántico...")
-            llm_client = GeminiLLMClient(api_key)
-        else:
-            click.echo("GEMINI_API_KEY no configurada, usando análisis mock...")
-            llm_client = MockLLMClient()
-        semantic = SemanticAnalyzer(project_path, llm_client, verbose=verbose)
+        llm_client = create_llm_client(provider=provider)
+        provider_name = type(llm_client).__name__
+        click.echo(f"Iniciando análisis semántico con {provider_name}...")
+        semantic = SemanticAnalyzer(
+            project_path, llm_client, verbose=verbose, max_llm_calls=max_llm_calls
+        )
         report = semantic.analyze(report)
+
+        # Mostrar info del proveedor usado
+        if report.llm_provider_info:
+            info = report.llm_provider_info
+            if info.get("fallback_occurred"):
+                click.echo(f"[!] Fallback activado: {info['initial_provider']} -> {info['current_provider']}")
+            else:
+                click.echo(f"Análisis completado con: {info['current_provider']}")
 
     # Mostrar resultados
     if not verbose:
@@ -158,6 +167,25 @@ def main(project_path: str, verbose: bool, json_path: str, html_path: str, ai: b
     if html_path:
         HtmlReporter().generate(report, Path(html_path))
         click.echo(f"Reporte HTML exportado: {html_path}")
+
+    # Mostrar info del proveedor LLM si se usó --ai
+    if report.llm_provider_info:
+        info = report.llm_provider_info
+        click.echo("\n[Análisis Semántico AI]")
+        click.echo(f"  Proveedor: {info['current_provider']}")
+        if info.get("fallback_occurred"):
+            click.echo(f"  Fallback: Si ({info['initial_provider']} -> {info['current_provider']})")
+
+    # Mostrar consumo de tokens si se usó LLM API
+    if semantic and hasattr(semantic, 'get_token_usage'):
+        token_usage = semantic.get_token_usage()
+        if token_usage.get('total_tokens', 0) > 0:
+            click.echo("\n[LLM API - Consumo de Tokens]")
+            click.echo(f"  Tokens entrada: {token_usage['input_tokens']:,}")
+            click.echo(f"  Tokens salida:  {token_usage['output_tokens']:,}")
+            click.echo(f"  Total tokens:   {token_usage['total_tokens']:,}")
+            click.echo(f"  Llamadas API:   {token_usage['total_calls']}")
+            click.echo(f"  Costo estimado: ${token_usage['estimated_cost_usd']:.4f} USD")
 
     # Resumen final
     click.echo("\n" + "="*60)

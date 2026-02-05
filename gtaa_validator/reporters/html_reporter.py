@@ -116,6 +116,7 @@ class HtmlReporter:
                 <span>Fecha: <strong>{report.timestamp.strftime('%d/%m/%Y %H:%M')}</strong></span>
                 <span>Versión: <strong>{report.validator_version}</strong></span>
                 <span>Tiempo: <strong>{report.execution_time_seconds:.2f}s</strong></span>
+{self._build_llm_provider_meta(report)}
             </div>
         </header>
 
@@ -229,6 +230,21 @@ class HtmlReporter:
             header .meta { flex-direction: column; gap: 0.3rem; }
             table { font-size: 0.75rem; }
         }"""
+
+    def _build_llm_provider_meta(self, report: Report) -> str:
+        """Genera el span de metadatos del proveedor LLM si aplica."""
+        if not report.llm_provider_info:
+            return ""
+
+        info = report.llm_provider_info
+        provider = info.get("current_provider", "unknown")
+        provider_display = provider.capitalize()
+
+        if info.get("fallback_occurred"):
+            initial = info.get("initial_provider", "unknown").capitalize()
+            return f'                <span>LLM: <strong>{initial} &rarr; {provider_display}</strong> (fallback)</span>'
+        else:
+            return f'                <span>LLM: <strong>{provider_display}</strong></span>'
 
     def _get_score_color(self, score: float) -> str:
         """Color del gauge según el score."""

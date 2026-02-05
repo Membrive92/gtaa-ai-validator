@@ -363,6 +363,7 @@ class Report:
         validator_version: Versión del validador gTAA utilizado
         score: Puntuación de cumplimiento (0-100)
         execution_time_seconds: Tiempo empleado en el análisis
+        llm_provider_info: Información del proveedor LLM usado (solo con --ai)
     """
     project_path: Path
     violations: List[Violation] = field(default_factory=list)
@@ -371,6 +372,7 @@ class Report:
     validator_version: str = "0.4.0"
     score: float = 100.0
     execution_time_seconds: float = 0.0
+    llm_provider_info: Optional[dict] = None
 
     def calculate_score(self) -> float:
         """
@@ -399,13 +401,18 @@ class Report:
 
     def to_dict(self) -> dict:
         """Convertir informe a diccionario para serialización JSON."""
+        metadata = {
+            "project_path": str(self.project_path),
+            "timestamp": self.timestamp.isoformat(),
+            "validator_version": self.validator_version,
+            "execution_time_seconds": self.execution_time_seconds,
+        }
+        # Añadir info del proveedor LLM si está disponible
+        if self.llm_provider_info:
+            metadata["llm_provider"] = self.llm_provider_info
+
         return {
-            "metadata": {
-                "project_path": str(self.project_path),
-                "timestamp": self.timestamp.isoformat(),
-                "validator_version": self.validator_version,
-                "execution_time_seconds": self.execution_time_seconds,
-            },
+            "metadata": metadata,
             "summary": {
                 "files_analyzed": self.files_analyzed,
                 "total_violations": len(self.violations),
