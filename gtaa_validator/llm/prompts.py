@@ -1,83 +1,122 @@
 """
 Templates de prompts para análisis semántico con LLM.
 
-Estos prompts se envían al modelo (Gemini Flash) para:
-1. Detectar violaciones semánticas en código de test automation
-2. Enriquecer violaciones existentes con sugerencias contextuales
+Optimizados para reducir tokens (~40% menos) manteniendo precisión.
 """
 
-SYSTEM_PROMPT = """Eres un experto en arquitectura de test automation y el patrón gTAA \
-(generic Test Automation Architecture). Tu tarea es analizar código Python de proyectos \
-de test automation y detectar violaciones arquitectónicas.
+# System prompt comprimido (~40% menos tokens)
+SYSTEM_PROMPT = """Experto en gTAA (generic Test Automation Architecture).
+Capas: tests/ (definición), pages/ (adaptación/Page Objects), steps/ (BDD).
+Reglas: tests independientes, Page Objects con responsabilidad única, step definitions delegan a PO."""
 
-El patrón gTAA define estas capas:
-- **Capa de Definición (tests/)**: Contiene los tests. Solo debe orquestar acciones y verificar resultados.
-- **Capa de Definición BDD (.feature)**: Archivos Gherkin con lenguaje de negocio (Given/When/Then).
-- **Capa de Adaptación (pages/)**: Contiene Page Objects que encapsulan la interacción con la UI.
-- **Capa de Adaptación BDD (steps/)**: Step definitions que conectan Gherkin con Page Objects.
-- **Capa de Ejecución**: El framework de testing (pytest, Selenium, Playwright, Behave).
+# Prompt para análisis de archivo - optimizado
+ANALYZE_FILE_PROMPT = """Analiza código de test automation y detecta violaciones gTAA.
 
-Los tests deben ser independientes, claros y mantenibles. Los Page Objects deben tener \
-responsabilidad única y no contener lógica de test. Los step definitions deben delegar \
-a Page Objects, no llamar directamente a APIs del navegador."""
+Archivo: `{file_path}` | Tipo: {file_type} | Auto-wait: {has_auto_wait}
 
-ANALYZE_FILE_PROMPT = """Analiza el siguiente archivo Python de un proyecto de test automation \
-y detecta violaciones semánticas.
-
-**Archivo**: `{file_path}`
-**Clasificación del archivo**: {file_type} (api = test de API, ui = test de UI, unknown = no clasificado)
-**Contenido**:
-```python
+```
 {file_content}
 ```
 
-**Auto-wait del framework**: {has_auto_wait}
+Violaciones válidas:
+- UNCLEAR_TEST_PURPOSE: nombre/docstring no describe comportamiento
+- PAGE_OBJECT_DOES_TOO_MUCH: PO con muchas responsabilidades
+- IMPLICIT_TEST_DEPENDENCY: tests dependen del orden
+- MISSING_WAIT_STRATEGY: UI sin espera (ignorar si api o auto-wait=sí)
+- MISSING_AAA_STRUCTURE: test sin Arrange-Act-Assert claro
+- MIXED_ABSTRACTION_LEVEL: PO mezcla keywords con selectores
+- STEP_DEF_DIRECT_BROWSER_CALL: step llama browser directo
+- STEP_DEF_TOO_COMPLEX: step >15 líneas
 
-**IMPORTANTE**:
-- Si el archivo es de tipo "api", NO reportes MISSING_WAIT_STRATEGY (las esperas de UI no aplican a tests de API).
-- Si el framework tiene auto-wait (has_auto_wait = sí), NO reportes MISSING_WAIT_STRATEGY (el framework gestiona las esperas automáticamente, ej. Playwright).
+Responde SOLO JSON: [{{"type":"X","line":N,"message":"...","code_snippet":"..."}}] o []"""
 
-Busca SOLO estos tipos de violaciones:
-- `UNCLEAR_TEST_PURPOSE`: Test cuyo nombre y/o docstring no describen claramente qué comportamiento valida.
-- `PAGE_OBJECT_DOES_TOO_MUCH`: Page Object con demasiadas responsabilidades (muchos métodos, múltiples páginas).
-- `IMPLICIT_TEST_DEPENDENCY`: Tests que dependen del orden de ejecución o comparten estado mutable.
-- `MISSING_WAIT_STRATEGY`: Interacciones con UI (click, fill, etc.) sin espera explícita previa.
-- `MISSING_AAA_STRUCTURE`: Test que no sigue la estructura Arrange-Act-Assert. El código mezcla preparación, acción y verificación sin separación clara.
-- `MIXED_ABSTRACTION_LEVEL`: Método de Page Object que mezcla keywords de negocio (login, add_to_cart) con selectores de UI directos (XPath, CSS selectors, By.ID).
-- `STEP_DEF_DIRECT_BROWSER_CALL`: Step definition (función con @given/@when/@then) que llama directamente a APIs del navegador (driver.find_element, page.locator) en lugar de usar Page Objects.
-- `STEP_DEF_TOO_COMPLEX`: Step definition con demasiadas líneas de código (>15). Debería delegar a Page Objects.
+# Prompt para enriquecimiento - optimizado (solo contexto relevante)
+# Usa {context_snippet} en lugar de {file_content} para reducir tokens
+ENRICH_VIOLATION_PROMPT = """Violación gTAA detectada:
+Tipo: {violation_type} | Archivo: {file_path}:{line_number}
+Código: `{code_snippet}`
+Mensaje: {violation_message}
 
-Responde SOLO con un JSON array. Si no hay violaciones, responde con `[]`.
-Cada violación debe tener este formato:
-```json
-[
-  {{
-    "type": "TIPO_DE_VIOLACION",
-    "line": 42,
-    "message": "Descripción breve del problema en español",
-    "code_snippet": "la línea de código problemática"
-  }}
-]
+Contexto:
+```
+{context_snippet}
 ```
 
-Responde ÚNICAMENTE con el JSON, sin explicaciones adicionales."""
+Genera sugerencia breve (2 frases): por qué es problema + cómo corregirlo."""
 
-ENRICH_VIOLATION_PROMPT = """Se ha detectado la siguiente violación arquitectónica en un proyecto \
-de test automation:
 
-**Tipo**: `{violation_type}`
-**Mensaje**: {violation_message}
-**Archivo**: `{file_path}`
-**Línea**: {line_number}
-**Código**: `{code_snippet}`
+def extract_context_snippet(file_content: str, line_number: int, context_lines: int = 5) -> str:
+    """
+    Extrae solo las líneas relevantes alrededor de la violación.
 
-**Contexto del archivo**:
-```python
-{file_content}
-```
+    Reduce tokens enviando solo el contexto necesario en lugar del archivo completo.
 
-Genera una sugerencia breve (2-3 frases) en español que explique:
-1. Por qué esto es un problema en la arquitectura gTAA
-2. Cómo corregirlo concretamente en este contexto
+    Args:
+        file_content: Contenido completo del archivo
+        line_number: Línea de la violación
+        context_lines: Líneas antes y después a incluir
 
-Responde SOLO con la sugerencia, sin formato markdown ni prefijos."""
+    Returns:
+        Fragmento de código con contexto
+    """
+    if not line_number:
+        # Sin número de línea, enviar primeras 30 líneas
+        lines = file_content.split('\n')[:30]
+        return '\n'.join(lines)
+
+    lines = file_content.split('\n')
+    start = max(0, line_number - context_lines - 1)
+    end = min(len(lines), line_number + context_lines)
+
+    snippet_lines = []
+    for i, line in enumerate(lines[start:end], start=start + 1):
+        prefix = ">>> " if i == line_number else "    "
+        snippet_lines.append(f"{prefix}{i}: {line}")
+
+    return '\n'.join(snippet_lines)
+
+
+def extract_functions_from_code(file_content: str, max_chars: int = 3000) -> str:
+    """
+    Extrae solo las funciones/métodos del código si el archivo es muy grande.
+
+    Para archivos grandes, envía solo las firmas de funciones y código sospechoso.
+
+    Args:
+        file_content: Contenido completo del archivo
+        max_chars: Máximo de caracteres a enviar
+
+    Returns:
+        Código reducido o completo si es pequeño
+    """
+    if len(file_content) <= max_chars:
+        return file_content
+
+    # Archivo grande: extraer solo definiciones de funciones/clases
+    import re
+
+    # Patrones para extraer estructuras importantes
+    patterns = [
+        r'^(class\s+\w+.*?:)',  # Definiciones de clase
+        r'^(\s*def\s+\w+.*?:)',  # Definiciones de función
+        r'^(\s*async\s+def\s+\w+.*?:)',  # Funciones async
+        r'^(\s*@\w+.*?)$',  # Decoradores
+    ]
+
+    lines = file_content.split('\n')
+    important_lines = []
+
+    for i, line in enumerate(lines):
+        for pattern in patterns:
+            if re.match(pattern, line):
+                # Incluir línea y siguientes 5 líneas (cuerpo de función)
+                important_lines.extend(lines[i:min(i+6, len(lines))])
+                break
+
+    result = '\n'.join(important_lines)
+
+    # Si sigue siendo muy grande, truncar
+    if len(result) > max_chars:
+        result = result[:max_chars] + "\n... [truncado]"
+
+    return result if result else file_content[:max_chars] + "\n... [truncado]"

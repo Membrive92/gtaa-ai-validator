@@ -2,11 +2,13 @@
 
 from datetime import datetime
 from pathlib import Path
+from unittest.mock import Mock, patch
 
 import pytest
 
 from gtaa_validator.models import Report, Violation, Severity, ViolationType
 from gtaa_validator.llm.client import MockLLMClient
+from gtaa_validator.llm.api_client import APILLMClient, RateLimitError
 from gtaa_validator.analyzers.semantic_analyzer import SemanticAnalyzer
 
 
@@ -180,3 +182,149 @@ class TestSemanticAnalyzer:
         result2 = analyzer_verbose.analyze(report2)
 
         assert len(result1.violations) == len(result2.violations)
+
+
+class TestSemanticAnalyzerProviderTracking:
+    """Tests para tracking de proveedor LLM y fallback."""
+
+    def test_provider_info_with_mock(self, mock_client, tmp_path, empty_report):
+        """MockLLMClient se identifica correctamente."""
+        empty_report.project_path = tmp_path
+        analyzer = SemanticAnalyzer(tmp_path, mock_client)
+
+        result = analyzer.analyze(empty_report)
+
+        assert result.llm_provider_info is not None
+        assert result.llm_provider_info["initial_provider"] == "mock"
+        assert result.llm_provider_info["current_provider"] == "mock"
+        assert result.llm_provider_info["fallback_occurred"] is False
+
+    @patch("gtaa_validator.llm.api_client.genai.Client")
+    def test_provider_info_with_gemini(self, mock_genai, tmp_path, empty_report):
+        """APILLMClient se identifica como gemini."""
+        empty_report.project_path = tmp_path
+        gemini_client = APILLMClient(api_key="test-key")
+        analyzer = SemanticAnalyzer(tmp_path, gemini_client)
+
+        # Mock para que no haga llamadas reales
+        gemini_client.analyze_file = Mock(return_value=[])
+        gemini_client.enrich_violation = Mock(return_value="")
+
+        result = analyzer.analyze(empty_report)
+
+        assert result.llm_provider_info["initial_provider"] == "gemini"
+        assert result.llm_provider_info["current_provider"] == "gemini"
+        assert result.llm_provider_info["fallback_occurred"] is False
+
+    @patch("gtaa_validator.llm.api_client.genai.Client")
+    def test_fallback_on_rate_limit_in_analyze_file(self, mock_genai, project_with_tests, empty_report):
+        """Fallback a Mock cuando analyze_file da RateLimitError."""
+        empty_report.project_path = project_with_tests
+        gemini_client = APILLMClient(api_key="test-key")
+
+        # Simular rate limit en primera llamada
+        gemini_client.analyze_file = Mock(side_effect=RateLimitError("429 rate limit"))
+
+        analyzer = SemanticAnalyzer(project_with_tests, gemini_client)
+        result = analyzer.analyze(empty_report)
+
+        assert result.llm_provider_info["initial_provider"] == "gemini"
+        assert result.llm_provider_info["current_provider"] == "mock"
+        assert result.llm_provider_info["fallback_occurred"] is True
+
+    @patch("gtaa_validator.llm.api_client.genai.Client")
+    def test_fallback_on_rate_limit_in_enrich_violation(
+        self, mock_genai, report_with_violations
+    ):
+        """Fallback a Mock cuando enrich_violation da RateLimitError."""
+        project_path = report_with_violations.project_path
+        gemini_client = APILLMClient(api_key="test-key")
+
+        # analyze_file funciona, pero enrich_violation falla
+        gemini_client.analyze_file = Mock(return_value=[])
+        gemini_client.enrich_violation = Mock(side_effect=RateLimitError("quota exceeded"))
+
+        analyzer = SemanticAnalyzer(project_path, gemini_client)
+        result = analyzer.analyze(report_with_violations)
+
+        assert result.llm_provider_info["fallback_occurred"] is True
+        assert result.llm_provider_info["current_provider"] == "mock"
+
+    @patch("gtaa_validator.llm.api_client.genai.Client")
+    def test_fallback_only_occurs_once(self, mock_genai, project_with_tests, empty_report):
+        """El fallback solo ocurre una vez aunque haya múltiples errores."""
+        empty_report.project_path = project_with_tests
+        gemini_client = APILLMClient(api_key="test-key")
+
+        # Simular rate limit
+        call_count = {"count": 0}
+
+        def raise_rate_limit(*args, **kwargs):
+            call_count["count"] += 1
+            raise RateLimitError("429")
+
+        gemini_client.analyze_file = Mock(side_effect=raise_rate_limit)
+
+        analyzer = SemanticAnalyzer(project_with_tests, gemini_client)
+        result = analyzer.analyze(empty_report)
+
+        # Verificar que el fallback ocurrió
+        assert result.llm_provider_info["fallback_occurred"] is True
+        # El cliente ahora debe ser MockLLMClient
+        assert isinstance(analyzer.llm_client, MockLLMClient)
+
+    def test_get_provider_info_before_analyze(self, mock_client, tmp_path):
+        """get_provider_info funciona antes de llamar a analyze."""
+        analyzer = SemanticAnalyzer(tmp_path, mock_client)
+
+        info = analyzer.get_provider_info()
+
+        assert info["initial_provider"] == "mock"
+        assert info["current_provider"] == "mock"
+        assert info["fallback_occurred"] is False
+
+    def test_llm_provider_info_in_report_to_dict(self, mock_client, tmp_path, empty_report):
+        """llm_provider_info aparece en report.to_dict()."""
+        empty_report.project_path = tmp_path
+        analyzer = SemanticAnalyzer(tmp_path, mock_client)
+
+        result = analyzer.analyze(empty_report)
+        report_dict = result.to_dict()
+
+        assert "llm_provider" in report_dict["metadata"]
+        assert report_dict["metadata"]["llm_provider"]["current_provider"] == "mock"
+
+    @patch("gtaa_validator.llm.api_client.genai.Client")
+    def test_max_llm_calls_triggers_fallback(self, mock_genai, report_with_violations):
+        """max_llm_calls limita las llamadas antes de fallback."""
+        project_path = report_with_violations.project_path
+        gemini_client = APILLMClient(api_key="test-key")
+
+        # Mock para que las llamadas funcionen
+        gemini_client.analyze_file = Mock(return_value=[])
+        gemini_client.enrich_violation = Mock(return_value="sugerencia")
+
+        # Limitar a 1 llamada (analyze_file), luego fallback antes de enrich
+        analyzer = SemanticAnalyzer(project_path, gemini_client, max_llm_calls=1)
+        result = analyzer.analyze(report_with_violations)
+
+        # Deberia haber hecho fallback despues de 1 llamada
+        assert result.llm_provider_info["fallback_occurred"] is True
+        assert result.llm_provider_info["llm_calls"] == 1
+        assert result.llm_provider_info["max_llm_calls"] == 1
+
+    @patch("gtaa_validator.llm.api_client.genai.Client")
+    def test_no_limit_means_no_fallback(self, mock_genai, tmp_path, empty_report):
+        """Sin max_llm_calls no hay fallback por límite."""
+        empty_report.project_path = tmp_path
+        gemini_client = APILLMClient(api_key="test-key")
+
+        gemini_client.analyze_file = Mock(return_value=[])
+        gemini_client.enrich_violation = Mock(return_value="")
+
+        # Sin límite
+        analyzer = SemanticAnalyzer(tmp_path, gemini_client, max_llm_calls=None)
+        result = analyzer.analyze(empty_report)
+
+        assert result.llm_provider_info["fallback_occurred"] is False
+        assert "llm_calls" not in result.llm_provider_info

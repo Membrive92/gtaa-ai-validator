@@ -3,10 +3,48 @@ Cliente mock LLM para análisis semántico.
 
 Usa heurísticas deterministas (AST + regex) para simular detección
 de violaciones semánticas y generación de sugerencias AI.
+
+Fase 10: Mejorado con más heurísticas para reducir dependencia del LLM real.
+Puede usarse como primera línea de defensa, con LLM solo para casos difíciles.
 """
 
 import ast
+import re
+from dataclasses import dataclass
 from typing import List
+
+
+@dataclass
+class MockTokenUsage:
+    """Tracking simulado para compatibilidad de interfaz."""
+    input_tokens: int = 0
+    output_tokens: int = 0
+    total_calls: int = 0
+
+    def add(self, input_tokens: int, output_tokens: int):
+        self.input_tokens += input_tokens
+        self.output_tokens += output_tokens
+        self.total_calls += 1
+
+    @property
+    def total_tokens(self) -> int:
+        return self.input_tokens + self.output_tokens
+
+    @property
+    def estimated_cost_usd(self) -> float:
+        return 0.0  # Mock no tiene costo
+
+    def to_dict(self) -> dict:
+        return {
+            "input_tokens": self.input_tokens,
+            "output_tokens": self.output_tokens,
+            "total_tokens": self.total_tokens,
+            "total_calls": self.total_calls,
+            "estimated_cost_usd": 0.0,
+        }
+
+    def __str__(self) -> str:
+        return f"Mock: {self.total_calls} llamadas (sin costo)"
 
 
 class MockLLMClient:
@@ -15,13 +53,23 @@ class MockLLMClient:
 
     Usa reglas simples (AST + regex) para producir resultados predecibles,
     permitiendo tests deterministas y demostración sin API key.
+
+    Fase 10: Heurísticas ampliadas para cubrir más casos:
+    - Step definitions BDD (STEP_DEF_DIRECT_BROWSER_CALL, STEP_DEF_TOO_COMPLEX)
+    - Detección mejorada de dependencias implícitas
+    - Tracking de "uso" para compatibilidad de interfaz
     """
+
+    def __init__(self):
+        self.usage = MockTokenUsage()
 
     def analyze_file(self, file_content: str, file_path: str,
                      file_type: str = "unknown",
                      has_auto_wait: bool = False) -> List[dict]:
         """Detecta violaciones semánticas usando heurísticas."""
         violations = []
+        # Simular tracking de tokens (estimación basada en longitud)
+        self.usage.add(len(file_content) // 4, 100)
 
         try:
             tree = ast.parse(file_content)
@@ -30,6 +78,7 @@ class MockLLMClient:
 
         is_test_file = _is_test_file(file_path)
         is_page_object = _is_page_object(file_path)
+        is_step_def = _is_step_definition(file_path, file_content)
 
         if is_test_file:
             violations.extend(self._check_unclear_test_purpose(tree, file_content))
@@ -43,7 +92,19 @@ class MockLLMClient:
                 violations.extend(self._check_missing_wait_strategy(tree, file_content))
             violations.extend(self._check_mixed_abstraction_level(tree, file_content))
 
+        if is_step_def:
+            violations.extend(self._check_step_def_direct_browser(tree, file_content))
+            violations.extend(self._check_step_def_too_complex(tree, file_content))
+
         return violations
+
+    def get_usage_summary(self) -> str:
+        """Retorna resumen de uso para compatibilidad."""
+        return str(self.usage)
+
+    def get_usage_dict(self) -> dict:
+        """Retorna uso como diccionario para compatibilidad."""
+        return self.usage.to_dict()
 
     def enrich_violation(self, violation: dict, file_content: str) -> str:
         """Genera sugerencia contextual basada en el tipo de violación."""
@@ -294,7 +355,6 @@ class MockLLMClient:
         self, tree: ast.Module, source: str
     ) -> List[dict]:
         """Métodos públicos en Page Objects con selectores directos → MIXED_ABSTRACTION_LEVEL."""
-        import re as _re
         violations = []
         lines = source.splitlines()
         selector_patterns = [
@@ -304,7 +364,7 @@ class MockLLMClient:
             r'\[data-[\w-]+',            # data attributes
             r'#[\w-]+',                  # CSS id selector
         ]
-        selector_regex = _re.compile('|'.join(selector_patterns))
+        selector_regex = re.compile('|'.join(selector_patterns))
 
         for node in ast.walk(tree):
             if not isinstance(node, ast.ClassDef):
@@ -331,6 +391,98 @@ class MockLLMClient:
 
         return violations
 
+    def _check_step_def_direct_browser(
+        self, tree: ast.Module, source: str
+    ) -> List[dict]:
+        """Step definitions con llamadas directas al navegador → STEP_DEF_DIRECT_BROWSER_CALL."""
+        violations = []
+        lines = source.splitlines()
+        browser_patterns = [
+            r'driver\.find_element',
+            r'driver\.get\(',
+            r'page\.locator\(',
+            r'page\.get_by_',
+            r'browser\.new_page',
+            r'\.click\(\)',
+            r'\.fill\(',
+            r'\.send_keys\(',
+        ]
+        browser_regex = re.compile('|'.join(browser_patterns))
+
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+
+            # Verificar si tiene decorador BDD
+            has_bdd_decorator = any(
+                isinstance(d, ast.Call) and isinstance(d.func, ast.Name) and
+                d.func.id.lower() in ('given', 'when', 'then', 'step')
+                for d in node.decorator_list
+            )
+
+            if not has_bdd_decorator:
+                continue
+
+            # Verificar contenido de la función
+            func_lines = lines[node.lineno - 1:node.end_lineno] if hasattr(node, "end_lineno") and node.end_lineno else lines[node.lineno - 1:node.lineno + 20]
+            func_source = "\n".join(func_lines)
+
+            if browser_regex.search(func_source):
+                line_text = lines[node.lineno - 1].strip() if node.lineno <= len(lines) else ""
+                violations.append({
+                    "type": "STEP_DEF_DIRECT_BROWSER_CALL",
+                    "line": node.lineno,
+                    "message": (
+                        f"Step definition '{node.name}' llama directamente al navegador. "
+                        "Debería delegar a un Page Object"
+                    ),
+                    "code_snippet": line_text,
+                })
+
+        return violations
+
+    def _check_step_def_too_complex(
+        self, tree: ast.Module, source: str
+    ) -> List[dict]:
+        """Step definitions con >15 líneas → STEP_DEF_TOO_COMPLEX."""
+        violations = []
+        lines = source.splitlines()
+
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+
+            # Verificar si tiene decorador BDD
+            has_bdd_decorator = any(
+                isinstance(d, ast.Call) and isinstance(d.func, ast.Name) and
+                d.func.id.lower() in ('given', 'when', 'then', 'step')
+                for d in node.decorator_list
+            )
+
+            if not has_bdd_decorator:
+                continue
+
+            # Contar líneas de la función
+            if hasattr(node, "end_lineno") and node.end_lineno:
+                line_count = node.end_lineno - node.lineno + 1
+            else:
+                line_count = 15  # Asumir que no excede si no hay end_lineno
+
+            if line_count > 15:
+                line_text = lines[node.lineno - 1].strip() if node.lineno <= len(lines) else ""
+                violations.append({
+                    "type": "STEP_DEF_TOO_COMPLEX",
+                    "line": node.lineno,
+                    "message": (
+                        f"Step definition '{node.name}' tiene {line_count} líneas. "
+                        "Debería delegar lógica a Page Objects"
+                    ),
+                    "code_snippet": line_text,
+                })
+
+        return violations
+
+
 # --- Utilidades ---
 
 def _is_test_file(file_path: str) -> bool:
@@ -356,3 +508,23 @@ def _is_page_object(file_path: str) -> bool:
         or "/page_objects/" in path_lower
         or "/pom/" in path_lower
     )
+
+
+def _is_step_definition(file_path: str, content: str) -> bool:
+    """Determina si un fichero contiene step definitions BDD."""
+    path_lower = file_path.lower().replace("\\", "/")
+    name = path_lower.split("/")[-1] if "/" in path_lower else path_lower
+
+    # Por ruta
+    if "/steps/" in path_lower or "/step_defs/" in path_lower:
+        return True
+
+    # Por nombre
+    if name.startswith("step_") or name.endswith("_steps.py"):
+        return True
+
+    # Por contenido (decoradores BDD)
+    if re.search(r'@(given|when|then|step)\s*\(', content, re.IGNORECASE):
+        return True
+
+    return False
