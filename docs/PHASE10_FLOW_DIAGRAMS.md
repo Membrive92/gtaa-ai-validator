@@ -904,6 +904,30 @@ Tests totales: 402 → 416
 | `21a2ac3` | fix | Logging en 10 bloques de excepciones silenciosas |
 | `49cd9fd` | fix | Eliminar ast.Str deprecado, alinear LSP en BaseChecker |
 | `93815f4` | test | 14 tests nuevos para CLI y prompts |
+| `a254026` | docs | ADRs 45-50, diagramas de flujo, actualización README |
+| `4f8c213` | style | PEP 8 E402 import order, docstrings consistentes |
+
+---
+
+## 23. Correcciones PEP 8 E402 y Docstrings
+
+Ficheros corregidos para cumplimiento PEP 8 E402 (logger entre imports):
+
+| Fichero | Antes | Después |
+|---------|-------|---------|
+| `static_analyzer.py` | `logger` entre `models` y `checkers` imports | `logger` después de todos los imports |
+| `semantic_analyzer.py` | `logger` entre `models` y `llm` imports | `logger` después de todos los imports |
+| `bdd_checker.py` | `logger` entre `typing` y `checkers` imports | `logger` después de todos los imports |
+| `api_client.py` | `logger` + `RateLimitError` entre imports | Ambos después de todos los imports |
+
+Correcciones de docstrings y referencias:
+
+| Fichero | Cambio |
+|---------|--------|
+| `analyzers/__init__.py` | Docstring inglés → español |
+| `checkers/base.py` | Eliminadas refs "Fase 2/3", añadido BDDChecker |
+| `static_analyzer.py` | "archivos Python" → "archivos del proyecto (Python, Java, JS/TS, C#, Gherkin)" |
+| `__main__.py` | Cabecera CLI sin referencia a fase específica |
 
 ---
 

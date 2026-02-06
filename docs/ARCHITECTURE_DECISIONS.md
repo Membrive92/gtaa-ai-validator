@@ -60,6 +60,7 @@ El formato sigue la estructura de un ADR (Architecture Decision Record) adaptado
 48. [Logging en excepciones silenciosas](#48-logging-en-excepciones-silenciosas)
 49. [Alineación LSP en firma de BaseChecker](#49-alineación-lsp-en-firma-de-basechecker)
 50. [Cobertura de tests: CLI y prompts](#50-cobertura-de-tests-cli-y-prompts)
+51. [PEP 8 E402 y consistencia de docstrings](#51-pep-8-e402-y-consistencia-de-docstrings)
 
 ---
 
@@ -3146,6 +3147,36 @@ Total: 402 → 416 tests (+14).
 
 ---
 
+## 51. PEP 8 E402 y consistencia de docstrings
+
+**Problema:** En 4 ficheros (`static_analyzer.py`, `semantic_analyzer.py`, `bdd_checker.py`, `api_client.py`), la asignación `logger = logging.getLogger(__name__)` y la clase `RateLimitError` aparecían entre bloques de imports, violando PEP 8 E402 (*module level imports not at top of file*). Además, `analyzers/__init__.py` tenía el docstring en inglés (el único módulo del paquete), `base.py` referenciaba fases obsoletas, y `StaticAnalyzer` describía solo archivos Python cuando soporta 5 lenguajes.
+
+**Alternativas evaluadas:**
+
+| Alternativa | Evaluación |
+|---|---|
+| Ignorar E402 (es solo estilo) | Herramientas como `flake8`, `ruff` y `pylint` lo reportan como error. En un TFM demuestra falta de rigor |
+| Mover logger al final del módulo | Correcto según PEP 8 pero lejos de los imports, dificulta lectura |
+| **Mover logger justo después del último import** | PEP 8 compliant, patrón estándar en proyectos Python |
+
+**Solución elegida:** Mover `logger = logging.getLogger(__name__)` y `RateLimitError` después de todos los imports en cada fichero. Traducir docstrings inconsistentes al español. Eliminar referencias a fases obsoletas y añadir `BDDChecker` a la lista de subclases en `base.py`. Remover "Fase 10" hardcodeada de la cabecera CLI.
+
+**Ficheros afectados:**
+
+| Fichero | Cambio |
+|---------|--------|
+| `analyzers/static_analyzer.py` | Logger movido después de imports; docstring "archivos Python" → "archivos del proyecto (Python, Java, JS/TS, C#, Gherkin)" |
+| `analyzers/semantic_analyzer.py` | Logger movido después de imports |
+| `checkers/bdd_checker.py` | Logger movido después de imports |
+| `llm/api_client.py` | Logger y `RateLimitError` movidos después de imports |
+| `analyzers/__init__.py` | Docstring traducido al español |
+| `checkers/base.py` | Eliminadas refs "(Fase 2)" y "(Fase 3)", añadido BDDChecker |
+| `__main__.py` | Cabecera CLI: "Fase 10" → sin referencia a fase |
+
+**Justificación:** PEP 8 es el estándar de estilo de la comunidad Python. Un TFM debe demostrar adherencia a estándares profesionales. La consistencia de idioma (español) en docstrings es fundamental para un proyecto académico hispanohablante. Las referencias a fases obsoletas confunden al lector.
+
+---
+
 ## Resumen de decisiones
 
 | Decisión | Solución elegida | Alternativa descartada | Justificación principal |
@@ -3197,6 +3228,7 @@ Total: 402 → 416 tests (+14).
 | Excepciones silenciosas | `logger.debug/warning` | `except Exception: pass` | Observabilidad sin cambio funcional |
 | Firma BaseChecker | `Union[ast.Module, ParseResult]` | Solo `ast.Module` | LSP, refleja contrato real |
 | Tests CLI + prompts | 14 tests nuevos (CliRunner) | Sin tests | Cobertura de punto de entrada y edge cases |
+| PEP 8 E402 + docstrings | Logger después de imports, docstrings en español | Ignorar / mantener inglés | Estándar profesional, consistencia lingüística |
 
 ---
 

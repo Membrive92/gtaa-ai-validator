@@ -52,7 +52,7 @@
 | ✅ Sistema de scoring (0-100) | Implementado | Penalización por severidad |
 | ✅ Proyectos de ejemplo (bueno/malo) | Implementado | En directorio examples/ |
 | ✅ Tests unitarios + integración (416 tests) | Implementado | pytest con unit/ e integration/ |
-| ✅ Documentación técnica con diagramas | Implementado | docs/ con flujos Fase 1-10, 50 ADRs |
+| ✅ Documentación técnica con diagramas | Implementado | docs/ con flujos Fase 1-10, 51 ADRs |
 | ✅ Reportes HTML dashboard | Implementado | Fase 4 — SVG inline, autocontenido |
 | ✅ Reportes JSON para CI/CD | Implementado | Fase 4 — `--json` / `--html` |
 | ✅ Análisis semántico con LLM | Implementado | Fase 5 — Gemini Flash API + MockLLM fallback |
@@ -637,7 +637,7 @@ gtaa-ai-validator/
 │
 └── docs/                               # 📚 Documentación técnica
     ├── README.md                       # Índice de documentación
-    ├── ARCHITECTURE_DECISIONS.md       # Decisiones arquitectónicas (42 ADR)
+    ├── ARCHITECTURE_DECISIONS.md       # Decisiones arquitectónicas (51 ADR)
     ├── PHASE1_FLOW_DIAGRAMS.md         # Diagramas Fase 1 (CLI y fundación)
     ├── PHASE2_FLOW_DIAGRAMS.md         # Diagramas Fase 2 (análisis estático)
     ├── PHASE3_FLOW_DIAGRAMS.md         # Diagramas Fase 3 (9 violaciones)
@@ -780,7 +780,7 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 - [ISTQB CT-TAE Syllabus v2016](https://www.istqb.org/)
 
 ### Documentación Técnica del Proyecto
-- **[Decisiones Arquitectónicas (ADR)](docs/ARCHITECTURE_DECISIONS.md)** ✅ — 42 ADRs: patrones de diseño, paradigmas, justificaciones técnicas
+- **[Decisiones Arquitectónicas (ADR)](docs/ARCHITECTURE_DECISIONS.md)** ✅ — 51 ADRs: patrones de diseño, paradigmas, justificaciones técnicas
 - **[Diagramas de Flujo - Fase 1](docs/PHASE1_FLOW_DIAGRAMS.md)** ✅ — Fundación del proyecto, CLI con Click, descubrimiento de archivos
 - **[Diagramas de Flujo - Fase 2](docs/PHASE2_FLOW_DIAGRAMS.md)** ✅ — Motor de análisis estático, BrowserAPICallVisitor, scoring
 - **[Diagramas de Flujo - Fase 3](docs/PHASE3_FLOW_DIAGRAMS.md)** ✅ — 4 checkers, 9 violaciones, AST visitors, cross-file state
@@ -1020,7 +1020,9 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 - ✅ Eliminación de `ast.Str` deprecado (Python 3.14 compatibility)
 - ✅ Alineación LSP: `BaseChecker.check()` acepta `Union[ast.Module, ParseResult]`
 - ✅ 14 tests nuevos: CLI (CliRunner) + prompts (funciones puras)
-- ✅ Total: 416 tests | Documentación: ADR 45-50, diagramas Fase 10.3
+- ✅ PEP 8 E402: logger después de imports en 4 ficheros
+- ✅ Consistencia de docstrings: español, sin refs a fases obsoletas
+- ✅ Total: 416 tests | Documentación: ADR 45-51, diagramas Fase 10.3
 
 ---
 
