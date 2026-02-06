@@ -617,7 +617,8 @@ Guía para contribuir al proyecto (estructura de código, estándares, pull requ
 7. Lee [PHASE7_FLOW_DIAGRAMS.md](PHASE7_FLOW_DIAGRAMS.md) para el soporte de proyectos mixtos API + UI
 8. Lee [PHASE8_FLOW_DIAGRAMS.md](PHASE8_FLOW_DIAGRAMS.md) para el soporte Gherkin/BDD
 9. Lee [PHASE9_FLOW_DIAGRAMS.md](PHASE9_FLOW_DIAGRAMS.md) para el soporte multilenguaje (Java, JS/TS, C#)
-10. Lee [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md) para las justificaciones técnicas
+10. Lee [PHASE10_FLOW_DIAGRAMS.md](PHASE10_FLOW_DIAGRAMS.md) para optimización LLM, logging, packaging y despliegue
+11. Lee [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md) para las justificaciones técnicas (54 ADRs)
 11. Ejecuta el código mientras lees:
     - Python: `python -m gtaa_validator examples/bad_project --ai --verbose`
     - Java: `python -m gtaa_validator examples/java_project --verbose`
@@ -665,4 +666,4 @@ Este directorio se actualizará con:
 - Guías de uso avanzadas
 - Ejemplos adicionales
 
-**Última actualización**: 4 Febrero 2026
+**Última actualización**: 6 Febrero 2026 (Fase 10.4)

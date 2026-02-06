@@ -5,14 +5,16 @@
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Estado](https://img.shields.io/badge/estado-en%20desarrollo-yellow)](https://github.com/Membrive92/gtaa-ai-validator)
-[![Fase](https://img.shields.io/badge/fase-10.3%2F10-blue)](https://github.com/Membrive92/gtaa-ai-validator)
-[![Progreso](https://img.shields.io/badge/progreso-98%25-green)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Fase](https://img.shields.io/badge/fase-10.4%2F10-blue)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Progreso](https://img.shields.io/badge/progreso-99%25-green)](https://github.com/Membrive92/gtaa-ai-validator)
+[![CI](https://github.com/Membrive92/gtaa-ai-validator/actions/workflows/ci.yml/badge.svg)](https://github.com/Membrive92/gtaa-ai-validator/actions/workflows/ci.yml)
+[![Docker](https://img.shields.io/badge/docker-ready-blue)](https://github.com/Membrive92/gtaa-ai-validator/blob/main/Dockerfile)
 
 > **📌 TRABAJO DE FIN DE MÁSTER - EN DESARROLLO INCREMENTAL**
 >
 > Autor: Jose Antonio Membrive Guillen
 > Año: 2025-2026
-> **Estado:** Fase 10.3/10 Completa | Última actualización: 6 Febrero 2026
+> **Estado:** Fase 10.4/10 Completa | Última actualización: 6 Febrero 2026
 
 ---
 
@@ -39,6 +41,7 @@
 | ↳ **✅ 10.1** | Optimización capa LLM (factory, fallback, rate limit, --max-llm-calls) | **COMPLETO** | **05/02/2026** |
 | ↳ **✅ 10.2** | Sistema de logging profesional + métricas de rendimiento | **COMPLETO** | **06/02/2026** |
 | ↳ **✅ 10.3** | Optimizaciones de proyecto (packaging, dead code, tests, LSP) | **COMPLETO** | **06/02/2026** |
+| ↳ **✅ 10.4** | Despliegue: Docker + GitHub Actions CI + reusable action | **COMPLETO** | **06/02/2026** |
 
 ### 📊 Funcionalidades Implementadas vs Planeadas
 
@@ -52,7 +55,7 @@
 | ✅ Sistema de scoring (0-100) | Implementado | Penalización por severidad |
 | ✅ Proyectos de ejemplo (bueno/malo) | Implementado | En directorio examples/ |
 | ✅ Tests unitarios + integración (416 tests) | Implementado | pytest con unit/ e integration/ |
-| ✅ Documentación técnica con diagramas | Implementado | docs/ con flujos Fase 1-10, 51 ADRs |
+| ✅ Documentación técnica con diagramas | Implementado | docs/ con flujos Fase 1-10, 54 ADRs |
 | ✅ Reportes HTML dashboard | Implementado | Fase 4 — SVG inline, autocontenido |
 | ✅ Reportes JSON para CI/CD | Implementado | Fase 4 — `--json` / `--html` |
 | ✅ Análisis semántico con LLM | Implementado | Fase 5 — Gemini Flash API + MockLLM fallback |
@@ -240,9 +243,57 @@ pip install -e ".[ai]"       # Añade google-genai + python-dotenv
 pip install -e ".[parsers]"  # Añade tree-sitter (Java, JS/TS, C#)
 ```
 
+### Docker
+
+```bash
+# Construir imagen
+docker build -t gtaa-validator .
+
+# Analizar un proyecto local
+docker run -v ./mi-proyecto:/project gtaa-validator
+
+# Con opciones
+docker run -v ./mi-proyecto:/project gtaa-validator . --verbose
+
+# Con análisis AI (pasar API key)
+docker run -e GEMINI_API_KEY=tu_key -v ./mi-proyecto:/project gtaa-validator . --ai
+
+# Generar reportes (se escriben en el volumen montado)
+docker run -v ./mi-proyecto:/project gtaa-validator . --json /project/report.json --html /project/report.html
+```
+
+### GitHub Action
+
+Otros proyectos pueden usar el validador directamente en su pipeline CI/CD:
+
+```yaml
+# En .github/workflows/validate.yml de tu proyecto
+name: Validate Test Architecture
+on: [push]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run gTAA Validator
+        id: gtaa
+        uses: Membrive92/gtaa-ai-validator@main
+        with:
+          project_path: ./tests
+          verbose: true
+
+      - name: Check score threshold
+        if: steps.gtaa.outputs.score < 75
+        run: |
+          echo "::error::gTAA score (${{ steps.gtaa.outputs.score }}) is below threshold (75)"
+          exit 1
+```
+
 ---
 
-### ✅ Funcionalidad ACTUAL (Fase 10.3)
+### ✅ Funcionalidad ACTUAL (Fase 10.4)
 
 **Funcionalidad disponible en la versión actual:**
 
@@ -557,7 +608,11 @@ gtaa-ai-validator/
 ├── README.md                           # Este archivo
 ├── LICENSE                             # Licencia MIT
 ├── requirements.txt                    # Dependencias Python
-├── setup.py                            # Instalación del paquete
+├── setup.py                            # Shim de compatibilidad
+├── Dockerfile                          # Imagen Docker multistage
+├── .dockerignore                       # Exclusiones del contexto Docker
+├── action.yml                          # GitHub Action reutilizable
+├── .github/workflows/ci.yml            # Pipeline CI (tests + build)
 ├── .gitignore                          # Archivos ignorados por Git
 │
 ├── gtaa_validator/                     # 📦 Código fuente principal
@@ -637,7 +692,7 @@ gtaa-ai-validator/
 │
 └── docs/                               # 📚 Documentación técnica
     ├── README.md                       # Índice de documentación
-    ├── ARCHITECTURE_DECISIONS.md       # Decisiones arquitectónicas (51 ADR)
+    ├── ARCHITECTURE_DECISIONS.md       # Decisiones arquitectónicas (54 ADR)
     ├── PHASE1_FLOW_DIAGRAMS.md         # Diagramas Fase 1 (CLI y fundación)
     ├── PHASE2_FLOW_DIAGRAMS.md         # Diagramas Fase 2 (análisis estático)
     ├── PHASE3_FLOW_DIAGRAMS.md         # Diagramas Fase 3 (9 violaciones)
@@ -780,7 +835,7 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 - [ISTQB CT-TAE Syllabus v2016](https://www.istqb.org/)
 
 ### Documentación Técnica del Proyecto
-- **[Decisiones Arquitectónicas (ADR)](docs/ARCHITECTURE_DECISIONS.md)** ✅ — 51 ADRs: patrones de diseño, paradigmas, justificaciones técnicas
+- **[Decisiones Arquitectónicas (ADR)](docs/ARCHITECTURE_DECISIONS.md)** ✅ — 54 ADRs: patrones de diseño, paradigmas, justificaciones técnicas
 - **[Diagramas de Flujo - Fase 1](docs/PHASE1_FLOW_DIAGRAMS.md)** ✅ — Fundación del proyecto, CLI con Click, descubrimiento de archivos
 - **[Diagramas de Flujo - Fase 2](docs/PHASE2_FLOW_DIAGRAMS.md)** ✅ — Motor de análisis estático, BrowserAPICallVisitor, scoring
 - **[Diagramas de Flujo - Fase 3](docs/PHASE3_FLOW_DIAGRAMS.md)** ✅ — 4 checkers, 9 violaciones, AST visitors, cross-file state
@@ -1026,18 +1081,30 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 
 ---
 
+### Versión 0.10.4 - Fase 10.4 (6 Febrero 2026) ✅
+
+**Implementado:**
+- ✅ Dockerfile multistage (builder + runtime, ~150MB) con todas las dependencias
+- ✅ `.dockerignore` para contexto de build limpio
+- ✅ Fix `build-backend`: `setuptools.build_meta` (era API privada `_legacy`)
+- ✅ GitHub Actions CI: matrix Python 3.10/3.11/3.12, tests + build
+- ✅ GitHub Action reutilizable (`action.yml`): composite action con inputs/outputs
+- ✅ Outputs: score, violations, reportes JSON/HTML como artefactos
+- ✅ Documentación: ADR 52-54, diagramas Fase 10.4
+
+---
+
 ### Versión 1.0.0 - Fase 10 Final (Pendiente) ⏳
 
 **Planificado:**
 - ⏳ CLI: `--min-score` threshold mínimo para exit code
 - ⏳ CLI: `--lang` forzar lenguaje si auto-detección falla
-- ⏳ Integración CI/CD (exit codes, GitHub Actions)
 - ⏳ Documentación TFM final
 
 ---
 
 <div align="center">
 
-**Estado del proyecto:** Fase 10.3/10 | 23 violaciones | 4 lenguajes (Python, Java, JS/TS, C#) | 416 tests
+**Estado del proyecto:** Fase 10.4/10 | 23 violaciones | 4 lenguajes (Python, Java, JS/TS, C#) | 416 tests
 
 </div>

@@ -2,10 +2,12 @@
 
 ## Resumen General
 
-La Fase 10 se divide en dos sub-fases:
+La Fase 10 se divide en cuatro sub-fases:
 
 - **Fase 10.1**: Optimización de la capa LLM (fallback, factory, tracking)
 - **Fase 10.2**: Sistema de logging profesional + métricas de rendimiento en reportes
+- **Fase 10.3**: Optimizaciones de proyecto (packaging, dead code, tests, LSP, PEP 8)
+- **Fase 10.4**: Despliegue (Docker, GitHub Actions CI, reusable action)
 
 ### Fase 10.1
 
@@ -931,4 +933,133 @@ Correcciones de docstrings y referencias:
 
 ---
 
-*Última actualización: 6 de febrero de 2026 (Fase 10.3)*
+## 24. Fase 10.4 — Despliegue
+
+La Fase 10.4 añade tres vectores de distribución al proyecto, permitiendo su uso como paquete pip, contenedor Docker o GitHub Action reutilizable.
+
+## 25. Docker Multistage Build
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    DOCKERFILE MULTISTAGE                         │
+└─────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │  STAGE 1: builder (python:3.12-slim)                        │
+  │                                                             │
+  │  1. apt-get install gcc build-essential                     │
+  │     └── Necesario para compilar tree-sitter (C nativo)      │
+  │                                                             │
+  │  2. pip install build wheel                                 │
+  │                                                             │
+  │  3. COPY pyproject.toml setup.py gtaa_validator/            │
+  │                                                             │
+  │  4. pip wheel --wheel-dir /wheels ".[all]"                  │
+  │     └── Genera .whl para: click, PyYAML, google-genai,     │
+  │         python-dotenv, tree-sitter-language-pack,           │
+  │         tree-sitter-c-sharp, gtaa-ai-validator              │
+  │                                                             │
+  │  Resultado: /wheels/*.whl (todas las dependencias)          │
+  └──────────────────────────┬──────────────────────────────────┘
+                             │
+                             │ COPY --from=builder /wheels
+                             ▼
+  ┌─────────────────────────────────────────────────────────────┐
+  │  STAGE 2: runtime (python:3.12-slim)                        │
+  │                                                             │
+  │  1. pip install /tmp/wheels/*                               │
+  │     └── Instala todos los wheels (sin gcc, sin cache)       │
+  │                                                             │
+  │  2. ENV GEMINI_API_KEY=""                                   │
+  │     └── Pasar en runtime: docker run -e GEMINI_API_KEY=key  │
+  │                                                             │
+  │  3. WORKDIR /project                                        │
+  │     └── Punto de montaje del proyecto del usuario           │
+  │                                                             │
+  │  4. ENTRYPOINT ["gtaa-validator"]                           │
+  │  5. CMD ["."]                                               │
+  │     └── Analiza /project (volumen montado) por defecto      │
+  │                                                             │
+  │  Imagen final: ~150MB (sin gcc, sin build tools)            │
+  └─────────────────────────────────────────────────────────────┘
+
+  Uso:
+  ┌─────────────────────────────────────────────────────────────┐
+  │  docker build -t gtaa-validator .                           │
+  │  docker run -v ./mi-proyecto:/project gtaa-validator        │
+  │  docker run -v ./mi-proyecto:/project gtaa-validator \      │
+  │      . --verbose --ai --provider mock                       │
+  │  docker run -e GEMINI_API_KEY=key \                         │
+  │      -v ./mi-proyecto:/project gtaa-validator . --ai        │
+  └─────────────────────────────────────────────────────────────┘
+```
+
+## 26. GitHub Actions CI + Reusable Action
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│              CI PIPELINE (.github/workflows/ci.yml)              │
+└─────────────────────────────────────────────────────────────────┘
+
+  push/PR a main
+       │
+       ▼
+  ┌─────────────────────────────────────────────────────────────┐
+  │  Matrix: Python 3.10, 3.11, 3.12                            │
+  │  runs-on: ubuntu-latest                                     │
+  │                                                             │
+  │  1. actions/checkout@v4                                     │
+  │  2. actions/setup-python@v5 (con cache pip)                 │
+  │  3. pip install -e ".[all,dev]"                             │
+  │  4. pytest tests/ -v --tb=short                             │
+  │  5. gtaa-validator examples/bad_project --json              │
+  │  6. gtaa-validator examples/good_project --json             │
+  │  7. python -m build (solo Python 3.12)                      │
+  └─────────────────────────────────────────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────┐
+│           REUSABLE ACTION (action.yml — composite)              │
+└─────────────────────────────────────────────────────────────────┘
+
+  Proyecto externo
+       │
+       │  uses: Membrive92/gtaa-ai-validator@main
+       │  with:
+       │    project_path: ./tests
+       │    verbose: true
+       │
+       ▼
+  ┌─────────────────────────────────────────────────────────────┐
+  │  1. setup-python (versión configurable)                     │
+  │  2. pip install "${{ github.action_path }}[all]"            │
+  │  3. gtaa-validator $project --json --html                   │
+  │     └── Opciones condicionales: --verbose, --ai, --provider │
+  │  4. Extraer score del JSON:                                 │
+  │     └── data['summary']['score']                            │
+  │     └── data['summary']['total_violations']                 │
+  │  5. Upload artifacts (JSON + HTML, 30 días)                 │
+  └─────────────────────────────────────────────────────────────┘
+       │
+       ▼
+  Outputs: score (0-100), violations (int), report_json (path)
+```
+
+## 27. Comparativa de Vectores de Despliegue
+
+| Vector | Comando | Dependencias | Caso de uso |
+|--------|---------|-------------|-------------|
+| **pip install** | `pip install gtaa-ai-validator[all]` | Python 3.10+ | Desarrollo local, uso directo |
+| **Docker** | `docker run -v ./proyecto:/project gtaa-validator` | Docker | Entorno aislado, sin Python |
+| **GitHub Action** | `uses: Membrive92/gtaa-ai-validator@main` | Ninguna (action instala) | CI/CD automatizado |
+
+## 28. Commits en Fase 10.4
+
+| Commit | Tipo | Descripción |
+|--------|------|-------------|
+| `a20ff12` | feat | Dockerfile multistage + .dockerignore + fix build-backend |
+| `0717d34` | feat | GitHub Actions CI + reusable composite action |
+
+---
+
+*Última actualización: 6 de febrero de 2026 (Fase 10.4)*

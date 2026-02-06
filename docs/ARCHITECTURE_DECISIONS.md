@@ -61,6 +61,9 @@ El formato sigue la estructura de un ADR (Architecture Decision Record) adaptado
 49. [Alineación LSP en firma de BaseChecker](#49-alineación-lsp-en-firma-de-basechecker)
 50. [Cobertura de tests: CLI y prompts](#50-cobertura-de-tests-cli-y-prompts)
 51. [PEP 8 E402 y consistencia de docstrings](#51-pep-8-e402-y-consistencia-de-docstrings)
+52. [Docker multistage con wheels frente a imagen monolítica](#52-docker-multistage-con-wheels-frente-a-imagen-monolítica)
+53. [GitHub Action composite frente a Docker-based](#53-github-action-composite-frente-a-docker-based)
+54. [build-backend setuptools.build_meta frente a _legacy](#54-build-backend-setuptoolsbuild_meta-frente-a-_legacy)
 
 ---
 
@@ -3177,6 +3180,72 @@ Total: 402 → 416 tests (+14).
 
 ---
 
+## 52. Docker multistage con wheels frente a imagen monolítica
+
+**Problema:** El proyecto necesita un contenedor Docker para despliegue portable. Las dependencias incluyen `tree-sitter` con compilación nativa en C, lo que complica la imagen.
+
+**Alternativas evaluadas:**
+
+| Alternativa | Evaluación |
+|---|---|
+| Imagen monolítica (single stage) | Simple pero incluye gcc, build-essential, pip caches en imagen final (~400MB) |
+| Multistage con `--prefix` | Gestión de paths compleja, errores de runtime por paths no encontrados |
+| **Multistage con `pip wheel`** | Wheels portables entre stages con misma base image, imagen final limpia |
+
+**Solución elegida:** Dockerfile multistage con `pip wheel` en builder + `pip install /tmp/wheels/*` en runtime.
+
+```dockerfile
+# Stage 1: builder con gcc para tree-sitter
+FROM python:3.12-slim AS builder
+RUN apt-get install -y gcc build-essential
+RUN pip wheel --wheel-dir /wheels ".[all]"
+
+# Stage 2: runtime sin build tools
+FROM python:3.12-slim
+COPY --from=builder /wheels /tmp/wheels
+RUN pip install /tmp/wheels/*
+ENTRYPOINT ["gtaa-validator"]
+```
+
+**Justificación:** Imagen final ~150MB sin herramientas de build. Patrón estándar en la comunidad Docker/Python. `ENTRYPOINT + CMD` permite usar el contenedor como si fuera el CLI directamente: `docker run -v ./proyecto:/project gtaa-validator . --verbose`.
+
+---
+
+## 53. GitHub Action composite frente a Docker-based
+
+**Problema:** Crear una GitHub Action reutilizable para que otros proyectos validen su arquitectura gTAA en CI/CD.
+
+**Alternativas evaluadas:**
+
+| Alternativa | Evaluación |
+|---|---|
+| Docker-based action (`runs: using: docker`) | Self-contained pero lento (pull/build en cada run). Complejo para pasar inputs/outputs |
+| JavaScript action | Requiere reescribir lógica en JS o usar exec. Overhead de mantenimiento |
+| **Composite action** (`runs: using: composite`) | Rápido (no Docker), flexible (versión Python configurable), acceso a `${{ github.action_path }}` |
+
+**Solución elegida:** Composite action con `setup-python` + `pip install` desde el repositorio.
+
+**Justificación:** Ejecución rápida sin overhead de Docker. El usuario puede elegir versión de Python. Los outputs (score, violations) se extraen del JSON generado con `python3 -c`. Los reportes se suben como artefactos con `upload-artifact@v4`.
+
+---
+
+## 54. build-backend setuptools.build_meta frente a _legacy
+
+**Problema:** El `pyproject.toml` original usaba `setuptools.backends._legacy:_Backend` como build-backend. Este es un API interno/privado de setuptools que no tiene garantía de estabilidad entre versiones.
+
+**Alternativas evaluadas:**
+
+| Alternativa | Evaluación |
+|---|---|
+| Mantener `_legacy` | Funciona hoy, pero puede romper en futuras versiones de setuptools. No documentado |
+| **`setuptools.build_meta`** | API pública documentada en PEP 517/518. Estándar de la comunidad |
+
+**Solución elegida:** `build-backend = "setuptools.build_meta"` en `[build-system]`.
+
+**Justificación:** API pública con contrato de estabilidad. Requerido para `python -m build`. Es el backend que recomienda la documentación oficial de setuptools y PEP 517.
+
+---
+
 ## Resumen de decisiones
 
 | Decisión | Solución elegida | Alternativa descartada | Justificación principal |
@@ -3229,7 +3298,10 @@ Total: 402 → 416 tests (+14).
 | Firma BaseChecker | `Union[ast.Module, ParseResult]` | Solo `ast.Module` | LSP, refleja contrato real |
 | Tests CLI + prompts | 14 tests nuevos (CliRunner) | Sin tests | Cobertura de punto de entrada y edge cases |
 | PEP 8 E402 + docstrings | Logger después de imports, docstrings en español | Ignorar / mantener inglés | Estándar profesional, consistencia lingüística |
+| Docker | Multistage con `pip wheel` | Imagen monolítica | ~150MB vs ~400MB, sin build tools en runtime |
+| GitHub Action | Composite action | Docker-based action | Rápido, versión Python flexible, sin overhead Docker |
+| build-backend | `setuptools.build_meta` | `_legacy` (privado) | API pública, PEP 517, estable |
 
 ---
 
-*Última actualización: 6 de febrero de 2026 (Fase 10.3)*
+*Última actualización: 6 de febrero de 2026 (Fase 10.4)*
