@@ -1,0 +1,126 @@
+name: gTAA AI Validator
+description: >
+  Valida el cumplimiento arquitectónico gTAA (ISTQB CT-TAE) en proyectos de test automation.
+  Detecta 23 tipos de violaciones en proyectos Python, Java, JS/TS y C#.
+author: Jose Antonio Membrive Guillen
+
+branding:
+  icon: check-circle
+  color: blue
+
+inputs:
+  project_path:
+    description: Ruta al proyecto de test automation a analizar
+    required: true
+  verbose:
+    description: Activar salida detallada con información de violaciones
+    required: false
+    default: "false"
+  ai:
+    description: Activar análisis semántico AI (requiere GEMINI_API_KEY como env var)
+    required: false
+    default: "false"
+  provider:
+    description: "Proveedor LLM: gemini, mock, o vacío para auto-detección"
+    required: false
+    default: ""
+  config_path:
+    description: Ruta al archivo de configuración .gtaa.yaml
+    required: false
+    default: ""
+  python_version:
+    description: Versión de Python para el validador
+    required: false
+    default: "3.12"
+  upload_reports:
+    description: Subir reportes JSON y HTML como artefactos del workflow
+    required: false
+    default: "true"
+
+outputs:
+  score:
+    description: Puntuación de cumplimiento gTAA (0-100)
+    value: ${{ steps.analyze.outputs.score }}
+  violations:
+    description: Número total de violaciones arquitectónicas encontradas
+    value: ${{ steps.analyze.outputs.violations }}
+  report_json:
+    description: Ruta al fichero JSON del reporte generado
+    value: ${{ steps.analyze.outputs.report_json }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python_version }}
+        cache: pip
+
+    - name: Install gTAA Validator
+      shell: bash
+      run: pip install --no-cache-dir "${{ github.action_path }}[all]"
+
+    - name: Run gTAA Validator
+      id: analyze
+      shell: bash
+      run: |
+        # Construir comando base
+        CMD="gtaa-validator ${{ inputs.project_path }}"
+        CMD="$CMD --json gtaa_report.json --html gtaa_report.html"
+
+        # Opciones condicionales
+        if [ "${{ inputs.verbose }}" = "true" ]; then
+          CMD="$CMD --verbose"
+        fi
+        if [ "${{ inputs.ai }}" = "true" ]; then
+          CMD="$CMD --ai"
+        fi
+        if [ -n "${{ inputs.provider }}" ]; then
+          CMD="$CMD --provider ${{ inputs.provider }}"
+        fi
+        if [ -n "${{ inputs.config_path }}" ]; then
+          CMD="$CMD --config ${{ inputs.config_path }}"
+        fi
+
+        echo "Executing: $CMD"
+
+        # Ejecutar (exit code 1 si hay violaciones criticas)
+        set +e
+        eval $CMD
+        VALIDATOR_EXIT=$?
+        set -e
+
+        # Extraer score y violaciones del reporte JSON
+        SCORE=$(python3 -c "
+        import json
+        with open('gtaa_report.json') as f:
+            data = json.load(f)
+        print(data['summary']['score'])
+        ")
+        VIOLATIONS=$(python3 -c "
+        import json
+        with open('gtaa_report.json') as f:
+            data = json.load(f)
+        print(data['summary']['total_violations'])
+        ")
+
+        # Establecer outputs
+        echo "score=$SCORE" >> "$GITHUB_OUTPUT"
+        echo "violations=$VIOLATIONS" >> "$GITHUB_OUTPUT"
+        echo "report_json=gtaa_report.json" >> "$GITHUB_OUTPUT"
+
+        # Resumen en el log de GitHub Actions
+        echo "::notice::gTAA Compliance Score: ${SCORE}/100 | Violations: ${VIOLATIONS}"
+
+        exit $VALIDATOR_EXIT
+
+    - name: Upload reports as artifacts
+      if: inputs.upload_reports == 'true' && always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: gtaa-validator-reports
+        path: |
+          gtaa_report.json
+          gtaa_report.html
+        retention-days: 30
