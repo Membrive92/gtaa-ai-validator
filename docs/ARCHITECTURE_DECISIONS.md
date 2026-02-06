@@ -47,6 +47,11 @@ El formato sigue la estructura de un ADR (Architecture Decision Record) adaptado
 35. [ParseResult como interfaz unificada frente a AST nativo](#35-parseresult-como-interfaz-unificada-frente-a-ast-nativo)
 36. [Factory function frente a dispatcher manual para parsers](#36-factory-function-frente-a-dispatcher-manual-para-parsers)
 37. [Python AST nativo frente a tree-sitter para Python](#37-python-ast-nativo-frente-a-tree-sitter-para-python)
+38. [Renombrado a APILLMClient: naming provider-agnostic](#38-renombrado-a-apillmclient-naming-provider-agnostic)
+39. [Factory pattern para creación de clientes LLM](#39-factory-pattern-para-creación-de-clientes-llm)
+40. [RateLimitError y fallback automático](#40-ratelimiterror-y-fallback-automático)
+41. [Call limiting con --max-llm-calls](#41-call-limiting-con---max-llm-calls)
+42. [Provider tracking en reportes](#42-provider-tracking-en-reportes)
 
 ---
 
@@ -2347,6 +2352,477 @@ La uniformidad se logra en la **interfaz de salida** (`ParseResult`), no en la i
 
 ---
 
+## 38. Renombrado a APILLMClient: naming provider-agnostic
+
+### Problema
+
+En Fase 5 se creó `GeminiLLMClient` acoplado al proveedor específico Gemini. Al considerar soporte futuro para otros proveedores (OpenAI, Anthropic, local), el nombre de la clase limita la extensibilidad conceptual.
+
+### Alternativa evaluada: Mantener GeminiLLMClient
+
+```python
+# Problema: nombre acoplado al proveedor
+from gtaa_validator.llm.gemini_client import GeminiLLMClient
+
+client = GeminiLLMClient(api_key="...")  # ¿Y si mañana es OpenAI?
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Acoplamiento semántico | El nombre sugiere que solo funciona con Gemini |
+| Confusión futura | Si se añade OpenAI, ¿hay `OpenAILLMClient` separado? |
+| Inconsistencia | `MockLLMClient` es provider-agnostic, `GeminiLLMClient` no |
+
+### Solución elegida: APILLMClient (provider-agnostic)
+
+```python
+# gtaa_validator/llm/api_client.py
+
+class APILLMClient:
+    """Cliente LLM basado en API cloud (actualmente Gemini)."""
+
+    def __init__(self, api_key: str):
+        self._client = genai.Client(api_key=api_key)
+        # Internamente usa Gemini, pero la interfaz es agnóstica
+
+# Alias para compatibilidad hacia atrás
+GeminiLLMClient = APILLMClient
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Naming semántico | `APILLMClient` describe *qué hace* (API cloud), no *quién lo provee* |
+| Extensibilidad | El mismo nombre aplica si se cambia el proveedor interno |
+| Compatibilidad | Alias `GeminiLLMClient = APILLMClient` preserva código existente |
+| Consistencia | Ahora ambos clientes son provider-agnostic: `MockLLMClient`, `APILLMClient` |
+
+**Principio aplicado — Naming por comportamiento, no por implementación:**
+
+El nombre de una clase debe describir su contrato público, no su implementación interna.
+
+---
+
+## 39. Factory pattern para creación de clientes LLM
+
+### Problema
+
+La creación de clientes LLM requiere lógica condicional:
+1. Verificar si hay API key en el entorno
+2. Decidir entre `APILLMClient` o `MockLLMClient`
+3. Respetar preferencia explícita del usuario (`--provider`)
+
+Esta lógica estaba dispersa en `__main__.py`, dificultando tests y reutilización.
+
+### Alternativa evaluada: Lógica inline en CLI
+
+```python
+# __main__.py
+if provider == "mock":
+    client = MockLLMClient()
+elif os.getenv("GEMINI_API_KEY"):
+    client = APILLMClient(api_key=os.getenv("GEMINI_API_KEY"))
+else:
+    client = MockLLMClient()
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Duplicación | Misma lógica si se añade otro entry point |
+| Testabilidad | Difícil de testear la lógica de selección |
+| Responsabilidad | CLI no debería conocer detalles de instanciación LLM |
+
+### Solución elegida: Factory function en módulo dedicado
+
+```python
+# gtaa_validator/llm/factory.py
+
+def create_llm_client(provider: str = None) -> Union[MockLLMClient, APILLMClient]:
+    """
+    Crea cliente LLM según configuración.
+
+    Args:
+        provider: 'mock', 'gemini', o None (auto-detect)
+
+    Returns:
+        MockLLMClient o APILLMClient
+    """
+    if provider == "mock":
+        return MockLLMClient()
+
+    api_key = os.getenv("GEMINI_API_KEY")
+
+    if api_key:
+        return APILLMClient(api_key=api_key)
+    else:
+        return MockLLMClient()
+
+
+def get_available_providers() -> dict:
+    """Lista proveedores disponibles y su estado."""
+    return {
+        "mock": {"available": True, "reason": "Always available"},
+        "gemini": {
+            "available": bool(os.getenv("GEMINI_API_KEY")),
+            "reason": "GEMINI_API_KEY" if os.getenv("GEMINI_API_KEY") else "Missing API key"
+        }
+    }
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Single Responsibility | Factory encapsula lógica de creación |
+| Testabilidad | `create_llm_client()` es fácil de testear en aislamiento |
+| Reutilización | Cualquier módulo puede crear clientes sin duplicar lógica |
+| Extensibilidad | Añadir nuevo proveedor = modificar solo factory |
+
+**Patrón aplicado — Factory Method:**
+
+```
+                    create_llm_client(provider)
+                              │
+                              ▼
+              ┌───────────────┴───────────────┐
+              │                               │
+        provider="mock"              provider=None/gemini
+              │                               │
+              ▼                               ▼
+      ┌─────────────┐              ┌────────────────────┐
+      │MockLLMClient│              │ GEMINI_API_KEY     │
+      └─────────────┘              │ exists?            │
+                                   └─────────┬──────────┘
+                                        │         │
+                                       Yes        No
+                                        │         │
+                                        ▼         ▼
+                               ┌───────────┐ ┌─────────────┐
+                               │APILLMClient│ │MockLLMClient│
+                               └───────────┘ └─────────────┘
+```
+
+---
+
+## 40. RateLimitError y fallback automático
+
+### Problema
+
+Gemini Free Tier tiene límite de 10 requests/minuto. Cuando se excede:
+- La API retorna error 429 (Rate Limit Exceeded)
+- El análisis semántico falla completamente
+- El usuario pierde el análisis estático ya completado
+
+Se necesita un mecanismo de degradación elegante que preserve el trabajo realizado.
+
+### Alternativa evaluada: Propagar excepción y abortar
+
+```python
+def analyze_file(self, content, file_path):
+    try:
+        response = self._client.generate(...)
+        return self._parse_violations(response.text)
+    except Exception as e:
+        raise  # Propagar, que el caller maneje
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Pérdida de trabajo | Análisis estático ya completado se pierde |
+| UX pobre | Usuario ve error críptico de API |
+| Inconsistente con ADR 15 | Que definió manejo silencioso de errores |
+
+### Solución elegida: RateLimitError + Fallback automático a Mock
+
+**Paso 1: Excepción específica para rate limit**
+
+```python
+# gtaa_validator/llm/api_client.py
+
+class RateLimitError(Exception):
+    """Error cuando se alcanza el límite de rate/cuota de la API."""
+    pass
+
+class APILLMClient:
+    def _is_rate_limit_error(self, error: Exception) -> bool:
+        """Detecta si el error es rate limit (429) o quota exceeded."""
+        error_str = str(error).lower()
+        return (
+            "429" in error_str
+            or "rate limit" in error_str
+            or "quota" in error_str
+            or "resource exhausted" in error_str
+        )
+
+    def analyze_file(self, content, file_path, **kwargs):
+        try:
+            response = self._client.generate(...)
+            return self._parse_violations(response.text)
+        except Exception as e:
+            if self._is_rate_limit_error(e):
+                raise RateLimitError(f"Rate limit: {e}") from e
+            return []  # Otros errores: silencioso (ADR 15)
+```
+
+**Paso 2: Fallback automático en SemanticAnalyzer**
+
+```python
+# gtaa_validator/analyzers/semantic_analyzer.py
+
+class SemanticAnalyzer:
+    def _fallback_to_mock(self, reason: str) -> None:
+        """Cambia a MockLLMClient como fallback."""
+        if self._fallback_occurred:
+            return  # Idempotente
+
+        self._fallback_occurred = True
+        self._current_provider = "mock"
+        self.llm_client = MockLLMClient()
+
+        if self.verbose:
+            print(f"[FALLBACK] {reason}")
+
+    def analyze(self, report):
+        for file_path in candidate_files:
+            try:
+                violations = self.llm_client.analyze_file(content, file_path)
+            except RateLimitError as e:
+                self._fallback_to_mock(str(e))
+                violations = self.llm_client.analyze_file(content, file_path)
+            # Continúa con MockLLMClient...
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Graceful degradation | Análisis continúa con heurísticas mock |
+| Transparencia | Usuario ve `[FALLBACK]` en modo verbose |
+| Preserva trabajo | Análisis estático + violaciones ya detectadas se mantienen |
+| Idempotente | Fallback solo ocurre una vez |
+
+**Flujo de fallback:**
+
+```
+APILLMClient.analyze_file()
+         │
+         ▼
+    ┌─────────┐
+    │ Success │───► Return violations
+    └─────────┘
+         │
+    Exception
+         │
+         ▼
+    ┌────────────────────┐
+    │ _is_rate_limit_error? │
+    └────────────────────┘
+         │           │
+        Yes         No
+         │           │
+         ▼           ▼
+  RateLimitError   return []
+         │         (silencioso)
+         ▼
+SemanticAnalyzer catches
+         │
+         ▼
+_fallback_to_mock()
+         │
+         ▼
+self.llm_client = MockLLMClient()
+         │
+         ▼
+Retry con MockLLMClient
+```
+
+---
+
+## 41. Call limiting con --max-llm-calls
+
+### Problema
+
+El free tier de Gemini tiene límites estrictos:
+- 10 requests/minuto
+- 1500 requests/día
+
+Un proyecto grande puede tener docenas de archivos candidatos para análisis semántico. Sin límite:
+- Se agotan los requests rápidamente
+- El fallback a mock ocurre tarde (después de muchos 429s)
+- El usuario no tiene control sobre el consumo de API
+
+### Alternativa evaluada: Sin límite, solo fallback por error
+
+```python
+# Sin --max-llm-calls, solo reaccionar a 429
+for file in files:
+    try:
+        violations = api_client.analyze_file(...)
+    except RateLimitError:
+        # Fallback solo cuando falla
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Desperdicio de quota | Se hacen N llamadas hasta el 429 |
+| Sin control | Usuario no puede decidir cuántas llamadas permitir |
+| Latencia | Esperar a que falle es más lento que limitar proactivamente |
+
+### Solución elegida: --max-llm-calls con fallback proactivo
+
+```python
+# CLI
+@click.option('--max-llm-calls', type=int, default=None,
+              help='Límite de llamadas LLM antes de fallback a mock')
+
+# SemanticAnalyzer
+def __init__(self, ..., max_llm_calls: int = None):
+    self.max_llm_calls = max_llm_calls
+    self._llm_call_count = 0
+
+def _check_call_limit(self) -> None:
+    """Verifica límite de llamadas, fallback si se excede."""
+    if self.max_llm_calls is None:
+        return  # Sin límite
+    if self._fallback_occurred:
+        return  # Ya en fallback
+
+    self._llm_call_count += 1
+    if self._llm_call_count > self.max_llm_calls:
+        self._fallback_to_mock(f"Límite de {self.max_llm_calls} llamadas alcanzado")
+
+def analyze(self, report):
+    for file in files:
+        self._check_call_limit()  # Verificar ANTES de llamar
+        violations = self.llm_client.analyze_file(...)
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Control de usuario | `--max-llm-calls 5` permite exactamente 5 llamadas API |
+| Proactivo | Fallback antes de error, no después |
+| Predecible | Usuario sabe exactamente cuántas llamadas se harán |
+| Opcional | Sin flag = sin límite (comportamiento por defecto) |
+
+**Casos de uso:**
+
+```bash
+# Análisis completo con API (sin límite)
+python -m gtaa_validator ./project --ai
+
+# Solo 5 llamadas API, luego mock
+python -m gtaa_validator ./project --ai --max-llm-calls 5
+
+# Zero llamadas API (fuerza mock)
+python -m gtaa_validator ./project --ai --max-llm-calls 0
+# Equivalente a: --provider mock
+```
+
+---
+
+## 42. Provider tracking en reportes
+
+### Problema
+
+El usuario necesita saber:
+1. ¿Qué proveedor LLM se usó para el análisis?
+2. ¿Hubo fallback a mock durante la ejecución?
+3. ¿Cuántas llamadas API se realizaron antes del fallback?
+
+Esta información es crucial para interpretar la calidad del análisis semántico.
+
+### Alternativa evaluada: Sin tracking, asumir API
+
+```python
+# Sin info de proveedor en el reporte
+{
+    "metadata": { ... },
+    "violations": [ ... ]
+}
+# Usuario no sabe si las sugerencias AI son de Gemini o heurísticas
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Opacidad | Usuario no sabe qué motor generó las sugerencias |
+| Debugging difícil | Si hay fallback, no queda registro |
+| Confianza reducida | Sin saber el proveedor, no se puede evaluar calidad |
+
+### Solución elegida: llm_provider_info en Report
+
+```python
+# gtaa_validator/models.py
+
+@dataclass
+class Report:
+    ...
+    llm_provider_info: Optional[dict] = None
+
+# Estructura del dict:
+{
+    "initial_provider": "gemini",   # Proveedor configurado
+    "current_provider": "mock",     # Proveedor usado al final
+    "fallback_occurred": True,      # Si hubo cambio
+    "llm_calls": 5,                 # Llamadas antes de fallback
+    "max_llm_calls": 5              # Límite configurado
+}
+```
+
+**Visualización en reportes:**
+
+CLI:
+```
+[!] Fallback activado: gemini -> mock
+```
+
+HTML:
+```html
+<span>LLM: <strong>Gemini &rarr; Mock</strong> (fallback)</span>
+```
+
+JSON:
+```json
+{
+    "metadata": {
+        "llm_provider": {
+            "initial_provider": "gemini",
+            "current_provider": "mock",
+            "fallback_occurred": true,
+            "llm_calls": 5,
+            "max_llm_calls": 5
+        }
+    }
+}
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Transparencia | Usuario sabe exactamente qué generó las sugerencias |
+| Auditabilidad | Registro persistente en JSON/HTML |
+| Debugging | Si algo falla, se sabe el contexto |
+| Confianza | `current_provider: gemini` indica sugerencias de IA real |
+
+**Principio aplicado — Observabilidad:**
+
+Todo sistema debe exponer su estado interno para facilitar debugging y comprensión del comportamiento.
+
+---
+
 ## Resumen de decisiones
 
 | Decisión | Solución elegida | Alternativa descartada | Justificación principal |
@@ -2385,7 +2861,12 @@ La uniformidad se logra en la **interfaz de salida** (`ParseResult`), no en la i
 | Interfaz de datos | ParseResult unificado | AST nativo por lenguaje | Abstracción limpia, tipado fuerte, responsabilidad única |
 | Selección de parser | Factory function | Switch en StaticAnalyzer | Desacoplamiento, imports lazy, punto único de extensión |
 | Parser Python | ast nativo (stdlib) | tree-sitter para Python | Zero deps extra, rendimiento, código existente reutilizado |
+| Naming cliente LLM | APILLMClient (agnóstico) | GeminiLLMClient (específico) | Extensibilidad, consistencia, sin acoplamiento al proveedor |
+| Creación clientes LLM | Factory function | Lógica inline en CLI | Single Responsibility, testabilidad, reutilización |
+| Errores rate limit | RateLimitError + fallback | Propagar excepción | Graceful degradation, preserva trabajo, consistente con ADR 15 |
+| Límite de llamadas LLM | --max-llm-calls proactivo | Solo fallback por error | Control de usuario, predecible, ahorra quota |
+| Tracking de proveedor | llm_provider_info en Report | Sin tracking | Transparencia, auditabilidad, debugging |
 
 ---
 
-*Última actualización: 4 de febrero de 2026*
+*Última actualización: 5 de febrero de 2026*

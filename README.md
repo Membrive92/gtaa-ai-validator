@@ -5,14 +5,14 @@
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Estado](https://img.shields.io/badge/estado-en%20desarrollo-yellow)](https://github.com/Membrive92/gtaa-ai-validator)
-[![Fase](https://img.shields.io/badge/fase-9%2F10-blue)](https://github.com/Membrive92/gtaa-ai-validator)
-[![Progreso](https://img.shields.io/badge/progreso-90%25-green)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Fase](https://img.shields.io/badge/fase-10.1%2F10-blue)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Progreso](https://img.shields.io/badge/progreso-95%25-green)](https://github.com/Membrive92/gtaa-ai-validator)
 
 > **📌 TRABAJO DE FIN DE MÁSTER - EN DESARROLLO INCREMENTAL**
 >
 > Autor: Jose Antonio Membrive Guillen
 > Año: 2025-2026
-> **Estado:** Fase 9/10 Completa | Última actualización: 4 Febrero 2026
+> **Estado:** Fase 10.1/10 Completa | Última actualización: 5 Febrero 2026
 
 ---
 
@@ -35,7 +35,8 @@
 | **✅ Fase 7** | **Soporte para proyectos mixtos (API + UI) + auto-wait Playwright** | **COMPLETO** | **02/02/2026** |
 | **✅ Fase 8** | **Soporte Gherkin/BDD (Behave + pytest-bdd)** | **COMPLETO** | **03/02/2026** |
 | **✅ Fase 9** | **Soporte Multilenguaje (Java + JS/TS + C#) + Refactor language-agnostic** | **COMPLETO** | **04/02/2026** |
-| **⏳ Fase 10** | **Optimización y documentación final** | **PENDIENTE** | — |
+| **🔄 Fase 10** | **Optimización y documentación final** | **EN PROGRESO** | — |
+| ↳ **✅ 10.1** | Optimización capa LLM (factory, fallback, rate limit, --max-llm-calls) | **COMPLETO** | **05/02/2026** |
 
 ### 📊 Funcionalidades Implementadas vs Planeadas
 
@@ -56,7 +57,8 @@
 | ✅ Soporte proyectos mixtos (API + UI) | Implementado | Fase 7 — FileClassifier, .gtaa.yaml, auto-wait Playwright |
 | ✅ Soporte Gherkin/BDD (Behave + pytest-bdd) | Implementado | Fase 8 — GherkinParser, BDDChecker, 5 violaciones BDD |
 | ✅ Soporte Multilenguaje (Java + JS/TS + C#) | Implementado | Fase 9 — tree-sitter, checkers language-agnostic, ParseResult |
-| ⏳ Optimización y documentación final | Pendiente | Fase 10 — prompts, CI/CD, docs TFM |
+| ✅ Optimización capa LLM | Implementado | Fase 10.1 — Factory, fallback automático, --max-llm-calls |
+| ⏳ Optimización y documentación final | En progreso | Fase 10 — CI/CD, docs TFM |
 
 **Leyenda:** ✅ Implementado | ⏳ Pendiente
 
@@ -232,7 +234,7 @@ pip install -e .
 
 ---
 
-### ✅ Funcionalidad ACTUAL (Fase 9)
+### ✅ Funcionalidad ACTUAL (Fase 10.1)
 
 **Funcionalidad disponible en la versión actual:**
 
@@ -245,6 +247,9 @@ python -m gtaa_validator /path/to/project --verbose
 
 # Análisis semántico AI (requiere GEMINI_API_KEY en .env)
 python -m gtaa_validator /path/to/project --ai --verbose
+
+# Análisis AI con límite de llamadas (fallback automático a mock)
+python -m gtaa_validator /path/to/project --ai --max-llm-calls 5
 
 # Configuración por proyecto (.gtaa.yaml)
 python -m gtaa_validator /path/to/project --config /path/.gtaa.yaml
@@ -276,7 +281,10 @@ pytest tests/integration/   # Solo integración
 - ✅ Detección por regex (emails, URLs, teléfonos, passwords, locators duplicados, configuración hardcodeada)
 - ✅ Análisis semántico AI con Gemini Flash API (6 tipos de violación semántica)
 - ✅ Sugerencias AI contextuales para cada violación (enriquecimiento)
-- ✅ Fallback automático a MockLLMClient cuando no hay API key
+- ✅ Fallback automático a MockLLMClient cuando no hay API key o rate limit (429)
+- ✅ Factory pattern para creación de clientes LLM (create_llm_client)
+- ✅ Limitación de llamadas API con --max-llm-calls (fallback proactivo)
+- ✅ Tracking de proveedor LLM en reportes (inicial, actual, fallback)
 - ✅ Clasificador de archivos API/UI con scoring ponderado (imports AST + código regex + path)
 - ✅ Detección automática de Playwright auto-wait (salta MISSING_WAIT_STRATEGY)
 - ✅ Configuración por proyecto .gtaa.yaml (exclude_checks, ignore_paths, api_test_patterns)
@@ -482,11 +490,51 @@ BROWSER_METHODS_CSHARP = {"FindElement", "Navigate", ...}
 
 ---
 
-### ⏳ Funcionalidad FUTURA — Fase 10
+### ✅ Funcionalidad Implementada — Fase 10.1: Optimización Capa LLM
 
-#### Fase 10: Optimización y Documentación Final
+**Problema resuelto**: El free tier de Gemini (10 req/min) provocaba errores 429 que abortaban el análisis. No había control sobre el consumo de API ni visibilidad del proveedor usado.
+
+#### Factory Pattern para clientes LLM
+```python
+# Creación centralizada y testeable de clientes LLM
+# Auto-detecta proveedor según API key disponible
+from gtaa_validator.llm.factory import create_llm_client
+
+client = create_llm_client()           # Auto-detect
+client = create_llm_client("mock")     # Forzar mock
+client = create_llm_client("gemini")   # Forzar Gemini
 ```
-# ⏳ Optimización de prompts LLM
+
+#### Fallback automático ante rate limit
+```python
+# Si Gemini retorna 429 (rate limit) o quota exceeded:
+# 1. SemanticAnalyzer captura RateLimitError
+# 2. Cambia a MockLLMClient automáticamente
+# 3. Reintenta la operación con heurísticas
+# 4. Continúa el análisis sin interrumpir
+```
+
+#### Limitación de llamadas con --max-llm-calls
+```bash
+# Limitar a 5 llamadas API, luego fallback proactivo a mock
+python -m gtaa_validator ./proyecto --ai --max-llm-calls 5
+
+# Sin límite (por defecto)
+python -m gtaa_validator ./proyecto --ai
+```
+
+#### Tracking de proveedor en reportes
+```
+# CLI muestra: [!] Fallback activado: gemini -> mock
+# HTML muestra: badge con proveedor (Gemini -> Mock si fallback)
+# JSON incluye: llm_provider_info con initial/current/fallback
+```
+
+---
+
+### ⏳ Funcionalidad FUTURA — Fase 10 (pendiente)
+
+```
 # ⏳ Integración CI/CD (--min-score)
 # ⏳ Documentación TFM final
 ```
@@ -524,10 +572,11 @@ gtaa-ai-validator/
 │   │   ├── static_analyzer.py          # Orquestador estático (Facade Pattern)
 │   │   └── semantic_analyzer.py        # Orquestador semántico AI (Fase 5)
 │   │
-│   ├── llm/                            # 🧠 Clientes LLM (Fase 5)
+│   ├── llm/                            # 🧠 Clientes LLM (Fase 5 + 10.1)
 │   │   ├── client.py                   # MockLLMClient (heurísticas deterministas)
-│   │   ├── gemini_client.py            # GeminiLLMClient (Gemini Flash API)
-│   │   └── prompts.py                  # Templates de prompts para el modelo
+│   │   ├── api_client.py              # APILLMClient + RateLimitError (Fase 10.1)
+│   │   ├── factory.py                 # create_llm_client() factory (Fase 10.1)
+│   │   └── prompts.py                  # Templates de prompts optimizados
 │   │
 │   ├── reporters/                      # 📊 Generadores de reportes
 │   │   ├── json_reporter.py            # Reporte JSON estructurado
@@ -559,8 +608,9 @@ gtaa-ai-validator/
 │   │   ├── test_json_reporter.py      # JsonReporter
 │   │   ├── test_html_reporter.py      # HtmlReporter
 │   │   ├── test_llm_client.py         # MockLLMClient
-│   │   ├── test_gemini_client.py      # GeminiLLMClient
-│   │   ├── test_semantic_analyzer.py  # SemanticAnalyzer
+│   │   ├── test_api_client.py         # APILLMClient + RateLimitError (Fase 10.1)
+│   │   ├── test_llm_factory.py        # Factory LLM (Fase 10.1)
+│   │   ├── test_semantic_analyzer.py  # SemanticAnalyzer + fallback + tracking
 │   │   ├── test_classifier.py        # FileClassifier (Fase 7)
 │   │   └── test_config.py            # ProjectConfig (Fase 7)
 │   └── integration/                    # Tests de integración
@@ -579,7 +629,7 @@ gtaa-ai-validator/
 │
 └── docs/                               # 📚 Documentación técnica
     ├── README.md                       # Índice de documentación
-    ├── ARCHITECTURE_DECISIONS.md       # Decisiones arquitectónicas (37 ADR)
+    ├── ARCHITECTURE_DECISIONS.md       # Decisiones arquitectónicas (42 ADR)
     ├── PHASE1_FLOW_DIAGRAMS.md         # Diagramas Fase 1 (CLI y fundación)
     ├── PHASE2_FLOW_DIAGRAMS.md         # Diagramas Fase 2 (análisis estático)
     ├── PHASE3_FLOW_DIAGRAMS.md         # Diagramas Fase 3 (9 violaciones)
@@ -588,7 +638,8 @@ gtaa-ai-validator/
     ├── PHASE6_FLOW_DIAGRAMS.md         # Diagramas Fase 6 (18 violaciones)
     ├── PHASE7_FLOW_DIAGRAMS.md         # Diagramas Fase 7 (proyectos mixtos)
     ├── PHASE8_FLOW_DIAGRAMS.md         # Diagramas Fase 8 (BDD/Gherkin)
-    └── PHASE9_FLOW_DIAGRAMS.md         # Diagramas Fase 9 (multilenguaje + refactor)
+    ├── PHASE9_FLOW_DIAGRAMS.md         # Diagramas Fase 9 (multilenguaje + refactor)
+    └── PHASE10_FLOW_DIAGRAMS.md        # Diagramas Fase 10 (optimización LLM)
 ```
 
 > **Nota sobre `docs/`**: La documentación técnica se distribuye en múltiples documentos independientes, uno por cada fase del proyecto y uno para las decisiones arquitectónicas. Esta separación responde a un criterio de **transparencia y trazabilidad**: cada documento refleja el estado del proyecto en el momento de su elaboración, permitiendo seguir la evolución del diseño y las decisiones técnicas a lo largo del desarrollo. El índice general se encuentra en [`docs/README.md`](docs/README.md).
@@ -648,12 +699,16 @@ Puntuación = max(0, 100 - suma de penalizaciones)
 - Compatible con pipelines CI/CD
 - Generado desde `Report.to_dict()` sin dependencias externas
 
-### 4. 🧠 Análisis Semántico con IA (✅ Fase 5-6)
+### 4. 🧠 Análisis Semántico con IA (✅ Fase 5-6, optimizado Fase 10.1)
 
 **Activado con `--ai`:**
 - Detección de 6 tipos de violaciones semánticas que AST no puede capturar
 - Sugerencias AI contextuales en español para cada violación
-- Gemini Flash API (free tier) con fallback a MockLLMClient
+- Gemini Flash API (free tier) con fallback automático a MockLLMClient
+- Factory pattern para creación de clientes (`create_llm_client()`)
+- Fallback automático ante rate limit (429) o quota exceeded
+- `--max-llm-calls N` para limitar llamadas API antes de fallback proactivo
+- Tracking de proveedor (inicial, actual, si hubo fallback) visible en reportes
 - Configuración via `GEMINI_API_KEY` en `.env`
 
 | Severidad | Tipo Semántico | Detección |
@@ -692,8 +747,9 @@ Puntuación = max(0, 100 - suma de penalizaciones)
 - ✅ Fase 6: Ampliación cobertura (18 violaciones) + Documentación - **COMPLETA**
 - ✅ Fase 7: Soporte para proyectos mixtos (API + UI) + auto-wait Playwright - **COMPLETA**
 - ✅ Fase 8: Soporte Gherkin/BDD (Behave + pytest-bdd) - **COMPLETA**
-- ⏳ Fase 9: Soporte Multilenguaje (Java + JavaScript) - **PENDIENTE**
-- ⏳ Fase 10: Optimización y documentación final - **PENDIENTE**
+- ✅ Fase 9: Soporte Multilenguaje (Java + JS/TS + C#) - **COMPLETA**
+- 🔄 Fase 10: Optimización y documentación final - **EN PROGRESO**
+  - ✅ 10.1: Optimización capa LLM (factory, fallback, rate limit, --max-llm-calls)
 
 ---
 
@@ -716,7 +772,7 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 - [ISTQB CT-TAE Syllabus v2016](https://www.istqb.org/)
 
 ### Documentación Técnica del Proyecto
-- **[Decisiones Arquitectónicas (ADR)](docs/ARCHITECTURE_DECISIONS.md)** ✅ — 37 ADRs: patrones de diseño, paradigmas, justificaciones técnicas
+- **[Decisiones Arquitectónicas (ADR)](docs/ARCHITECTURE_DECISIONS.md)** ✅ — 42 ADRs: patrones de diseño, paradigmas, justificaciones técnicas
 - **[Diagramas de Flujo - Fase 1](docs/PHASE1_FLOW_DIAGRAMS.md)** ✅ — Fundación del proyecto, CLI con Click, descubrimiento de archivos
 - **[Diagramas de Flujo - Fase 2](docs/PHASE2_FLOW_DIAGRAMS.md)** ✅ — Motor de análisis estático, BrowserAPICallVisitor, scoring
 - **[Diagramas de Flujo - Fase 3](docs/PHASE3_FLOW_DIAGRAMS.md)** ✅ — 4 checkers, 9 violaciones, AST visitors, cross-file state
@@ -726,6 +782,7 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 - **[Diagramas de Flujo - Fase 7](docs/PHASE7_FLOW_DIAGRAMS.md)** ✅ — Proyectos mixtos API+UI, FileClassifier, .gtaa.yaml, auto-wait Playwright
 - **[Diagramas de Flujo - Fase 8](docs/PHASE8_FLOW_DIAGRAMS.md)** ✅ — Soporte BDD/Gherkin, GherkinParser, BDDChecker, 5 violaciones BDD
 - **[Diagramas de Flujo - Fase 9](docs/PHASE9_FLOW_DIAGRAMS.md)** ✅ — Multilenguaje, ParseResult, checkers language-agnostic, refactor DRY
+- **[Diagramas de Flujo - Fase 10](docs/PHASE10_FLOW_DIAGRAMS.md)** ✅ — Optimización LLM, factory, fallback, rate limit, tracking
 - **[Índice de documentación](docs/README.md)** ✅
 
 ---
@@ -915,20 +972,35 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 
 ---
 
-### Versión 1.0.0 - Fase 10 (Pendiente) ⏳
+### Versión 0.10.1 - Fase 10.1 (5 Febrero 2026) ✅
+
+**Implementado:**
+- ✅ Refactor: GeminiLLMClient renombrado a APILLMClient (naming provider-agnostic)
+- ✅ Factory pattern: `create_llm_client()` para creación centralizada de clientes LLM
+- ✅ RateLimitError: excepción específica para errores 429/quota de la API
+- ✅ Fallback automático: Gemini -> MockLLMClient ante rate limit o quota exceeded
+- ✅ `--max-llm-calls`: opción CLI para limitar llamadas API antes de fallback proactivo
+- ✅ Provider tracking: registro de proveedor inicial/actual/fallback en `Report.llm_provider_info`
+- ✅ Visualización en reportes: badge de proveedor LLM en HTML, info en JSON, mensaje en CLI
+- ✅ Prompts optimizados: ~40% menos tokens
+- ✅ Fix encoding Windows: caracteres Unicode reemplazados por ASCII/HTML entities
+- ✅ Tests para factory, fallback y tracking de proveedor
+- ✅ Documentación: PHASE10_FLOW_DIAGRAMS.md + ADR 38-42
+
+---
+
+### Versión 1.0.0 - Fase 10 Final (Pendiente) ⏳
 
 **Planificado:**
-- ⏳ Optimización de prompts LLM (reducir tokens, mejorar precisión para 23+ violaciones)
 - ⏳ CLI: `--min-score` threshold mínimo para exit code
 - ⏳ CLI: `--lang` forzar lenguaje si auto-detección falla
 - ⏳ Integración CI/CD (exit codes, GitHub Actions)
 - ⏳ Documentación TFM final
-- ⏳ PHASE10_FLOW_DIAGRAMS.md + ADRs finales
 
 ---
 
 <div align="center">
 
-**Estado del proyecto:** Fase 9/10 | 23 violaciones | 4 lenguajes (Python, Java, JS/TS, C#)
+**Estado del proyecto:** Fase 10.1/10 | 23 violaciones | 4 lenguajes (Python, Java, JS/TS, C#)
 
 </div>
