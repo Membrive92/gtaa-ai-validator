@@ -253,12 +253,6 @@ class PythonParser:
                     value=node.value,
                     line=node.lineno,
                 ))
-            # Compatibilidad Python 3.7
-            elif isinstance(node, ast.Str):
-                strings.append(ParsedString(
-                    value=node.s,
-                    line=node.lineno,
-                ))
 
         return strings
 

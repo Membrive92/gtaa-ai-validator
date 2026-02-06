@@ -11,12 +11,17 @@ Conceptos clave:
 - Template Method: Define el esqueleto de check() que las subclases implementan
 """
 
+from __future__ import annotations
+
 import ast
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional, Union
 
 from gtaa_validator.models import Violation
+
+if TYPE_CHECKING:
+    from gtaa_validator.parsers.treesitter_base import ParseResult
 
 
 class BaseChecker(ABC):
@@ -44,7 +49,8 @@ class BaseChecker(ABC):
         self.name = self.__class__.__name__
 
     @abstractmethod
-    def check(self, file_path: Path, tree: Optional[ast.Module] = None,
+    def check(self, file_path: Path,
+              tree: Optional[Union[ast.Module, ParseResult]] = None,
               file_type: str = "unknown") -> List[Violation]:
         """
         Verificar un archivo en busca de violaciones gTAA.
@@ -54,8 +60,9 @@ class BaseChecker(ABC):
 
         Args:
             file_path: Ruta al archivo a verificar
-            tree: Árbol AST pre-parseado (opcional). Si se proporciona, el checker
-                  debe usarlo en lugar de parsear el archivo de nuevo.
+            tree: Árbol AST pre-parseado o ParseResult multi-lenguaje (opcional).
+                  Si se proporciona, el checker debe usarlo en lugar de parsear
+                  el archivo de nuevo.
             file_type: Clasificación del archivo ('api', 'ui' o 'unknown').
                   Los checkers pueden usar esto para saltar reglas no aplicables.
 
