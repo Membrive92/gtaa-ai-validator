@@ -25,6 +25,7 @@ from gtaa_validator.reporters.html_reporter import HtmlReporter
 from gtaa_validator.analyzers.semantic_analyzer import SemanticAnalyzer
 from gtaa_validator.llm.factory import create_llm_client
 from gtaa_validator.config import load_config
+from gtaa_validator.logging_config import setup_logging
 
 
 @click.command()
@@ -39,7 +40,9 @@ from gtaa_validator.config import load_config
               help='Ruta al archivo de configuración .gtaa.yaml')
 @click.option('--max-llm-calls', type=int, default=None,
               help='Limite de llamadas al LLM real antes de fallback a mock (default: sin limite)')
-def main(project_path: str, verbose: bool, json_path: str, html_path: str, ai: bool, provider: str, config_path: str, max_llm_calls: int):
+@click.option('--log-file', type=click.Path(), default=None,
+              help='Escribir log detallado a fichero (siempre nivel DEBUG)')
+def main(project_path: str, verbose: bool, json_path: str, html_path: str, ai: bool, provider: str, config_path: str, max_llm_calls: int, log_file: str):
     """
     Valida el cumplimiento de la arquitectura gTAA en un proyecto de test automation.
 
@@ -49,6 +52,9 @@ def main(project_path: str, verbose: bool, json_path: str, html_path: str, ai: b
         python -m gtaa_validator ./mi-proyecto-selenium
         python -m gtaa_validator ./mi-proyecto-selenium --verbose
     """
+    # Configurar sistema de logging
+    setup_logging(verbose=verbose, log_file=log_file)
+
     # Mostrar cabecera
     click.echo("=== gTAA AI Validator - Fase 10 ===")
     click.echo(f"Analizando proyecto: {project_path}\n")

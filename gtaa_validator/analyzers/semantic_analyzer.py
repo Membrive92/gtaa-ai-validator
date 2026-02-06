@@ -17,11 +17,14 @@ Optimizaciones Fase 10:
 """
 
 import ast
+import logging
 import re
 from pathlib import Path
 from typing import List, Set, Union
 
 from gtaa_validator.models import Report, Violation, ViolationType, Severity
+
+logger = logging.getLogger(__name__)
 from gtaa_validator.llm.client import MockLLMClient
 from gtaa_validator.llm.api_client import APILLMClient, RateLimitError
 from gtaa_validator.file_classifier import FileClassifier
@@ -93,9 +96,8 @@ class SemanticAnalyzer:
         self._current_provider = "mock"
         self.llm_client = MockLLMClient()
 
-        if self.verbose:
-            print(f"\n[FALLBACK] {reason}")
-            print("[FALLBACK] Continuando con MockLLMClient (heuristicas)...")
+        logger.warning("[FALLBACK] %s", reason)
+        logger.warning("[FALLBACK] Continuando con MockLLMClient (heuristicas)...")
 
     def _check_call_limit(self) -> None:
         """Verifica si se alcanzó el límite de llamadas y hace fallback si es necesario."""
@@ -155,9 +157,9 @@ class SemanticAnalyzer:
         all_python_files = self._discover_python_files()
         candidate_files = self._filter_candidate_files(all_python_files, files_with_violations)
 
-        if self.verbose:
-            print(f"[Semantic] Archivos candidatos: {len(candidate_files)}/{len(all_python_files)}")
-            print(f"[Semantic] Proveedor: {self._current_provider}")
+        logger.info("[Semantic] Archivos candidatos: %d/%d",
+                    len(candidate_files), len(all_python_files))
+        logger.info("[Semantic] Proveedor: %s", self._current_provider)
 
         # Fase 1: Detectar nuevas violaciones semánticas (solo en candidatos)
         for file_path in candidate_files:
@@ -244,8 +246,8 @@ class SemanticAnalyzer:
         report.llm_provider_info = self.get_provider_info()
 
         # Mostrar consumo de tokens
-        if self.verbose and hasattr(self.llm_client, 'usage'):
-            print(f"\n[LLM] {self.llm_client.get_usage_summary()}")
+        if hasattr(self.llm_client, 'usage'):
+            logger.info("[LLM] %s", self.llm_client.get_usage_summary())
 
         return report
 

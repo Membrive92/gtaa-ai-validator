@@ -21,11 +21,14 @@ Ejemplo de uso:
     client = create_llm_client(provider="mock")
 """
 
+import logging
 import os
 from typing import Optional, Union
 
 from gtaa_validator.llm.client import MockLLMClient
 from gtaa_validator.llm.api_client import APILLMClient
+
+logger = logging.getLogger(__name__)
 
 
 # Type alias para cualquier cliente LLM
@@ -89,11 +92,7 @@ def create_llm_client(
     if provider == "gemini":
         if not api_key:
             # Sin API key, fallback silencioso a Mock
-            import sys
-            print(
-                "[INFO] No se encontró GEMINI_API_KEY. Usando MockLLMClient (heurísticas).",
-                file=sys.stderr,
-            )
+            logger.info("No se encontró GEMINI_API_KEY. Usando MockLLMClient (heurísticas).")
             return MockLLMClient()
 
         gemini_model = model or os.environ.get("GEMINI_MODEL", "gemini-2.5-flash-lite")
@@ -101,12 +100,7 @@ def create_llm_client(
             return APILLMClient(api_key=api_key, model=gemini_model)
         except Exception as e:
             # Si falla la inicialización, fallback a Mock
-            import sys
-            print(
-                f"[ADVERTENCIA] Error inicializando Gemini: {e}\n"
-                f"  Usando MockLLMClient como fallback...",
-                file=sys.stderr,
-            )
+            logger.warning("Error inicializando Gemini: %s. Usando MockLLMClient como fallback.", e)
             return MockLLMClient()
 
     # Fallback (no debería llegar aquí)

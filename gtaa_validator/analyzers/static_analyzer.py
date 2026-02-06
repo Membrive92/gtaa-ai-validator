@@ -24,11 +24,14 @@ Uso:
 """
 
 import fnmatch
+import logging
 import time
 from pathlib import Path
 from typing import List, Optional
 
 from gtaa_validator.models import Report, Violation
+
+logger = logging.getLogger(__name__)
 from gtaa_validator.checkers.base import BaseChecker
 from gtaa_validator.checkers.definition_checker import DefinitionChecker
 from gtaa_validator.checkers.structure_checker import StructureChecker
@@ -92,9 +95,8 @@ class StaticAnalyzer:
             BDDChecker(),          # BDD/Gherkin (Python + .feature)
         ]
 
-        if self.verbose:
-            checker_names = [c.name for c in checkers]
-            print(f"Inicializados {len(checkers)} checkers: {', '.join(checker_names)}")
+        logger.debug("Inicializados %d checkers: %s",
+                     len(checkers), ", ".join(c.name for c in checkers))
 
         return checkers
 
@@ -116,9 +118,7 @@ class StaticAnalyzer:
         """
         start_time = time.time()
 
-        if self.verbose:
-            print(f"\nIniciando análisis estático de: {self.project_path}")
-            print("="*60)
+        logger.info("Iniciando análisis estático de: %s", self.project_path)
 
         # Inicializar informe
         report = Report(
@@ -133,26 +133,22 @@ class StaticAnalyzer:
                 project_violations = checker.check_project(self.project_path)
                 if project_violations:
                     report.violations.extend(project_violations)
-                    if self.verbose:
-                        print(f"  [{checker.name}] Encontrada(s) {len(project_violations)} violación(es) a nivel de proyecto")
+                    logger.debug("[%s] %d violación(es) a nivel de proyecto",
+                                 checker.name, len(project_violations))
             except Exception as e:
-                if self.verbose:
-                    print(f"  [{checker.name}] Error en verificación de proyecto: {str(e)}")
+                logger.warning("[%s] Error en verificación de proyecto: %s", checker.name, e)
 
         # Descubrir todos los archivos Python
         python_files = self._discover_python_files()
 
-        if self.verbose:
-            py_count = sum(1 for f in python_files if f.suffix == ".py")
-            feature_count = sum(1 for f in python_files if f.suffix == ".feature")
-            extra = f" + {feature_count} .feature" if feature_count else ""
-            print(f"\nEncontrados {py_count} archivos Python{extra}")
+        py_count = sum(1 for f in python_files if f.suffix == ".py")
+        feature_count = sum(1 for f in python_files if f.suffix == ".feature")
+        extra = f" + {feature_count} .feature" if feature_count else ""
+        logger.debug("Encontrados %d archivos Python%s", py_count, extra)
 
         # Analizar cada archivo con los checkers aplicables
         for file_path in python_files:
-            if self.verbose:
-                relative_path = self._get_relative_path(file_path)
-                print(f"  Verificando: {relative_path}")
+            logger.debug("Verificando: %s", self._get_relative_path(file_path))
 
             file_violations = self._check_file(file_path)
             report.violations.extend(file_violations)
@@ -164,13 +160,8 @@ class StaticAnalyzer:
         # Registrar tiempo de ejecución
         report.execution_time_seconds = time.time() - start_time
 
-        if self.verbose:
-            print("\n" + "="*60)
-            print("¡Análisis completado!")
-            print(f"Archivos analizados: {report.files_analyzed}")
-            print(f"Violaciones encontradas: {len(report.violations)}")
-            print(f"Puntuación: {report.score:.1f}/100")
-            print(f"Tiempo: {report.execution_time_seconds:.2f}s")
+        logger.info("Análisis completado: %d archivos, %d violaciones, %.1f/100",
+                    report.files_analyzed, len(report.violations), report.score)
 
         return report
 
@@ -274,11 +265,11 @@ class StaticAnalyzer:
                 )
                 file_type = classification.file_type
 
-                if self.verbose and file_type != "unknown":
-                    relative = self._get_relative_path(file_path)
+                if file_type != "unknown":
                     fw_info = f" (frameworks: {', '.join(classification.frameworks)})" if classification.frameworks else ""
                     bdd_info = " [BDD]" if classification.is_bdd else ""
-                    print(f"    [Clasificación] {relative} → {file_type}{fw_info}{bdd_info}")
+                    logger.debug("[Clasificación] %s -> %s%s%s",
+                                 self._get_relative_path(file_path), file_type, fw_info, bdd_info)
 
         except (SyntaxError, Exception):
             # Si el parseo falla, dejar que los checkers individuales lo manejen
@@ -290,13 +281,12 @@ class StaticAnalyzer:
                 checker_violations = checker.check(file_path, parse_result, file_type=file_type)
                 violations.extend(checker_violations)
 
-                if self.verbose and checker_violations:
-                    print(f"    [{checker.name}] Encontrada(s) {len(checker_violations)} violación(es)")
+                if checker_violations:
+                    logger.debug("[%s] %d violación(es)", checker.name, len(checker_violations))
 
             except Exception as e:
                 # No fallar si un checker individual falla
-                if self.verbose:
-                    print(f"    [{checker.name}] Error: {str(e)}")
+                logger.warning("[%s] Error: %s", checker.name, e)
 
         return violations
 
