@@ -1,15 +1,21 @@
 # Core dependencies for gTAA AI Validator
 # Requires Python >= 3.10
+# Nota: pyproject.toml es la fuente principal de dependencias.
+# Este fichero es un mirror para uso directo con pip install -r.
 
-# FASE 1: CLI interface
+# CLI
 click>=8.0.0
 
-# FASE 5: Testing
-pytest>=7.0.0
-
-# FASE 7: Configuración por proyecto
+# Configuración por proyecto
 PyYAML>=6.0
 
-# FASE 9: Multi-lang parsing (Java, JavaScript/TypeScript, C#)
+# LLM / Análisis semántico AI (opcional: pip install ".[ai]")
+google-genai>=1.0.0
+python-dotenv>=1.0.0
+
+# Multi-lang parsing (opcional: pip install ".[parsers]")
 tree-sitter-language-pack>=0.4.0
 tree-sitter-c-sharp>=0.23.0
+
+# Testing (dev)
+pytest>=7.0.0
