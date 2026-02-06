@@ -1,0 +1,53 @@
+# Archivos y directorios excluidos del contexto de build Docker
+
+# Control de versiones
+.git
+.gitignore
+
+# Python build artifacts
+__pycache__
+*.py[cod]
+*$py.class
+*.egg-info
+dist
+build
+*.egg
+MANIFEST
+
+# Entornos virtuales
+venv
+.venv
+env
+ENV
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Variables de entorno (sensibles — pasar con docker run -e)
+.env
+.env.local
+.env.example
+
+# Tests, docs, ejemplos (no necesarios en imagen de produccion)
+tests
+docs
+examples
+logs
+
+# Reportes generados
+*.html
+*.json
+reports
+
+# OS
+.DS_Store
+Thumbs.db
+
+# GitHub
+.github
+
+# Claude
+.claude
