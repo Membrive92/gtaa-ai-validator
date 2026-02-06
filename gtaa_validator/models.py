@@ -16,6 +16,8 @@ from pathlib import Path
 from typing import List, Optional
 from datetime import datetime
 
+from gtaa_validator import __version__
+
 
 class Severity(Enum):
     """
@@ -410,7 +412,7 @@ class Report:
     violations: List[Violation] = field(default_factory=list)
     files_analyzed: int = 0
     timestamp: datetime = field(default_factory=datetime.now)
-    validator_version: str = "0.4.0"
+    validator_version: str = field(default_factory=lambda: __version__)
     score: float = 100.0
     execution_time_seconds: float = 0.0
     llm_provider_info: Optional[dict] = None

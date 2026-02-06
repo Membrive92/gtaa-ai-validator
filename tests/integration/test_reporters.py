@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 
+from gtaa_validator import __version__
 from gtaa_validator.analyzers.static_analyzer import StaticAnalyzer
 from gtaa_validator.reporters.json_reporter import JsonReporter
 from gtaa_validator.reporters.html_reporter import HtmlReporter
@@ -44,7 +45,7 @@ class TestJsonReporterIntegration:
         assert data["summary"]["score"] < 100
         assert data["summary"]["files_analyzed"] > 0
         assert len(data["violations"]) == data["summary"]["total_violations"]
-        assert data["metadata"]["validator_version"] == "0.4.0"
+        assert data["metadata"]["validator_version"] == __version__
 
     def test_good_project_json(self, good_project_path, tmp_path):
         """Análisis de good_project genera JSON sin violaciones."""

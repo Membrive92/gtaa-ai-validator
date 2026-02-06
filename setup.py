@@ -4,8 +4,16 @@ Configuración de instalación para gTAA AI Validator.
 Este archivo permite instalar el proyecto con pip.
 """
 
+import re
 from setuptools import setup, find_packages
 from pathlib import Path
+
+# Single source of truth: leer versión desde __init__.py
+_version_match = re.search(
+    r'__version__\s*=\s*["\']([^"\']+)',
+    (Path(__file__).parent / "gtaa_validator" / "__init__.py").read_text()
+)
+__version__ = _version_match.group(1)
 
 # Leer README para la descripción larga
 readme_file = Path(__file__).parent / "README.md"
@@ -17,7 +25,7 @@ else:
 
 setup(
     name="gtaa-ai-validator",
-    version="0.4.0",
+    version=__version__,
     author="Jose Antonio Membrive Guillen",
     author_email="membri_2@hotmail.com",
     description="Validador de cumplimiento arquitectónico gTAA para proyectos de test automation",
