@@ -32,10 +32,11 @@ class BaseChecker(ABC):
     El método check() recibe una ruta de archivo y devuelve una lista de violaciones encontradas.
 
     Subclases:
-    - DefinitionChecker: Verifica archivos de test en busca de violaciones (Fase 2)
-    - StructureChecker: Valida la estructura del proyecto (Fase 3)
-    - AdaptationChecker: Valida Page Objects (Fase 3)
-    - QualityChecker: Verificaciones generales de calidad de código (Fase 3)
+    - DefinitionChecker: Verifica archivos de test en busca de violaciones
+    - StructureChecker: Valida la estructura del proyecto
+    - AdaptationChecker: Valida Page Objects
+    - QualityChecker: Verificaciones generales de calidad de código
+    - BDDChecker: Verifica archivos BDD/Gherkin
 
     Uso:
         class MiChecker(BaseChecker):

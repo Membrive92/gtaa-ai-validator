@@ -62,7 +62,7 @@ def main(project_path: str, verbose: bool, json_path: str, html_path: str, ai: b
     setup_logging(verbose=verbose, log_file=log_file)
 
     # Mostrar cabecera
-    click.echo("=== gTAA AI Validator - Fase 10 ===")
+    click.echo("=== gTAA AI Validator ===")
     click.echo(f"Analizando proyecto: {project_path}\n")
 
     # Convertir a objeto Path y resolver a ruta absoluta

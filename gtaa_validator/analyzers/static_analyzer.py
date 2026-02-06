@@ -30,8 +30,6 @@ from pathlib import Path
 from typing import List, Optional
 
 from gtaa_validator.models import Report, Violation
-
-logger = logging.getLogger(__name__)
 from gtaa_validator.checkers.base import BaseChecker
 from gtaa_validator.checkers.definition_checker import DefinitionChecker
 from gtaa_validator.checkers.structure_checker import StructureChecker
@@ -42,13 +40,15 @@ from gtaa_validator.file_classifier import FileClassifier
 from gtaa_validator.config import ProjectConfig, load_config
 from gtaa_validator.parsers.treesitter_base import ParseResult, get_parser_for_file
 
+logger = logging.getLogger(__name__)
+
 
 class StaticAnalyzer:
     """
     Orquesta el análisis estático de un proyecto de test automation.
 
     El analizador:
-    1. Descubre todos los archivos Python del proyecto
+    1. Descubre todos los archivos del proyecto (Python, Java, JS/TS, C#, Gherkin)
     2. Filtra archivos según las capacidades de cada checker
     3. Ejecuta cada checker sobre los archivos aplicables
     4. Agrega todas las violaciones

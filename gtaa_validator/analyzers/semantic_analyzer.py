@@ -23,11 +23,11 @@ from pathlib import Path
 from typing import List, Set, Union
 
 from gtaa_validator.models import Report, Violation, ViolationType, Severity
-
-logger = logging.getLogger(__name__)
 from gtaa_validator.llm.client import MockLLMClient
 from gtaa_validator.llm.api_client import APILLMClient, RateLimitError
 from gtaa_validator.file_classifier import FileClassifier
+
+logger = logging.getLogger(__name__)
 
 
 # Directorios excluidos del análisis (mismos que StaticAnalyzer)

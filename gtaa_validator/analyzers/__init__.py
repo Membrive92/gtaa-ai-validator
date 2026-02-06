@@ -1,15 +1,15 @@
 """
-Analyzers package for gTAA Validator.
+Paquete de analizadores para gTAA Validator.
 
-This package contains analyzers that orchestrate the violation detection process.
-Analyzers coordinate multiple checkers and aggregate results into reports.
+Contiene los analizadores que orquestan el proceso de detección de violaciones.
+Coordinan múltiples checkers y agregan resultados en reportes.
 
-Available analyzers:
-- StaticAnalyzer: Orchestrates static analysis checkers (AST, regex, filesystem)
-- SemanticAnalyzer: Uses LLM for semantic analysis (Phase 5, optional — requires API key)
+Analizadores disponibles:
+- StaticAnalyzer: Orquesta checkers de análisis estático (AST, regex, filesystem)
+- SemanticAnalyzer: Análisis semántico via LLM (opcional — requiere API key)
 
-The analyzers implement the Facade Pattern, providing a simple interface
-to a complex subsystem of checkers.
+Los analizadores implementan el Patrón Facade, proporcionando una interfaz simple
+a un subsistema complejo de checkers.
 """
 
 from gtaa_validator.analyzers.static_analyzer import StaticAnalyzer

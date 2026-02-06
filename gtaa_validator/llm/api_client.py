@@ -13,15 +13,7 @@ import re
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-logger = logging.getLogger(__name__)
-
 from google import genai
-
-
-class RateLimitError(Exception):
-    """Error cuando se alcanza el límite de rate/cuota de la API."""
-    pass
-
 from gtaa_validator.llm.prompts import (
     SYSTEM_PROMPT,
     ANALYZE_FILE_PROMPT,
@@ -29,6 +21,13 @@ from gtaa_validator.llm.prompts import (
     extract_context_snippet,
     extract_functions_from_code,
 )
+
+logger = logging.getLogger(__name__)
+
+
+class RateLimitError(Exception):
+    """Error cuando se alcanza el límite de rate/cuota de la API."""
+    pass
 
 
 @dataclass

@@ -19,11 +19,11 @@ import re
 from pathlib import Path
 from typing import List, Optional, Dict, Set
 
-logger = logging.getLogger(__name__)
-
 from gtaa_validator.checkers.base import BaseChecker
 from gtaa_validator.models import Violation, ViolationType, Severity
 from gtaa_validator.parsers.gherkin_parser import GherkinParser
+
+logger = logging.getLogger(__name__)
 
 
 class BDDChecker(BaseChecker):
