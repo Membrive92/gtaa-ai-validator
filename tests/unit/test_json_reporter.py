@@ -6,7 +6,7 @@ from datetime import datetime
 
 import pytest
 
-from gtaa_validator.models import Report, Violation, Severity, ViolationType
+from gtaa_validator.models import Report, Violation, Severity, ViolationType, AnalysisMetrics
 from gtaa_validator.reporters.json_reporter import JsonReporter
 
 
@@ -142,3 +142,26 @@ class TestJsonReporter:
 
         # indent=2 produce líneas con espacios
         assert "\n  " in content
+
+    def test_metrics_present_in_json(self, reporter, sample_report, tmp_path):
+        """metadata.metrics is present in JSON when report has metrics."""
+        sample_report.metrics = AnalysisMetrics(
+            static_analysis_seconds=1.5,
+            total_seconds=2.0,
+            files_per_second=3.3,
+        )
+        output = tmp_path / "report.json"
+        reporter.generate(sample_report, output)
+        data = json.loads(output.read_text(encoding="utf-8"))
+
+        assert "metrics" in data["metadata"]
+        assert "timing" in data["metadata"]["metrics"]
+        assert data["metadata"]["metrics"]["timing"]["static_analysis_seconds"] == 1.5
+
+    def test_metrics_absent_in_json(self, reporter, empty_report, tmp_path):
+        """metadata.metrics is absent in JSON when report has no metrics."""
+        output = tmp_path / "report.json"
+        reporter.generate(empty_report, output)
+        data = json.loads(output.read_text(encoding="utf-8"))
+
+        assert "metrics" not in data["metadata"]

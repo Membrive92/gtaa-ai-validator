@@ -140,6 +140,8 @@ class HtmlReporter:
 {self._build_severity_cards(severity_counts)}
         </section>
 
+{self._build_metrics_section(report)}
+
 {self._build_chart_section(severity_counts)}
 
 {self._build_actionable_summary(report)}
@@ -223,6 +225,14 @@ class HtmlReporter:
         .violation-type { font-weight: 600; color: #334155; font-size: 0.85rem; }
         .violation-desc { font-size: 0.8rem; color: #64748b; }
 
+        .metrics-section { background: #fff; border-radius: 8px; padding: 1.5rem; margin-bottom: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .metrics-section h2 { font-size: 1.1rem; margin-bottom: 1rem; color: #334155; }
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
+        .metric-card { background: #f8fafc; border-radius: 6px; padding: 1rem; text-align: center; border: 1px solid #e2e8f0; }
+        .metric-value { font-size: 1.4rem; font-weight: 700; color: #0f172a; }
+        .metric-label { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.2rem; }
+        .metric-card.llm { border-left: 3px solid #7c3aed; }
+
         footer { text-align: center; color: #94a3b8; font-size: 0.8rem; margin-top: 1rem; }
 
         @media (max-width: 600px) {
@@ -303,6 +313,58 @@ class HtmlReporter:
                 <div class="card-label">{label}</div>
             </div>""")
         return "\n".join(cards)
+
+    def _build_metrics_section(self, report: Report) -> str:
+        """Sección de métricas de rendimiento (timing + LLM)."""
+        if not report.metrics:
+            return ""
+
+        m = report.metrics
+        cards = []
+
+        cards.append(
+            f'            <div class="metric-card">'
+            f'<div class="metric-value">{m.static_analysis_seconds:.2f}s</div>'
+            f'<div class="metric-label">Análisis Estático</div></div>'
+        )
+
+        if m.semantic_analysis_seconds > 0:
+            cards.append(
+                f'            <div class="metric-card">'
+                f'<div class="metric-value">{m.semantic_analysis_seconds:.2f}s</div>'
+                f'<div class="metric-label">Análisis Semántico</div></div>'
+            )
+
+        cards.append(
+            f'            <div class="metric-card">'
+            f'<div class="metric-value">{m.files_per_second:.1f}</div>'
+            f'<div class="metric-label">Archivos/segundo</div></div>'
+        )
+
+        if m.llm_api_calls > 0:
+            cards.append(
+                f'            <div class="metric-card llm">'
+                f'<div class="metric-value">{m.llm_api_calls}</div>'
+                f'<div class="metric-label">Llamadas API</div></div>'
+            )
+            cards.append(
+                f'            <div class="metric-card llm">'
+                f'<div class="metric-value">{m.llm_total_tokens:,}</div>'
+                f'<div class="metric-label">Tokens Totales</div></div>'
+            )
+            cards.append(
+                f'            <div class="metric-card llm">'
+                f'<div class="metric-value">${m.llm_estimated_cost_usd:.4f}</div>'
+                f'<div class="metric-label">Costo Estimado</div></div>'
+            )
+
+        cards_html = "\n".join(cards)
+        return f"""        <section class="metrics-section">
+            <h2>Métricas de Rendimiento</h2>
+            <div class="metrics-grid">
+{cards_html}
+            </div>
+        </section>"""
 
     def _build_chart_section(self, counts: dict) -> str:
         """Sección con gráfico de barras SVG."""

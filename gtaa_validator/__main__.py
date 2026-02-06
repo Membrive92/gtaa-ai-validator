@@ -14,6 +14,7 @@ Análisis estático con AST:
 
 import click
 import sys
+import time
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -26,6 +27,7 @@ from gtaa_validator.analyzers.semantic_analyzer import SemanticAnalyzer
 from gtaa_validator.llm.factory import create_llm_client
 from gtaa_validator.config import load_config
 from gtaa_validator.logging_config import setup_logging
+from gtaa_validator.models import AnalysisMetrics
 
 
 @click.command()
@@ -78,7 +80,9 @@ def main(project_path: str, verbose: bool, json_path: str, html_path: str, ai: b
     if not verbose:
         click.echo("Ejecutando análisis estático...")
 
+    t0 = time.time()
     report = analyzer.analyze()
+    t1 = time.time()
 
     # Análisis semántico AI (opcional)
     semantic = None
@@ -98,6 +102,8 @@ def main(project_path: str, verbose: bool, json_path: str, html_path: str, ai: b
                 click.echo(f"[!] Fallback activado: {info['initial_provider']} -> {info['current_provider']}")
             else:
                 click.echo(f"Análisis completado con: {info['current_provider']}")
+
+    t2 = time.time()
 
     # Mostrar resultados
     if not verbose:
@@ -165,14 +171,42 @@ def main(project_path: str, verbose: bool, json_path: str, html_path: str, ai: b
             if violation.ai_suggestion:
                 click.echo(f"    [AI] {violation.ai_suggestion}")
 
+    # Construir métricas de rendimiento
+    static_secs = t1 - t0
+    semantic_secs = t2 - t1 if ai else 0.0
+
+    metrics = AnalysisMetrics(
+        static_analysis_seconds=static_secs,
+        semantic_analysis_seconds=semantic_secs,
+        total_seconds=t2 - t0,
+        files_per_second=report.files_analyzed / static_secs if static_secs > 0 else 0.0,
+    )
+
+    # Poblar métricas LLM si se usó análisis semántico
+    if semantic:
+        token_usage = semantic.get_token_usage()
+        if token_usage:
+            metrics.llm_api_calls = token_usage.get('total_calls', 0)
+            metrics.llm_input_tokens = token_usage.get('input_tokens', 0)
+            metrics.llm_output_tokens = token_usage.get('output_tokens', 0)
+            metrics.llm_total_tokens = token_usage.get('total_tokens', 0)
+            metrics.llm_estimated_cost_usd = token_usage.get('estimated_cost_usd', 0.0)
+
     # Exportar reportes si se solicitaron
     if json_path:
+        report.metrics = metrics
         JsonReporter().generate(report, Path(json_path))
         click.echo(f"\nReporte JSON exportado: {json_path}")
 
     if html_path:
+        report.metrics = metrics
         HtmlReporter().generate(report, Path(html_path))
         click.echo(f"Reporte HTML exportado: {html_path}")
+
+    t3 = time.time()
+    metrics.report_generation_seconds = t3 - t2
+    metrics.total_seconds = t3 - t0
+    report.metrics = metrics
 
     # Mostrar info del proveedor LLM si se usó --ai
     if report.llm_provider_info:
@@ -195,7 +229,7 @@ def main(project_path: str, verbose: bool, json_path: str, html_path: str, ai: b
 
     # Resumen final
     click.echo("\n" + "="*60)
-    click.echo(f"Análisis completado en {report.execution_time_seconds:.2f}s")
+    click.echo(f"Análisis completado en {metrics.total_seconds:.2f}s")
     click.echo("="*60)
 
     # Código de salida 1 si hay violaciones críticas

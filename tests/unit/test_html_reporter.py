@@ -5,7 +5,7 @@ from datetime import datetime
 
 import pytest
 
-from gtaa_validator.models import Report, Violation, Severity, ViolationType
+from gtaa_validator.models import Report, Violation, Severity, ViolationType, AnalysisMetrics
 from gtaa_validator.reporters.html_reporter import HtmlReporter
 
 
@@ -209,3 +209,60 @@ class TestHtmlReporter:
 
         assert "<script>" not in content
         assert "&lt;script&gt;" in content
+
+    def test_metrics_section_present(self, reporter, sample_report, tmp_path):
+        """Metrics section appears when report has metrics."""
+        sample_report.metrics = AnalysisMetrics(
+            static_analysis_seconds=1.23,
+            total_seconds=1.50,
+            files_per_second=4.1,
+        )
+        output = tmp_path / "report.html"
+        reporter.generate(sample_report, output)
+        content = output.read_text(encoding="utf-8")
+
+        assert "Métricas de Rendimiento" in content
+        assert "Análisis Estático" in content
+        assert "Archivos/segundo" in content
+
+    def test_metrics_section_absent(self, reporter, empty_report, tmp_path):
+        """Metrics section is absent when report has no metrics."""
+        output = tmp_path / "report.html"
+        reporter.generate(empty_report, output)
+        content = output.read_text(encoding="utf-8")
+
+        assert "Métricas de Rendimiento" not in content
+
+    def test_llm_metrics_visible(self, reporter, sample_report, tmp_path):
+        """LLM metric cards appear when llm_api_calls > 0."""
+        sample_report.metrics = AnalysisMetrics(
+            static_analysis_seconds=0.5,
+            semantic_analysis_seconds=2.0,
+            total_seconds=2.5,
+            files_per_second=10.0,
+            llm_api_calls=3,
+            llm_total_tokens=2000,
+            llm_estimated_cost_usd=0.003,
+        )
+        output = tmp_path / "report.html"
+        reporter.generate(sample_report, output)
+        content = output.read_text(encoding="utf-8")
+
+        assert "Llamadas API" in content
+        assert "Tokens Totales" in content
+        assert "Costo Estimado" in content
+        assert "Análisis Semántico" in content
+
+    def test_llm_metrics_hidden_when_no_calls(self, reporter, sample_report, tmp_path):
+        """LLM metric cards are hidden when llm_api_calls is 0."""
+        sample_report.metrics = AnalysisMetrics(
+            static_analysis_seconds=0.5,
+            total_seconds=0.5,
+            files_per_second=10.0,
+        )
+        output = tmp_path / "report.html"
+        reporter.generate(sample_report, output)
+        content = output.read_text(encoding="utf-8")
+
+        assert "Llamadas API" not in content
+        assert "Tokens Totales" not in content
