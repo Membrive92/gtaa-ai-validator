@@ -5,10 +5,10 @@
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Estado](https://img.shields.io/badge/estado-en%20desarrollo-yellow)](https://github.com/Membrive92/gtaa-ai-validator)
-[![Fase](https://img.shields.io/badge/fase-10.5%2F10-blue)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Fase](https://img.shields.io/badge/fase-10.6%2F10-blue)](https://github.com/Membrive92/gtaa-ai-validator)
 [![Progreso](https://img.shields.io/badge/progreso-99%25-green)](https://github.com/Membrive92/gtaa-ai-validator)
 [![Coverage](https://img.shields.io/badge/coverage-93%25-brightgreen)](https://github.com/Membrive92/gtaa-ai-validator)
-[![Tests](https://img.shields.io/badge/tests-633-brightgreen)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Tests](https://img.shields.io/badge/tests-667-brightgreen)](https://github.com/Membrive92/gtaa-ai-validator)
 [![CI](https://github.com/Membrive92/gtaa-ai-validator/actions/workflows/ci.yml/badge.svg)](https://github.com/Membrive92/gtaa-ai-validator/actions/workflows/ci.yml)
 [![Docker](https://img.shields.io/badge/docker-ready-blue)](https://github.com/Membrive92/gtaa-ai-validator/blob/main/Dockerfile)
 
@@ -16,7 +16,7 @@
 >
 > Autor: Jose Antonio Membrive Guillen
 > Año: 2025-2026
-> **Estado:** Fase 10.5/10 Completa | Última actualización: 6 Febrero 2026
+> **Estado:** Fase 10.6/10 Completa | Última actualización: 6 Febrero 2026
 
 ---
 
@@ -45,6 +45,7 @@
 | ↳ **✅ 10.3** | Optimizaciones de proyecto (packaging, dead code, tests, LSP) | **COMPLETO** | **06/02/2026** |
 | ↳ **✅ 10.4** | Despliegue: Docker + GitHub Actions CI + reusable action | **COMPLETO** | **06/02/2026** |
 | ↳ **✅ 10.5** | Cobertura de código: 84% a 93% (633 tests) | **COMPLETO** | **06/02/2026** |
+| ↳ **✅ 10.6** | Tests de regresión de seguridad (34 tests, SEC-01 a SEC-09) | **COMPLETO** | **06/02/2026** |
 
 ### 📊 Funcionalidades Implementadas vs Planeadas
 
@@ -57,7 +58,7 @@
 | ✅ Detección de 23 tipos de violaciones gTAA | Implementado | Fase 2-8 — 5 checkers + LLM |
 | ✅ Sistema de scoring (0-100) | Implementado | Penalización por severidad |
 | ✅ Proyectos de ejemplo (bueno/malo) | Implementado | En directorio examples/ |
-| ✅ Tests unitarios + integración (633 tests, 93% coverage) | Implementado | pytest + pytest-cov con unit/ e integration/ |
+| ✅ Tests unitarios + integración + seguridad (667 tests, 93% coverage) | Implementado | pytest + pytest-cov con unit/ e integration/ |
 | ✅ Documentación técnica con diagramas | Implementado | docs/ con flujos Fase 1-10, 55 ADRs |
 | ✅ Reportes HTML dashboard | Implementado | Fase 4 — SVG inline, autocontenido |
 | ✅ Reportes JSON para CI/CD | Implementado | Fase 4 — `--json` / `--html` |
@@ -329,7 +330,7 @@ python -m gtaa_validator examples/js_project --verbose
 python -m gtaa_validator examples/csharp_project --verbose
 
 # Ejecutar tests
-pytest tests/                                        # Todos (633 tests)
+pytest tests/                                        # Todos (667 tests)
 pytest tests/unit/                                   # Solo unitarios
 pytest tests/integration/                            # Solo integración
 pytest tests/ --cov=gtaa_validator --cov-report=term  # Con cobertura
@@ -360,7 +361,7 @@ pytest tests/ --cov=gtaa_validator --cov-report=term  # Con cobertura
 - ✅ Soporte BDD: analiza archivos .feature y step definitions (Behave, pytest-bdd)
 - ✅ GherkinParser regex-based sin dependencias externas
 - ✅ 5 violaciones BDD: detalles técnicos en Gherkin, browser calls en steps, complejidad, falta de Then, duplicados
-- ✅ 633 tests automatizados (93% cobertura de código)
+- ✅ 667 tests automatizados (93% cobertura de código)
 
 **Ejemplo de salida (con --ai):**
 ```
@@ -657,7 +658,7 @@ gtaa-ai-validator/
 │       ├── quality_checker.py          # Calidad de tests (AST + Regex)
 │       └── bdd_checker.py              # BDD/Gherkin (Fase 8)
 │
-├── tests/                              # 🧪 Tests automatizados (633 tests, 93% coverage)
+├── tests/                              # 🧪 Tests automatizados (667 tests, 93% coverage)
 │   ├── conftest.py                     # Fixtures compartidas
 │   ├── unit/                           # Tests unitarios
 │   │   ├── test_models.py             # Modelos de datos
@@ -821,6 +822,7 @@ Puntuación = max(0, 100 - suma de penalizaciones)
 - 🔄 Fase 10: Optimización y documentación final - **EN PROGRESO**
   - ✅ 10.1: Optimización capa LLM (factory, fallback, rate limit, --max-llm-calls)
   - ✅ 10.5: Cobertura de código 84% a 93% (633 tests)
+  - ✅ 10.6: Tests de regresión de seguridad (34 tests para SEC-01 a SEC-09)
 
 ---
 
@@ -1107,7 +1109,7 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 
 **Implementado:**
 - ✅ Cobertura de código: 84% a 93% global (objetivo 90%+ superado)
-- ✅ 217 tests nuevos (416 a 633 tests totales)
+- ✅ 251 tests nuevos (416 a 667 tests totales)
 - ✅ `pytest-cov` como dependencia de desarrollo
 - ✅ Nuevos test files: test_file_utils.py, test_base_checker.py, test_python_parser.py
 - ✅ Tests CLI extendidos: score labels, --config, --ai, exit codes, verbose
@@ -1128,6 +1130,6 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 
 <div align="center">
 
-**Estado del proyecto:** Fase 10.5/10 | 23 violaciones | 4 lenguajes (Python, Java, JS/TS, C#) | 633 tests | 93% cobertura
+**Estado del proyecto:** Fase 10.6/10 | 23 violaciones | 4 lenguajes (Python, Java, JS/TS, C#) | 667 tests | 93% cobertura
 
 </div>
