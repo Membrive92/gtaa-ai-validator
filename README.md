@@ -5,8 +5,10 @@
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Estado](https://img.shields.io/badge/estado-en%20desarrollo-yellow)](https://github.com/Membrive92/gtaa-ai-validator)
-[![Fase](https://img.shields.io/badge/fase-10.4%2F10-blue)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Fase](https://img.shields.io/badge/fase-10.5%2F10-blue)](https://github.com/Membrive92/gtaa-ai-validator)
 [![Progreso](https://img.shields.io/badge/progreso-99%25-green)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Coverage](https://img.shields.io/badge/coverage-93%25-brightgreen)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Tests](https://img.shields.io/badge/tests-633-brightgreen)](https://github.com/Membrive92/gtaa-ai-validator)
 [![CI](https://github.com/Membrive92/gtaa-ai-validator/actions/workflows/ci.yml/badge.svg)](https://github.com/Membrive92/gtaa-ai-validator/actions/workflows/ci.yml)
 [![Docker](https://img.shields.io/badge/docker-ready-blue)](https://github.com/Membrive92/gtaa-ai-validator/blob/main/Dockerfile)
 
@@ -14,7 +16,7 @@
 >
 > Autor: Jose Antonio Membrive Guillen
 > Año: 2025-2026
-> **Estado:** Fase 10.4/10 Completa | Última actualización: 6 Febrero 2026
+> **Estado:** Fase 10.5/10 Completa | Última actualización: 6 Febrero 2026
 
 ---
 
@@ -42,6 +44,7 @@
 | ↳ **✅ 10.2** | Sistema de logging profesional + métricas de rendimiento | **COMPLETO** | **06/02/2026** |
 | ↳ **✅ 10.3** | Optimizaciones de proyecto (packaging, dead code, tests, LSP) | **COMPLETO** | **06/02/2026** |
 | ↳ **✅ 10.4** | Despliegue: Docker + GitHub Actions CI + reusable action | **COMPLETO** | **06/02/2026** |
+| ↳ **✅ 10.5** | Cobertura de código: 84% a 93% (633 tests) | **COMPLETO** | **06/02/2026** |
 
 ### 📊 Funcionalidades Implementadas vs Planeadas
 
@@ -54,7 +57,7 @@
 | ✅ Detección de 23 tipos de violaciones gTAA | Implementado | Fase 2-8 — 5 checkers + LLM |
 | ✅ Sistema de scoring (0-100) | Implementado | Penalización por severidad |
 | ✅ Proyectos de ejemplo (bueno/malo) | Implementado | En directorio examples/ |
-| ✅ Tests unitarios + integración (416 tests) | Implementado | pytest con unit/ e integration/ |
+| ✅ Tests unitarios + integración (633 tests, 93% coverage) | Implementado | pytest + pytest-cov con unit/ e integration/ |
 | ✅ Documentación técnica con diagramas | Implementado | docs/ con flujos Fase 1-10, 55 ADRs |
 | ✅ Reportes HTML dashboard | Implementado | Fase 4 — SVG inline, autocontenido |
 | ✅ Reportes JSON para CI/CD | Implementado | Fase 4 — `--json` / `--html` |
@@ -326,9 +329,10 @@ python -m gtaa_validator examples/js_project --verbose
 python -m gtaa_validator examples/csharp_project --verbose
 
 # Ejecutar tests
-pytest tests/               # Todos (~380 tests)
-pytest tests/unit/          # Solo unitarios
-pytest tests/integration/   # Solo integración
+pytest tests/                                        # Todos (633 tests)
+pytest tests/unit/                                   # Solo unitarios
+pytest tests/integration/                            # Solo integración
+pytest tests/ --cov=gtaa_validator --cov-report=term  # Con cobertura
 ```
 
 **Capacidades implementadas:**
@@ -356,7 +360,7 @@ pytest tests/integration/   # Solo integración
 - ✅ Soporte BDD: analiza archivos .feature y step definitions (Behave, pytest-bdd)
 - ✅ GherkinParser regex-based sin dependencias externas
 - ✅ 5 violaciones BDD: detalles técnicos en Gherkin, browser calls en steps, complejidad, falta de Then, duplicados
-- ✅ 416 tests automatizados
+- ✅ 633 tests automatizados (93% cobertura de código)
 
 **Ejemplo de salida (con --ai):**
 ```
@@ -653,7 +657,7 @@ gtaa-ai-validator/
 │       ├── quality_checker.py          # Calidad de tests (AST + Regex)
 │       └── bdd_checker.py              # BDD/Gherkin (Fase 8)
 │
-├── tests/                              # 🧪 Tests automatizados (~380 tests)
+├── tests/                              # 🧪 Tests automatizados (633 tests, 93% coverage)
 │   ├── conftest.py                     # Fixtures compartidas
 │   ├── unit/                           # Tests unitarios
 │   │   ├── test_models.py             # Modelos de datos
@@ -664,10 +668,12 @@ gtaa-ai-validator/
 │   │   ├── test_bdd_checker.py        # BDDChecker (Fase 8)
 │   │   ├── test_gherkin_parser.py     # GherkinParser (Fase 8)
 │   │   ├── test_treesitter_base.py    # ParseResult y base (Fase 9)
-│   │   ├── test_python_parser.py      # PythonParser (Fase 9)
-│   │   ├── test_java_parser.py        # JavaParser (Fase 9)
-│   │   ├── test_js_parser.py          # JSParser (Fase 9)
-│   │   ├── test_csharp_parser.py      # CSharpParser (Fase 9)
+│   │   ├── test_python_parser.py      # PythonParser (Fase 9+10.5)
+│   │   ├── test_java_checker.py       # JavaParser + checkers (Fase 9+10.5)
+│   │   ├── test_js_checker.py         # JSParser + checkers (Fase 9+10.5)
+│   │   ├── test_csharp_checker.py     # CSharpParser + checkers (Fase 9+10.5)
+│   │   ├── test_base_checker.py       # BaseChecker (Fase 10.5)
+│   │   ├── test_file_utils.py         # read_file_safe (Fase 10.5)
 │   │   ├── test_json_reporter.py      # JsonReporter
 │   │   ├── test_html_reporter.py      # HtmlReporter
 │   │   ├── test_llm_client.py         # MockLLMClient
@@ -814,6 +820,7 @@ Puntuación = max(0, 100 - suma de penalizaciones)
 - ✅ Fase 9: Soporte Multilenguaje (Java + JS/TS + C#) - **COMPLETA**
 - 🔄 Fase 10: Optimización y documentación final - **EN PROGRESO**
   - ✅ 10.1: Optimización capa LLM (factory, fallback, rate limit, --max-llm-calls)
+  - ✅ 10.5: Cobertura de código 84% a 93% (633 tests)
 
 ---
 
@@ -1079,7 +1086,7 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 - ✅ 14 tests nuevos: CLI (CliRunner) + prompts (funciones puras)
 - ✅ PEP 8 E402: logger después de imports en 4 ficheros
 - ✅ Consistencia de docstrings: español, sin refs a fases obsoletas
-- ✅ Total: 416 tests | Documentación: ADR 45-51, diagramas Fase 10.3
+- ✅ Total: 416 tests (base) | Documentación: ADR 45-51, diagramas Fase 10.3
 
 ---
 
@@ -1096,6 +1103,20 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 
 ---
 
+### Versión 0.10.5 - Fase 10.5 (6 Febrero 2026) ✅
+
+**Implementado:**
+- ✅ Cobertura de código: 84% a 93% global (objetivo 90%+ superado)
+- ✅ 217 tests nuevos (416 a 633 tests totales)
+- ✅ `pytest-cov` como dependencia de desarrollo
+- ✅ Nuevos test files: test_file_utils.py, test_base_checker.py, test_python_parser.py
+- ✅ Tests CLI extendidos: score labels, --config, --ai, exit codes, verbose
+- ✅ Tests de parsers tree-sitter: JavaParser, CSharpParser, JSParser (utility methods, extraction)
+- ✅ Tests de clasificador: multilanguage detection, ParseResult classification
+- ✅ Cobertura por modulo: __main__.py 100%, file_utils.py 100%, file_classifier.py 99%, python_parser.py 95%, js_parser.py 94%, java_parser.py 90%
+
+---
+
 ### Versión 1.0.0 - Fase 10 Final (Pendiente) ⏳
 
 **Planificado:**
@@ -1107,6 +1128,6 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 
 <div align="center">
 
-**Estado del proyecto:** Fase 10.4/10 | 23 violaciones | 4 lenguajes (Python, Java, JS/TS, C#) | 416 tests
+**Estado del proyecto:** Fase 10.5/10 | 23 violaciones | 4 lenguajes (Python, Java, JS/TS, C#) | 633 tests | 93% cobertura
 
 </div>
