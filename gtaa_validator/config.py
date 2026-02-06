@@ -8,9 +8,12 @@ Si el archivo no existe, se usan valores por defecto (sin restricciones).
 Si PyYAML no está instalado o el YAML es inválido, se degrada elegantemente.
 """
 
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -53,7 +56,8 @@ def load_config(project_path: Path) -> ProjectConfig:
     try:
         with open(config_path, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f)
-    except Exception:
+    except Exception as e:
+        logger.warning("Error leyendo config %s: %s", config_path, e)
         return ProjectConfig()
 
     if not isinstance(data, dict):

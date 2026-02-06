@@ -14,9 +14,12 @@ Soporta las keywords principales:
 Fase 8: Soporte BDD para Behave y pytest-bdd.
 """
 
+import logging
 import re
 from dataclasses import dataclass, field
 from typing import List, Optional
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -178,5 +181,6 @@ class GherkinParser:
             with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
             return self.parse(content)
-        except Exception:
+        except Exception as e:
+            logger.debug("Error parsing gherkin file %s: %s", file_path, e)
             return None

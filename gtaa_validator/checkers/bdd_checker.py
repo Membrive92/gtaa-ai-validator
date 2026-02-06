@@ -14,9 +14,12 @@ Fase 8: Soporte para la capa Gherkin en test automation.
 """
 
 import ast
+import logging
 import re
 from pathlib import Path
 from typing import List, Optional, Dict, Set
+
+logger = logging.getLogger(__name__)
 
 from gtaa_validator.checkers.base import BaseChecker
 from gtaa_validator.models import Violation, ViolationType, Severity
@@ -142,7 +145,8 @@ class BDDChecker(BaseChecker):
         try:
             with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
-        except Exception:
+        except Exception as e:
+            logger.debug("Error reading feature file %s: %s", file_path, e)
             return violations
 
         lines = content.splitlines()
@@ -210,7 +214,8 @@ class BDDChecker(BaseChecker):
         try:
             with open(file_path, "r", encoding="utf-8") as f:
                 source_code = f.read()
-        except Exception:
+        except Exception as e:
+            logger.debug("Error reading step definition %s: %s", file_path, e)
             return violations
 
         if tree is None:
@@ -339,7 +344,8 @@ class BDDChecker(BaseChecker):
             with open(file_path, "r", encoding="utf-8") as f:
                 source = f.read()
             tree = ast.parse(source)
-        except Exception:
+        except Exception as e:
+            logger.debug("Error parsing step patterns from %s: %s", file_path, e)
             return
 
         for node in ast.walk(tree):

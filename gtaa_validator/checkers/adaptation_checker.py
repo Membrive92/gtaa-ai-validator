@@ -18,10 +18,13 @@ Soporta: Python, Java, JavaScript/TypeScript, C#
 """
 
 import ast
+import logging
 import re
 from pathlib import Path
 from typing import List, Dict, Optional, Union, Set
 from collections import defaultdict
+
+logger = logging.getLogger(__name__)
 
 from gtaa_validator.checkers.base import BaseChecker
 from gtaa_validator.models import Violation, ViolationType, Severity
@@ -168,8 +171,8 @@ class AdaptationChecker(BaseChecker):
 
         except SyntaxError:
             pass
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Error checking %s: %s", file_path, e)
 
         return violations
 

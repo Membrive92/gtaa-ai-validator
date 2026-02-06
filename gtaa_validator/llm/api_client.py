@@ -8,9 +8,12 @@ Incluye tracking de consumo de tokens para monitoreo de costos.
 """
 
 import json
+import logging
 import re
 from dataclasses import dataclass, field
 from typing import List, Optional
+
+logger = logging.getLogger(__name__)
 
 from google import genai
 
@@ -194,9 +197,8 @@ class APILLMClient:
                 input_tokens = getattr(metadata, 'prompt_token_count', 0) or 0
                 output_tokens = getattr(metadata, 'candidates_token_count', 0) or 0
                 self.usage.add(input_tokens, output_tokens)
-        except Exception:
-            # Si falla el tracking, no interrumpir la ejecución
-            pass
+        except Exception as e:
+            logger.debug("Error tracking tokens: %s", e)
 
     def get_usage_summary(self) -> str:
         """Retorna un resumen del consumo de tokens."""
