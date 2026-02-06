@@ -789,4 +789,122 @@ python -m gtaa_validator ./proyecto --ai --verbose --html report.html --json rep
 
 ---
 
-*Última actualización: 6 de febrero de 2026*
+## 16. Fase 10.3 — Optimizaciones de Proyecto
+
+### Contexto
+
+Auditoría completa del proyecto como arquitecto de software Python y evaluador de TFMs. Se identificaron 37 hallazgos en 4 niveles de severidad. La Fase 10.3 corrige los problemas críticos y altos.
+
+---
+
+## 17. Versión Single Source of Truth
+
+```
+┌─────────────────────────────────────┐
+│  gtaa_validator/__init__.py         │
+│  __version__ = "0.10.3"  ← ÚNICA   │
+└─────────────┬───────────────────────┘
+              │
+    ┌─────────┼─────────┬──────────────┐
+    ▼         ▼         ▼              ▼
+ setup.py  models.py  pyproject.toml  tests/
+ (regex)   (import)   (dynamic attr)  (import)
+```
+
+---
+
+## 18. Estructura pyproject.toml
+
+```
+pyproject.toml
+├── [build-system]          → setuptools>=61.0
+├── [project]
+│   ├── dependencies        → click, PyYAML (core mínimo)
+│   └── optional-dependencies
+│       ├── ai              → google-genai, python-dotenv
+│       ├── parsers         → tree-sitter-language-pack, tree-sitter-c-sharp
+│       └── all             → ai + parsers
+├── [tool.pytest.ini_options]
+│   └── testpaths, markers
+└── [tool.coverage]
+    ├── run.source          → ["gtaa_validator"]
+    └── report.show_missing → true
+```
+
+**Instalación:**
+
+| Comando | Dependencias |
+|---------|--------------|
+| `pip install .` | click + PyYAML |
+| `pip install ".[ai]"` | + google-genai + python-dotenv |
+| `pip install ".[parsers]"` | + tree-sitter |
+| `pip install ".[all]"` | Todo |
+
+---
+
+## 19. Código Muerto Eliminado
+
+| Artefacto | Fichero | Líneas | Reemplazado por |
+|-----------|---------|--------|-----------------|
+| `BrowserAPICallVisitor` | definition_checker.py | 64 | `_check_browser_calls()` con ParseResult |
+| `add_violation()` | definition_checker.py | 33 | Construcción directa de `Violation()` |
+| `_HardcodedDataVisitor` | quality_checker.py | 62 | `_check_hardcoded_data()` con ParseResult |
+| **Total** | | **159** | |
+
+Además, `checkers/__init__.py` actualizado de 2 → 6 exports:
+
+```python
+# Antes (Fase 2):
+__all__ = ["BaseChecker", "DefinitionChecker"]
+
+# Después (Fase 10.3):
+__all__ = ["BaseChecker", "DefinitionChecker", "StructureChecker",
+           "AdaptationChecker", "QualityChecker", "BDDChecker"]
+```
+
+---
+
+## 20. Excepciones con Logging
+
+| Fichero | Línea | Nivel | Mensaje |
+|---------|-------|-------|---------|
+| config.py | 56 | WARNING | Error leyendo config |
+| api_client.py | 197 | DEBUG | Error tracking tokens |
+| definition_checker.py | 201 | DEBUG | Error checking file |
+| quality_checker.py | 174 | DEBUG | Error checking file |
+| adaptation_checker.py | 171 | DEBUG | Error checking file |
+| bdd_checker.py | 145 | DEBUG | Error reading feature |
+| bdd_checker.py | 213 | DEBUG | Error reading step def |
+| bdd_checker.py | 342 | DEBUG | Error parsing step patterns |
+| gherkin_parser.py | 181 | DEBUG | Error parsing gherkin file |
+
+**Impacto**: Solo observabilidad. El comportamiento funcional (retornar `[]` o `None`) no cambia.
+
+---
+
+## 21. Tests Añadidos en Fase 10.3
+
+| Fichero | Tests | Módulo cubierto | Herramienta |
+|---------|-------|-----------------|-------------|
+| `test_cli.py` | 6 | `__main__.py` | Click CliRunner |
+| `test_prompts.py` | 8 | `llm/prompts.py` | pytest directo |
+| **Total** | **14** | | |
+
+Tests totales: 402 → 416
+
+---
+
+## 22. Commits en Fase 10.3
+
+| Commit | Tipo | Descripción |
+|--------|------|-------------|
+| `b8440d6` | fix | Version bump a 0.10.3 con single source of truth |
+| `304dd62` | refactor | pyproject.toml y modernización de packaging |
+| `1456bc8` | refactor | Eliminar 159 líneas de código muerto, actualizar exports |
+| `21a2ac3` | fix | Logging en 10 bloques de excepciones silenciosas |
+| `49cd9fd` | fix | Eliminar ast.Str deprecado, alinear LSP en BaseChecker |
+| `93815f4` | test | 14 tests nuevos para CLI y prompts |
+
+---
+
+*Última actualización: 6 de febrero de 2026 (Fase 10.3)*

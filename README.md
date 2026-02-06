@@ -5,14 +5,14 @@
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Estado](https://img.shields.io/badge/estado-en%20desarrollo-yellow)](https://github.com/Membrive92/gtaa-ai-validator)
-[![Fase](https://img.shields.io/badge/fase-10.1%2F10-blue)](https://github.com/Membrive92/gtaa-ai-validator)
-[![Progreso](https://img.shields.io/badge/progreso-95%25-green)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Fase](https://img.shields.io/badge/fase-10.3%2F10-blue)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Progreso](https://img.shields.io/badge/progreso-98%25-green)](https://github.com/Membrive92/gtaa-ai-validator)
 
 > **📌 TRABAJO DE FIN DE MÁSTER - EN DESARROLLO INCREMENTAL**
 >
 > Autor: Jose Antonio Membrive Guillen
 > Año: 2025-2026
-> **Estado:** Fase 10.1/10 Completa | Última actualización: 5 Febrero 2026
+> **Estado:** Fase 10.3/10 Completa | Última actualización: 6 Febrero 2026
 
 ---
 
@@ -37,6 +37,8 @@
 | **✅ Fase 9** | **Soporte Multilenguaje (Java + JS/TS + C#) + Refactor language-agnostic** | **COMPLETO** | **04/02/2026** |
 | **🔄 Fase 10** | **Optimización y documentación final** | **EN PROGRESO** | — |
 | ↳ **✅ 10.1** | Optimización capa LLM (factory, fallback, rate limit, --max-llm-calls) | **COMPLETO** | **05/02/2026** |
+| ↳ **✅ 10.2** | Sistema de logging profesional + métricas de rendimiento | **COMPLETO** | **06/02/2026** |
+| ↳ **✅ 10.3** | Optimizaciones de proyecto (packaging, dead code, tests, LSP) | **COMPLETO** | **06/02/2026** |
 
 ### 📊 Funcionalidades Implementadas vs Planeadas
 
@@ -49,8 +51,8 @@
 | ✅ Detección de 23 tipos de violaciones gTAA | Implementado | Fase 2-8 — 5 checkers + LLM |
 | ✅ Sistema de scoring (0-100) | Implementado | Penalización por severidad |
 | ✅ Proyectos de ejemplo (bueno/malo) | Implementado | En directorio examples/ |
-| ✅ Tests unitarios + integración (317 tests) | Implementado | pytest con unit/ e integration/ |
-| ✅ Documentación técnica con diagramas | Implementado | docs/ con flujos Fase 1-7 |
+| ✅ Tests unitarios + integración (416 tests) | Implementado | pytest con unit/ e integration/ |
+| ✅ Documentación técnica con diagramas | Implementado | docs/ con flujos Fase 1-10, 50 ADRs |
 | ✅ Reportes HTML dashboard | Implementado | Fase 4 — SVG inline, autocontenido |
 | ✅ Reportes JSON para CI/CD | Implementado | Fase 4 — `--json` / `--html` |
 | ✅ Análisis semántico con LLM | Implementado | Fase 5 — Gemini Flash API + MockLLM fallback |
@@ -58,7 +60,9 @@
 | ✅ Soporte Gherkin/BDD (Behave + pytest-bdd) | Implementado | Fase 8 — GherkinParser, BDDChecker, 5 violaciones BDD |
 | ✅ Soporte Multilenguaje (Java + JS/TS + C#) | Implementado | Fase 9 — tree-sitter, checkers language-agnostic, ParseResult |
 | ✅ Optimización capa LLM | Implementado | Fase 10.1 — Factory, fallback automático, --max-llm-calls |
-| ⏳ Optimización y documentación final | En progreso | Fase 10 — CI/CD, docs TFM |
+| ✅ Logging profesional + métricas | Implementado | Fase 10.2 — logging stdlib, AnalysisMetrics, --log-file |
+| ✅ Optimizaciones de proyecto | Implementado | Fase 10.3 — pyproject.toml, dead code, tests CLI, LSP |
+| ⏳ Documentación TFM final | En progreso | Fase 10 — CI/CD, docs TFM |
 
 **Leyenda:** ✅ Implementado | ⏳ Pendiente
 
@@ -225,16 +229,20 @@ cd gtaa-ai-validator
 python -m venv venv
 source venv/bin/activate  # En Windows: venv\Scripts\activate
 
-# Instalar dependencias
-pip install -r requirements.txt
+# Instalar con todas las dependencias (recomendado)
+pip install -e ".[all]"
 
-# Instalar en modo desarrollo
+# O instalar solo core (sin LLM ni multi-lang parsing)
 pip install -e .
+
+# O instalar por grupos opcionales
+pip install -e ".[ai]"       # Añade google-genai + python-dotenv
+pip install -e ".[parsers]"  # Añade tree-sitter (Java, JS/TS, C#)
 ```
 
 ---
 
-### ✅ Funcionalidad ACTUAL (Fase 10.1)
+### ✅ Funcionalidad ACTUAL (Fase 10.3)
 
 **Funcionalidad disponible en la versión actual:**
 
@@ -297,7 +305,7 @@ pytest tests/integration/   # Solo integración
 - ✅ Soporte BDD: analiza archivos .feature y step definitions (Behave, pytest-bdd)
 - ✅ GherkinParser regex-based sin dependencias externas
 - ✅ 5 violaciones BDD: detalles técnicos en Gherkin, browser calls en steps, complejidad, falta de Then, duplicados
-- ✅ 317 tests automatizados
+- ✅ 416 tests automatizados
 
 **Ejemplo de salida (con --ai):**
 ```
@@ -989,6 +997,33 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 
 ---
 
+### Versión 0.10.2 - Fase 10.2 (6 Febrero 2026) ✅
+
+**Implementado:**
+- ✅ Sistema de logging profesional con `logging` stdlib (reemplaza 15 `print()`)
+- ✅ `--log-file`: opción CLI para escribir logs a fichero (siempre DEBUG)
+- ✅ `--verbose` auto-crea `logs/gtaa_debug.log` por defecto
+- ✅ Dataclass `AnalysisMetrics`: timing por fase, tokens LLM, archivos/segundo
+- ✅ Métricas en reportes HTML (tarjetas de rendimiento) y JSON
+- ✅ Documentación: ADR 43-44, diagramas Fase 10.2
+
+---
+
+### Versión 0.10.3 - Fase 10.3 (6 Febrero 2026) ✅
+
+**Implementado:**
+- ✅ Version bump a 0.10.3 con single source of truth (`__init__.__version__`)
+- ✅ `pyproject.toml` (PEP 621): dependencias opcionales `[ai]`, `[parsers]`, `[all]`
+- ✅ Eliminación de 159 líneas de código muerto (3 clases/métodos legacy)
+- ✅ Actualización `checkers/__init__.py`: exporta 6 checkers (era 2)
+- ✅ Logging en 10 bloques `except Exception: pass` silenciosos
+- ✅ Eliminación de `ast.Str` deprecado (Python 3.14 compatibility)
+- ✅ Alineación LSP: `BaseChecker.check()` acepta `Union[ast.Module, ParseResult]`
+- ✅ 14 tests nuevos: CLI (CliRunner) + prompts (funciones puras)
+- ✅ Total: 416 tests | Documentación: ADR 45-50, diagramas Fase 10.3
+
+---
+
 ### Versión 1.0.0 - Fase 10 Final (Pendiente) ⏳
 
 **Planificado:**
@@ -1001,6 +1036,6 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 
 <div align="center">
 
-**Estado del proyecto:** Fase 10.1/10 | 23 violaciones | 4 lenguajes (Python, Java, JS/TS, C#)
+**Estado del proyecto:** Fase 10.3/10 | 23 violaciones | 4 lenguajes (Python, Java, JS/TS, C#) | 416 tests
 
 </div>

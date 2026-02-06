@@ -54,6 +54,12 @@ El formato sigue la estructura de un ADR (Architecture Decision Record) adaptado
 42. [Provider tracking en reportes](#42-provider-tracking-en-reportes)
 43. [Logging con stdlib frente a print() o librerías externas](#43-logging-con-stdlib-frente-a-print-o-librerías-externas)
 44. [Ruta por defecto de log file con --verbose](#44-ruta-por-defecto-de-log-file-con---verbose)
+45. [Versión única: single source of truth](#45-versión-única-single-source-of-truth)
+46. [pyproject.toml con dependencias opcionales](#46-pyprojecttoml-con-dependencias-opcionales)
+47. [Eliminación de código muerto legacy](#47-eliminación-de-código-muerto-legacy)
+48. [Logging en excepciones silenciosas](#48-logging-en-excepciones-silenciosas)
+49. [Alineación LSP en firma de BaseChecker](#49-alineación-lsp-en-firma-de-basechecker)
+50. [Cobertura de tests: CLI y prompts](#50-cobertura-de-tests-cli-y-prompts)
 
 ---
 
@@ -2976,6 +2982,170 @@ Se establece una convención razonable (`logs/gtaa_debug.log`) que cubre el caso
 
 ---
 
+## 45. Versión única: single source of truth
+
+### Problema
+
+La cadena de versión `"0.4.0"` estaba hardcodeada en 4 lugares distintos: `__init__.py`, `setup.py`, `models.py` y un test de integración. Actualizar la versión requería modificar 4 ficheros, con riesgo de inconsistencia.
+
+### Solución elegida
+
+Definir `__version__` exclusivamente en `gtaa_validator/__init__.py`. Los demás puntos importan de ahí:
+
+| Consumidor | Mecanismo |
+|------------|-----------|
+| `setup.py` | Regex sobre `__init__.py` (sin importar el paquete) |
+| `models.py` | `from gtaa_validator import __version__` con `field(default_factory=...)` |
+| `test_reporters.py` | `from gtaa_validator import __version__` en la aserción |
+| `pyproject.toml` | `[tool.setuptools.dynamic] version = {attr = "gtaa_validator.__version__"}` |
+
+**Justificación:** Principio DRY. Un solo punto de cambio para la versión. Estándar de la industria en paquetes Python.
+
+---
+
+## 46. pyproject.toml con dependencias opcionales
+
+### Problema
+
+El proyecto usaba solo `setup.py` sin `pyproject.toml` (PEP 517/518/621). Todas las dependencias estaban en `install_requires`, obligando a instalar `google-genai` y `tree-sitter` incluso cuando no se usa `--ai`.
+
+### Solución elegida
+
+Crear `pyproject.toml` como fuente principal de metadatos. Dividir dependencias en grupos opcionales:
+
+```toml
+[project]
+dependencies = ["click>=8.0.0", "PyYAML>=6.0"]  # Core mínimo
+
+[project.optional-dependencies]
+ai = ["google-genai>=1.0.0", "python-dotenv>=1.0.0"]
+parsers = ["tree-sitter-language-pack>=0.4.0", "tree-sitter-c-sharp>=0.23.0"]
+all = ["gtaa-ai-validator[ai,parsers]"]
+```
+
+Incluye configuración de pytest y coverage en el mismo fichero. `setup.py` se reduce a shim mínimo.
+
+**Justificación:** PEP 621 es el estándar moderno. Las dependencias opcionales reducen el footprint de instalación y evitan errores de importación en entornos sin `google-genai`.
+
+---
+
+## 47. Eliminación de código muerto legacy
+
+### Problema
+
+159 líneas de código legacy sin uso:
+
+| Artefacto | Fichero | Líneas |
+|-----------|---------|--------|
+| `BrowserAPICallVisitor` | definition_checker.py | 64 |
+| `DefinitionChecker.add_violation()` | definition_checker.py | 33 |
+| `_HardcodedDataVisitor` | quality_checker.py | 62 |
+
+Estas clases fueron reemplazadas en la Fase 9 por métodos basados en `ParseResult` (agnósticos al lenguaje), pero se mantuvieron con comentarios "for backwards compatibility".
+
+### Solución elegida
+
+Eliminar completamente las 3 entidades. No existe código que las instancie o llame. Los tests existentes pasan sin cambios.
+
+Además, `checkers/__init__.py` se actualizó de exportar solo 2 checkers (herencia de Fase 2) a exportar los 6 checkers activos.
+
+**Justificación:** El código muerto confunde a evaluadores y desarrolladores, sugiere deuda técnica no resuelta. La eliminación es segura porque ningún test, import ni invocación externa depende de estos artefactos.
+
+---
+
+## 48. Logging en excepciones silenciosas
+
+### Problema
+
+10 bloques `except Exception: pass` dispersos en 7 ficheros (checkers, config, api_client, gherkin_parser). Los errores se tragaban sin dejar rastro, dificultando el debugging.
+
+### Solución elegida
+
+Reemplazar `pass` por llamadas `logger.debug()` o `logger.warning()` según la severidad:
+
+| Fichero | Nivel | Ejemplo |
+|---------|-------|---------|
+| `config.py` | WARNING | Error leyendo YAML de configuración |
+| `api_client.py` | DEBUG | Fallo en tracking de tokens (no crítico) |
+| `*_checker.py` | DEBUG | Error de parse en un archivo individual |
+| `gherkin_parser.py` | DEBUG | Error leyendo fichero `.feature` |
+
+El comportamiento funcional no cambia: las excepciones siguen retornando `[]` o `None`. La diferencia es que ahora quedan registradas en el sistema de logging (Fase 10.2).
+
+**Justificación:** Observabilidad sin cambio de comportamiento. Con `--verbose` o `--log-file`, el usuario puede ver por qué un archivo fue ignorado durante el análisis.
+
+---
+
+## 49. Alineación LSP en firma de BaseChecker
+
+### Problema
+
+`BaseChecker.check()` definía `tree: Optional[ast.Module]`, pero 3 implementaciones (DefinitionChecker, QualityChecker, AdaptationChecker) usaban `tree_or_result: Optional[Union[ast.Module, ParseResult]]`. Violación del principio de sustitución de Liskov.
+
+### Solución elegida
+
+Actualizar la firma de `BaseChecker.check()` para aceptar `Union[ast.Module, ParseResult]`:
+
+```python
+from __future__ import annotations
+from typing import TYPE_CHECKING, Union
+if TYPE_CHECKING:
+    from gtaa_validator.parsers.treesitter_base import ParseResult
+
+@abstractmethod
+def check(self, file_path: Path,
+          tree: Optional[Union[ast.Module, ParseResult]] = None,
+          file_type: str = "unknown") -> List[Violation]:
+```
+
+Se usa `TYPE_CHECKING` para evitar la importación en runtime y posibles dependencias circulares.
+
+**Justificación:** LSP es un principio SOLID fundamental. La firma base debe reflejar el contrato real de sus implementaciones. `from __future__ import annotations` evita evaluación eager de type hints.
+
+Además, se eliminó el fallback `ast.Str` en `python_parser.py` (deprecado desde Python 3.8, eliminado en 3.14). El proyecto requiere Python >=3.10 donde `ast.Constant` cubre todos los casos.
+
+---
+
+## 50. Cobertura de tests: CLI y prompts
+
+### Problema
+
+Dos módulos con 0% de cobertura:
+- `__main__.py` (248 líneas): punto de entrada CLI sin tests
+- `prompts.py` (funciones puras `extract_context_snippet` y `extract_functions_from_code`): sin tests
+
+### Solución elegida
+
+**`test_cli.py`** — 6 tests usando `click.testing.CliRunner`:
+
+| Test | Verifica |
+|------|----------|
+| `test_basic_run` | CLI ejecuta sin crash, output contiene cabecera |
+| `test_verbose_flag` | `--verbose` muestra violaciones detalladas |
+| `test_json_export` | `--json` crea fichero JSON válido con estructura esperada |
+| `test_html_export` | `--html` crea fichero HTML válido |
+| `test_invalid_path` | Path inexistente → exit code != 0 |
+| `test_score_displayed` | Output contiene puntuación de cumplimiento |
+
+**`test_prompts.py`** — 8 tests para funciones puras:
+
+| Test | Verifica |
+|------|----------|
+| `test_normal_line` | Contexto ±N líneas alrededor de la violación |
+| `test_line_zero` | `line_number=0` retorna primeras 30 líneas |
+| `test_first_line` | Línea 1 no produce índices negativos |
+| `test_highlighted_line` | Línea target tiene prefijo `>>> ` |
+| `test_last_line` | Contexto cerca del final del archivo |
+| `test_small_file_unchanged` | Fichero pequeño se retorna completo |
+| `test_large_file_truncated` | Fichero grande se reduce a firmas de función |
+| `test_max_chars_respected` | Resultado no excede max_chars |
+
+Total: 402 → 416 tests (+14).
+
+**Justificación:** Cobertura del punto de entrada (CLI) es fundamental para detectar regresiones en la interfaz de usuario. Las funciones puras de prompts son triviales de testear y tienen edge cases (línea 0, archivo vacío, truncamiento).
+
+---
+
 ## Resumen de decisiones
 
 | Decisión | Solución elegida | Alternativa descartada | Justificación principal |
@@ -3021,7 +3191,13 @@ Se establece una convención razonable (`logs/gtaa_debug.log`) que cubre el caso
 | Tracking de proveedor | llm_provider_info en Report | Sin tracking | Transparencia, auditabilidad, debugging |
 | Sistema de logging | `logging` stdlib centralizado | `print()` / loguru | Zero deps, niveles nativos, separación de canales |
 | Ruta default log file | Auto `logs/gtaa_debug.log` con `--verbose` | Sin fichero por defecto | Convention over Configuration, zero config para debug |
+| Versión single source | `__init__.__version__` importado | Hardcoded en 4 sitios | DRY, un solo punto de cambio |
+| Empaquetado moderno | `pyproject.toml` (PEP 621) | Solo `setup.py` | Estándar moderno, deps opcionales, config centralizada |
+| Código muerto | Eliminación completa (159 líneas) | Mantener con "legacy" | Claridad, sin deuda técnica visible |
+| Excepciones silenciosas | `logger.debug/warning` | `except Exception: pass` | Observabilidad sin cambio funcional |
+| Firma BaseChecker | `Union[ast.Module, ParseResult]` | Solo `ast.Module` | LSP, refleja contrato real |
+| Tests CLI + prompts | 14 tests nuevos (CliRunner) | Sin tests | Cobertura de punto de entrada y edge cases |
 
 ---
 
-*Última actualización: 6 de febrero de 2026*
+*Última actualización: 6 de febrero de 2026 (Fase 10.3)*
