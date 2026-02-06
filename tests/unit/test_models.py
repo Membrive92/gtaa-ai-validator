@@ -11,7 +11,9 @@ Covers the core data model logic:
 import pytest
 from pathlib import Path
 
-from gtaa_validator.models import Severity, ViolationType, Violation, Report
+from gtaa_validator.models import (
+    Severity, ViolationType, Violation, Report, AnalysisMetrics
+)
 
 
 # =========================================================================
@@ -276,3 +278,86 @@ class TestReport:
         ts = d["metadata"]["timestamp"]
         # ISO format includes 'T' separator
         assert "T" in ts or "-" in ts
+
+    def test_to_dict_with_metrics(self, empty_report):
+        """to_dict() includes metrics in metadata when present."""
+        empty_report.metrics = AnalysisMetrics(
+            static_analysis_seconds=1.5,
+            total_seconds=2.0,
+            files_per_second=10.0,
+        )
+        d = empty_report.to_dict()
+        assert "metrics" in d["metadata"]
+        assert d["metadata"]["metrics"]["timing"]["static_analysis_seconds"] == 1.5
+
+    def test_to_dict_without_metrics(self, empty_report):
+        """to_dict() does not include metrics when None."""
+        assert empty_report.metrics is None
+        d = empty_report.to_dict()
+        assert "metrics" not in d["metadata"]
+
+
+# =========================================================================
+# AnalysisMetrics
+# =========================================================================
+
+class TestAnalysisMetrics:
+    """Tests for the AnalysisMetrics dataclass."""
+
+    def test_defaults_are_zero(self):
+        """All fields default to zero."""
+        m = AnalysisMetrics()
+        assert m.static_analysis_seconds == 0.0
+        assert m.semantic_analysis_seconds == 0.0
+        assert m.llm_api_calls == 0
+        assert m.llm_total_tokens == 0
+
+    def test_to_dict_timing_section(self):
+        """to_dict() always includes timing section."""
+        m = AnalysisMetrics(
+            static_analysis_seconds=1.234,
+            semantic_analysis_seconds=2.567,
+            report_generation_seconds=0.123,
+            total_seconds=3.924,
+            files_per_second=5.12,
+        )
+        d = m.to_dict()
+        assert "timing" in d
+        assert d["timing"]["static_analysis_seconds"] == 1.234
+        assert d["timing"]["semantic_analysis_seconds"] == 2.567
+        assert d["timing"]["report_generation_seconds"] == 0.123
+        assert d["timing"]["total_seconds"] == 3.924
+        assert d["timing"]["files_per_second"] == 5.12
+
+    def test_to_dict_no_llm_section_when_zero_calls(self):
+        """to_dict() omits llm section when llm_api_calls is 0."""
+        m = AnalysisMetrics()
+        d = m.to_dict()
+        assert "llm" not in d
+
+    def test_to_dict_llm_section_when_calls_present(self):
+        """to_dict() includes llm section when llm_api_calls > 0."""
+        m = AnalysisMetrics(
+            llm_api_calls=3,
+            llm_input_tokens=1500,
+            llm_output_tokens=500,
+            llm_total_tokens=2000,
+            llm_estimated_cost_usd=0.003,
+        )
+        d = m.to_dict()
+        assert "llm" in d
+        assert d["llm"]["api_calls"] == 3
+        assert d["llm"]["input_tokens"] == 1500
+        assert d["llm"]["output_tokens"] == 500
+        assert d["llm"]["total_tokens"] == 2000
+        assert d["llm"]["estimated_cost_usd"] == 0.003
+
+    def test_to_dict_rounds_values(self):
+        """to_dict() rounds timing to 3 decimals and fps to 2."""
+        m = AnalysisMetrics(
+            static_analysis_seconds=1.23456789,
+            files_per_second=12.3456,
+        )
+        d = m.to_dict()
+        assert d["timing"]["static_analysis_seconds"] == 1.235
+        assert d["timing"]["files_per_second"] == 12.35

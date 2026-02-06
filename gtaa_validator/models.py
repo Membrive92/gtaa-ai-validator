@@ -351,6 +351,46 @@ class Violation:
 
 
 @dataclass
+class AnalysisMetrics:
+    """
+    Métricas de rendimiento de un análisis completo.
+
+    Captura tiempos por fase y uso de recursos LLM para incluir en reportes.
+    """
+    static_analysis_seconds: float = 0.0
+    semantic_analysis_seconds: float = 0.0
+    report_generation_seconds: float = 0.0
+    total_seconds: float = 0.0
+    files_per_second: float = 0.0
+    llm_api_calls: int = 0
+    llm_input_tokens: int = 0
+    llm_output_tokens: int = 0
+    llm_total_tokens: int = 0
+    llm_estimated_cost_usd: float = 0.0
+
+    def to_dict(self) -> dict:
+        """Convertir métricas a diccionario para serialización JSON."""
+        result = {
+            "timing": {
+                "static_analysis_seconds": round(self.static_analysis_seconds, 3),
+                "semantic_analysis_seconds": round(self.semantic_analysis_seconds, 3),
+                "report_generation_seconds": round(self.report_generation_seconds, 3),
+                "total_seconds": round(self.total_seconds, 3),
+                "files_per_second": round(self.files_per_second, 2),
+            }
+        }
+        if self.llm_api_calls > 0:
+            result["llm"] = {
+                "api_calls": self.llm_api_calls,
+                "input_tokens": self.llm_input_tokens,
+                "output_tokens": self.llm_output_tokens,
+                "total_tokens": self.llm_total_tokens,
+                "estimated_cost_usd": round(self.llm_estimated_cost_usd, 6),
+            }
+        return result
+
+
+@dataclass
 class Report:
     """
     Agrega todas las violaciones y metadatos de un análisis completo de proyecto.
@@ -364,6 +404,7 @@ class Report:
         score: Puntuación de cumplimiento (0-100)
         execution_time_seconds: Tiempo empleado en el análisis
         llm_provider_info: Información del proveedor LLM usado (solo con --ai)
+        metrics: Métricas de rendimiento del análisis (opcional)
     """
     project_path: Path
     violations: List[Violation] = field(default_factory=list)
@@ -373,6 +414,7 @@ class Report:
     score: float = 100.0
     execution_time_seconds: float = 0.0
     llm_provider_info: Optional[dict] = None
+    metrics: Optional[AnalysisMetrics] = None
 
     def calculate_score(self) -> float:
         """
@@ -410,6 +452,10 @@ class Report:
         # Añadir info del proveedor LLM si está disponible
         if self.llm_provider_info:
             metadata["llm_provider"] = self.llm_provider_info
+
+        # Añadir métricas de rendimiento si están disponibles
+        if self.metrics:
+            metadata["metrics"] = self.metrics.to_dict()
 
         return {
             "metadata": metadata,
