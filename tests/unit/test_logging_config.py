@@ -10,6 +10,7 @@ Covers:
 
 import logging
 import os
+import shutil
 import tempfile
 
 from gtaa_validator.logging_config import setup_logging
@@ -103,3 +104,23 @@ class TestSetupLogging:
                 if isinstance(h, logging.FileHandler):
                     h.close()
             os.unlink(log_path)
+
+    def test_auto_creates_parent_directory(self):
+        """FileHandler auto-creates parent directories if they don't exist."""
+        tmp_dir = tempfile.mkdtemp()
+        log_path = os.path.join(tmp_dir, "subdir", "nested", "debug.log")
+        try:
+            setup_logging(verbose=False, log_file=log_path)
+            logger = self._get_logger()
+            logger.info("Auto-created directory test")
+            for h in logger.handlers:
+                h.flush()
+            assert os.path.exists(log_path)
+            with open(log_path, encoding="utf-8") as f:
+                content = f.read()
+            assert "Auto-created directory test" in content
+        finally:
+            for h in logger.handlers:
+                if isinstance(h, logging.FileHandler):
+                    h.close()
+            shutil.rmtree(tmp_dir)

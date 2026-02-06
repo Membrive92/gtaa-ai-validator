@@ -54,6 +54,10 @@ def main(project_path: str, verbose: bool, json_path: str, html_path: str, ai: b
         python -m gtaa_validator ./mi-proyecto-selenium
         python -m gtaa_validator ./mi-proyecto-selenium --verbose
     """
+    # Con --verbose y sin --log-file explícito, escribir a logs/gtaa_debug.log
+    if verbose and not log_file:
+        log_file = "logs/gtaa_debug.log"
+
     # Configurar sistema de logging
     setup_logging(verbose=verbose, log_file=log_file)
 

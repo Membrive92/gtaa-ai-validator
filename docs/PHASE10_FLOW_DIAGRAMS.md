@@ -1,6 +1,13 @@
-# Fase 10 - Optimización de la Capa LLM
+# Fase 10 - Optimización LLM + Logging y Métricas
 
 ## Resumen General
+
+La Fase 10 se divide en dos sub-fases:
+
+- **Fase 10.1**: Optimización de la capa LLM (fallback, factory, tracking)
+- **Fase 10.2**: Sistema de logging profesional + métricas de rendimiento en reportes
+
+### Fase 10.1
 
 La Fase 10.1 se centra en optimizar la capa LLM para manejar las limitaciones de la API de forma elegante. Las mejoras principales son:
 
@@ -529,4 +536,257 @@ python -m gtaa_validator ./proyecto --ai -v --max-llm-calls 5
 
 ---
 
-*Última actualización: 5 de febrero de 2026*
+### Fase 10.2
+
+## 11. Sistema de Logging
+
+### 11.1 Arquitectura del Sistema de Logging
+
+```
+                    setup_logging(verbose, log_file)
+                              │
+                              v
+                  ┌──────────────────────┐
+                  │  Logger raíz          │
+                  │  "gtaa_validator"     │
+                  │  level: DEBUG         │
+                  └──────┬───────────────┘
+                         │
+              ┌──────────┴──────────┐
+              v                     v
+    ┌──────────────────┐  ┌──────────────────┐
+    │ Console Handler  │  │  File Handler    │
+    │ (stderr)         │  │  (opcional)      │
+    │                  │  │                  │
+    │ verbose=True:    │  │ Siempre DEBUG    │
+    │   level=DEBUG    │  │ Formato ISO:     │
+    │ verbose=False:   │  │ %(asctime)s      │
+    │   level=WARNING  │  │ [%(levelname)s]  │
+    └──────────────────┘  │ %(name)s:        │
+                          │ %(message)s      │
+                          └──────────────────┘
+```
+
+### 11.2 Jerarquía de Loggers
+
+```
+gtaa_validator                    <- Logger raíz (configurado en setup_logging)
+├── gtaa_validator.analyzers.static_analyzer   <- 10 mensajes (debug/info/warning)
+├── gtaa_validator.analyzers.semantic_analyzer  <- 3 mensajes (warning/info)
+└── gtaa_validator.llm.factory                  <- 2 mensajes (info/warning)
+```
+
+Todos heredan la configuración del logger raíz `gtaa_validator`.
+
+### 11.3 Migración print() → logging
+
+| Módulo | print() eliminados | Niveles usados |
+|--------|-------------------|----------------|
+| `static_analyzer.py` | 10 | DEBUG (7), INFO (2), WARNING (1) |
+| `semantic_analyzer.py` | 3 | INFO (2), WARNING (1) |
+| `llm/factory.py` | 2 | INFO (1), WARNING (1) |
+| **Total** | **15** | — |
+
+### 11.4 Comportamiento del Log File
+
+```
+┌─────────────────────────────────┐
+│          Flags CLI              │
+├──────────┬──────────────────────┤
+│ --verbose│ --log-file           │
+├──────────┼──────────────────────┤
+│    No    │    No                │  →  Solo consola (WARNING+), sin fichero
+│    Sí    │    No                │  →  Consola (DEBUG+) + logs/gtaa_debug.log
+│    No    │    custom.log        │  →  Consola (WARNING+) + custom.log
+│    Sí    │    custom.log        │  →  Consola (DEBUG+) + custom.log (override)
+└──────────┴──────────────────────┘
+```
+
+El directorio `logs/` se crea automáticamente y está en `.gitignore`.
+
+---
+
+## 12. AnalysisMetrics — Métricas de Rendimiento
+
+### 12.1 Estructura del Dataclass
+
+```python
+@dataclass
+class AnalysisMetrics:
+    # Timing por fase
+    static_analysis_seconds: float = 0.0
+    semantic_analysis_seconds: float = 0.0
+    report_generation_seconds: float = 0.0
+    total_seconds: float = 0.0
+    files_per_second: float = 0.0
+
+    # Métricas LLM (condicionales)
+    llm_api_calls: int = 0
+    llm_input_tokens: int = 0
+    llm_output_tokens: int = 0
+    llm_total_tokens: int = 0
+    llm_estimated_cost_usd: float = 0.0
+```
+
+### 12.2 Flujo de Instrumentación en CLI
+
+```
+__main__.py:
+
+t0 = time.time()
+├── StaticAnalyzer.analyze()
+t1 = time.time()
+├── SemanticAnalyzer.analyze()    (si --ai)
+t2 = time.time()
+├── JsonReporter.generate()       (si --json)
+├── HtmlReporter.generate()       (si --html)
+t3 = time.time()
+
+metrics = AnalysisMetrics(
+    static_analysis_seconds  = t1 - t0,
+    semantic_analysis_seconds = t2 - t1,    # 0.0 si no --ai
+    report_generation_seconds = t3 - t2,
+    total_seconds = t3 - t0,
+    files_per_second = files / (t1 - t0),
+)
+
+# Si --ai: poblar métricas LLM desde SemanticAnalyzer
+if semantic:
+    token_usage = semantic.get_token_usage()
+    metrics.llm_api_calls = token_usage['total_calls']
+    metrics.llm_total_tokens = token_usage['total_tokens']
+    ...
+```
+
+### 12.3 Serialización Condicional
+
+```python
+def to_dict(self) -> dict:
+    result = {
+        "timing": {
+            "static_analysis_seconds": ...,
+            "total_seconds": ...,
+            "files_per_second": ...,
+        }
+    }
+    # Solo incluir sección LLM si hubo llamadas API
+    if self.llm_api_calls > 0:
+        result["llm"] = {
+            "api_calls": ...,
+            "total_tokens": ...,
+            "estimated_cost_usd": ...,
+        }
+    return result
+```
+
+### 12.4 Visualización en Reportes
+
+**HTML — Tarjetas de métricas:**
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  Métricas de Rendimiento                                 │
+├──────────────┬───────────────┬───────────────────────────┤
+│ 0.45s        │ 2.10s         │ 11.1                     │
+│ Análisis     │ Análisis      │ Archivos/                │
+│ Estático     │ Semántico     │ segundo                  │
+├──────────────┼───────────────┼───────────────────────────┤
+│ 3            │ 2,000         │ $0.0030                  │
+│ Llamadas API │ Tokens        │ Costo                    │
+│  (LLM)      │ Totales (LLM) │ Estimado (LLM)           │
+└──────────────┴───────────────┴───────────────────────────┘
+```
+
+Las tarjetas LLM (borde morado) solo aparecen cuando `llm_api_calls > 0`.
+
+**JSON — En metadata:**
+
+```json
+{
+    "metadata": {
+        "metrics": {
+            "timing": {
+                "static_analysis_seconds": 0.45,
+                "semantic_analysis_seconds": 2.10,
+                "total_seconds": 2.55,
+                "files_per_second": 11.1
+            },
+            "llm": {
+                "api_calls": 3,
+                "total_tokens": 2000,
+                "estimated_cost_usd": 0.003
+            }
+        }
+    }
+}
+```
+
+---
+
+## 13. Estructura de Archivos Después de Fase 10.2
+
+```
+gtaa_validator/
+├── logging_config.py          # NUEVO: setup_logging() centralizado
+├── models.py                  # MODIFICADO: +AnalysisMetrics, Report.metrics
+├── __main__.py                # MODIFICADO: timing, --log-file, default log path
+│
+├── analyzers/
+│   ├── static_analyzer.py     # MODIFICADO: print() → logging (10 sentencias)
+│   └── semantic_analyzer.py   # MODIFICADO: print() → logging (3 sentencias)
+│
+├── llm/
+│   └── factory.py             # MODIFICADO: print() → logging (2 sentencias)
+│
+└── reporters/
+    ├── html_reporter.py       # MODIFICADO: +sección métricas de rendimiento
+    └── json_reporter.py       # Sin cambios (ya serializa Report.to_dict())
+
+tests/unit/
+├── test_logging_config.py     # NUEVO: 9 tests para logging
+├── test_models.py             # MODIFICADO: +9 tests para AnalysisMetrics
+├── test_html_reporter.py      # MODIFICADO: +4 tests para métricas HTML
+└── test_json_reporter.py      # MODIFICADO: +2 tests para métricas JSON
+```
+
+---
+
+## 14. Opciones CLI Actualizadas (Fase 10.1 + 10.2)
+
+| Opción | Tipo | Defecto | Descripción |
+|--------|------|---------|-------------|
+| `--ai` | flag | False | Activar análisis semántico con LLM |
+| `--provider` | choice | auto | Proveedor LLM: `gemini`, `mock` |
+| `--max-llm-calls` | int | None | Máx llamadas API antes de fallback |
+| `--verbose` / `-v` | flag | False | Salida detallada + log a `logs/gtaa_debug.log` |
+| `--log-file` | path | None | Ruta personalizada para log (override del default) |
+
+### Ejemplos de Uso
+
+```bash
+# Análisis básico (sin logs a fichero)
+python -m gtaa_validator ./proyecto
+
+# Verbose: consola DEBUG + logs/gtaa_debug.log automático
+python -m gtaa_validator ./proyecto --verbose
+
+# Log a fichero personalizado
+python -m gtaa_validator ./proyecto --log-file output/analysis.log
+
+# Análisis AI con métricas completas
+python -m gtaa_validator ./proyecto --ai --verbose --html report.html --json report.json
+```
+
+---
+
+## 15. Commits en Fase 10.2
+
+| Commit | Tipo | Descripción |
+|--------|------|-------------|
+| `136c6a4` | feat | Añadir logging_config.py y dataclass AnalysisMetrics |
+| `080970a` | refactor | Reemplazar 15 print() con logging en módulos internos |
+| `789b5dc` | feat | Poblar métricas y mostrar en reportes HTML/JSON |
+
+---
+
+*Última actualización: 6 de febrero de 2026*

@@ -52,6 +52,8 @@ El formato sigue la estructura de un ADR (Architecture Decision Record) adaptado
 40. [RateLimitError y fallback automático](#40-ratelimiterror-y-fallback-automático)
 41. [Call limiting con --max-llm-calls](#41-call-limiting-con---max-llm-calls)
 42. [Provider tracking en reportes](#42-provider-tracking-en-reportes)
+43. [Logging con stdlib frente a print() o librerías externas](#43-logging-con-stdlib-frente-a-print-o-librerías-externas)
+44. [Ruta por defecto de log file con --verbose](#44-ruta-por-defecto-de-log-file-con---verbose)
 
 ---
 
@@ -2823,6 +2825,157 @@ Todo sistema debe exponer su estado interno para facilitar debugging y comprensi
 
 ---
 
+## 43. Logging con stdlib frente a print() o librerías externas
+
+### Problema
+
+El proyecto tenía 15 sentencias `print()` dispersas en 3 módulos internos (`static_analyzer.py`, `semantic_analyzer.py`, `factory.py`) para output de debug/verbose. Esto presenta varios problemas:
+
+- Sin niveles de severidad: todo se muestra igual (debug, warning, info)
+- Sin formato consistente: cada módulo formatea diferente
+- Sin persistencia: no hay forma de guardar logs a fichero
+- Acoplamiento con `--verbose`: cada `print()` envuelto en `if self.verbose`
+- Output mezclado: mensajes internos y output CLI van al mismo `stdout`
+
+Se necesita un sistema de observabilidad profesional que soporte niveles, formato, persistencia y separación de canales.
+
+### Alternativa evaluada: Librerías externas (loguru, structlog)
+
+```python
+# Con loguru
+from loguru import logger
+
+logger.debug("Análisis completado: {files} archivos", files=10)
+logger.add("debug.log", rotation="10 MB")
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Dependencia extra | Añade una dependencia externa al proyecto |
+| Overhead conceptual | API diferente a stdlib, requiere aprendizaje |
+| Scope del proyecto | Para un TFM, stdlib es más que suficiente |
+| Interoperabilidad | Librerías de terceros usan `logging` estándar |
+
+### Solución elegida: `logging` stdlib con configuración centralizada
+
+```python
+# gtaa_validator/logging_config.py
+
+def setup_logging(verbose: bool = False, log_file: str = None) -> None:
+    logger = logging.getLogger("gtaa_validator")
+    logger.setLevel(logging.DEBUG)
+
+    # Consola (stderr): DEBUG si verbose, WARNING si no
+    console = logging.StreamHandler(sys.stderr)
+    console.setLevel(logging.DEBUG if verbose else logging.WARNING)
+
+    # Fichero (opcional): siempre DEBUG
+    if log_file:
+        Path(log_file).parent.mkdir(parents=True, exist_ok=True)
+        file_handler = logging.FileHandler(log_file, encoding="utf-8")
+        file_handler.setLevel(logging.DEBUG)
+```
+
+**Migración de módulos internos:**
+
+```python
+# Antes (static_analyzer.py)
+if self.verbose:
+    print(f"[StaticAnalyzer] Verificando: {file_path}")
+
+# Después
+logger.debug("Verificando: %s", file_path)
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Zero dependencias | `logging` es parte de la stdlib de Python |
+| Niveles nativos | DEBUG, INFO, WARNING, ERROR, CRITICAL |
+| Separación de canales | Console handler en stderr, file handler opcional |
+| Formato consistente | `[LEVEL] module: message` en consola, ISO timestamp en fichero |
+| Eliminación de condicionales | `logger.debug()` sustituye a `if verbose: print()` |
+| Jerarquía de loggers | `gtaa_validator.analyzers.static_analyzer` hereda configuración |
+
+**Principio aplicado — Separation of Concerns:**
+
+La lógica de negocio (análisis) se desacopla de la lógica de presentación (logging). Los módulos solo emiten mensajes; la configuración de cómo y dónde se muestran es responsabilidad de `logging_config.py`.
+
+---
+
+## 44. Ruta por defecto de log file con --verbose
+
+### Problema
+
+Con la introducción del sistema de logging (ADR 43), el flag `--log-file` permite persistir logs a disco. Sin embargo, el usuario que usa `--verbose` para debug probablemente también quiere los logs en fichero para poder revisarlos después. Tener que especificar `--verbose --log-file logs/debug.log` cada vez es verboso y propenso a olvidos.
+
+### Alternativa evaluada: No generar fichero por defecto
+
+```bash
+# Solo consola, sin fichero
+python -m gtaa_validator ./proyecto --verbose
+
+# Fichero requiere flag explícito siempre
+python -m gtaa_validator ./proyecto --verbose --log-file logs/debug.log
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Pérdida de información | Logs de debug se pierden al cerrar la terminal |
+| Fricción de uso | Hay que recordar añadir `--log-file` cada vez |
+| Debug post-mortem | Sin fichero, no se puede revisar un análisis pasado |
+
+### Solución elegida: `--verbose` genera fichero automáticamente en `logs/gtaa_debug.log`
+
+```python
+# gtaa_validator/__main__.py
+
+# Con --verbose y sin --log-file explícito, escribir a logs/gtaa_debug.log
+if verbose and not log_file:
+    log_file = "logs/gtaa_debug.log"
+
+setup_logging(verbose=verbose, log_file=log_file)
+```
+
+**Comportamiento resultante:**
+
+| Flags usados | Consola (stderr) | Fichero |
+|-------------|-------------------|---------|
+| _(ninguno)_ | Solo WARNING+ | No se crea |
+| `--verbose` | DEBUG+ | `logs/gtaa_debug.log` (auto) |
+| `--log-file custom.log` | Solo WARNING+ | `custom.log` |
+| `--verbose --log-file custom.log` | DEBUG+ | `custom.log` (override) |
+
+**Auto-creación de directorio:**
+
+```python
+# logging_config.py — crea directorios padre si no existen
+Path(log_file).parent.mkdir(parents=True, exist_ok=True)
+```
+
+El directorio `logs/` está en `.gitignore`, así que no se commitean ficheros de log.
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Zero config para debug | `--verbose` es suficiente para tener logs persistentes |
+| Override explícito | `--log-file` permite cambiar la ruta si se necesita |
+| Ruta predecible | Siempre `logs/gtaa_debug.log`, fácil de encontrar |
+| Sin sorpresas en producción | Sin `--verbose`, no se crea ningún fichero |
+| Limpieza | `logs/` en `.gitignore` evita commits accidentales |
+
+**Principio aplicado — Convention over Configuration:**
+
+Se establece una convención razonable (`logs/gtaa_debug.log`) que cubre el caso de uso más común (debug con persistencia), pero se permite configuración explícita cuando el usuario lo necesita.
+
+---
+
 ## Resumen de decisiones
 
 | Decisión | Solución elegida | Alternativa descartada | Justificación principal |
@@ -2866,7 +3019,9 @@ Todo sistema debe exponer su estado interno para facilitar debugging y comprensi
 | Errores rate limit | RateLimitError + fallback | Propagar excepción | Graceful degradation, preserva trabajo, consistente con ADR 15 |
 | Límite de llamadas LLM | --max-llm-calls proactivo | Solo fallback por error | Control de usuario, predecible, ahorra quota |
 | Tracking de proveedor | llm_provider_info en Report | Sin tracking | Transparencia, auditabilidad, debugging |
+| Sistema de logging | `logging` stdlib centralizado | `print()` / loguru | Zero deps, niveles nativos, separación de canales |
+| Ruta default log file | Auto `logs/gtaa_debug.log` con `--verbose` | Sin fichero por defecto | Convention over Configuration, zero config para debug |
 
 ---
 
-*Última actualización: 5 de febrero de 2026*
+*Última actualización: 6 de febrero de 2026*
