@@ -338,12 +338,23 @@ class Violation:
         if not self.message:
             self.message = self.violation_type.get_description()
 
-    def to_dict(self) -> dict:
-        """Convertir violación a diccionario para serialización JSON."""
+    def to_dict(self, project_path: Optional[Path] = None) -> dict:
+        """Convertir violación a diccionario para serialización JSON.
+
+        Args:
+            project_path: Si se proporciona, las rutas se relativizan
+                          respecto a este directorio (SEC-03).
+        """
+        file_display = self.file_path
+        if project_path:
+            try:
+                file_display = self.file_path.relative_to(project_path)
+            except ValueError:
+                file_display = self.file_path
         return {
             "type": self.violation_type.name,
             "severity": self.severity.value,
-            "file": str(self.file_path),
+            "file": str(file_display),
             "line": self.line_number,
             "message": self.message,
             "code_snippet": self.code_snippet,
@@ -444,9 +455,14 @@ class Report:
         }
 
     def to_dict(self) -> dict:
-        """Convertir informe a diccionario para serialización JSON."""
+        """Convertir informe a diccionario para serialización JSON.
+
+        Las rutas se relativizan respecto a project_path para no exponer
+        rutas absolutas del sistema de archivos del usuario (SEC-03).
+        """
+        # Usar solo el nombre del directorio, no la ruta absoluta
         metadata = {
-            "project_path": str(self.project_path),
+            "project_path": self.project_path.name,
             "timestamp": self.timestamp.isoformat(),
             "validator_version": self.validator_version,
             "execution_time_seconds": self.execution_time_seconds,
@@ -467,5 +483,5 @@ class Report:
                 "violations_by_severity": self.get_violation_count_by_severity(),
                 "score": self.score,
             },
-            "violations": [v.to_dict() for v in self.violations]
+            "violations": [v.to_dict(project_path=self.project_path) for v in self.violations]
         }

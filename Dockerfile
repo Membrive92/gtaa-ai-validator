@@ -46,6 +46,10 @@ RUN pip install --no-cache-dir /tmp/wheels/* && rm -rf /tmp/wheels
 # Variable de entorno para API key de Gemini (pasar en runtime con -e)
 ENV GEMINI_API_KEY=""
 
+# Crear usuario sin privilegios (SEC-06: principio de minimo privilegio)
+RUN useradd --create-home --shell /bin/bash validator
+USER validator
+
 # Directorio de trabajo donde se monta el proyecto del usuario
 WORKDIR /project
 

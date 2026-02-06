@@ -590,6 +590,27 @@ Diagramas de flujo de la Fase 9: Soporte Multilenguaje (Java + JavaScript/TypeSc
 - Patrones específicos por extensión (.py, .java, .js, .cs) en diccionarios
 - Dependency Inversion: checkers dependen de ParseResult, no de parsers concretos
 
+### [PHASE10_SECURITY_AUDIT.md](PHASE10_SECURITY_AUDIT.md)
+
+Auditoría de seguridad del código fuente del proyecto (Fase 10).
+
+**Contenido**:
+- 9 hallazgos de seguridad clasificados por severidad (2 críticos, 4 altos, 3 medios)
+- Análisis detallado por hallazgo: código afectado, vector de ataque, riesgo, recomendación
+- Clasificación OWASP Top 10 y estándares de seguridad
+- Buenas prácticas de seguridad ya implementadas (XSS prevention, safe YAML, env vars)
+- Matriz de riesgo (probabilidad vs impacto)
+- Tabla resumen y prioridad de remediación
+
+**Categorías auditadas**:
+- Inyección de comandos (shell, code injection)
+- Path traversal y divulgación de información
+- Gestión de secretos y API keys
+- Denegación de servicio (DoS, ReDoS)
+- Cross-Site Scripting (XSS) en reportes HTML
+- Seguridad de contenedores Docker
+- Supply chain en GitHub Actions
+
 ---
 
 ## Documentación Futura (Planeada)
@@ -618,8 +639,9 @@ Guía para contribuir al proyecto (estructura de código, estándares, pull requ
 8. Lee [PHASE8_FLOW_DIAGRAMS.md](PHASE8_FLOW_DIAGRAMS.md) para el soporte Gherkin/BDD
 9. Lee [PHASE9_FLOW_DIAGRAMS.md](PHASE9_FLOW_DIAGRAMS.md) para el soporte multilenguaje (Java, JS/TS, C#)
 10. Lee [PHASE10_FLOW_DIAGRAMS.md](PHASE10_FLOW_DIAGRAMS.md) para optimización LLM, logging, packaging y despliegue
-11. Lee [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md) para las justificaciones técnicas (54 ADRs)
-11. Ejecuta el código mientras lees:
+11. Lee [PHASE10_SECURITY_AUDIT.md](PHASE10_SECURITY_AUDIT.md) para la auditoría de seguridad del código
+12. Lee [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md) para las justificaciones técnicas (55 ADRs)
+13. Ejecuta el código mientras lees:
     - Python: `python -m gtaa_validator examples/bad_project --ai --verbose`
     - Java: `python -m gtaa_validator examples/java_project --verbose`
     - JS/TS: `python -m gtaa_validator examples/js_project --verbose`

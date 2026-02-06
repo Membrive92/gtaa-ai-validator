@@ -52,7 +52,7 @@ runs:
   using: composite
   steps:
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
       with:
         python-version: ${{ inputs.python_version }}
         cache: pip
@@ -65,29 +65,30 @@ runs:
       id: analyze
       shell: bash
       run: |
-        # Construir comando base
-        CMD="gtaa-validator ${{ inputs.project_path }}"
-        CMD="$CMD --json gtaa_report.json --html gtaa_report.html"
+        # Construir array de argumentos (sin eval — SEC-01)
+        ARGS=()
+        ARGS+=("${{ inputs.project_path }}")
+        ARGS+=("--json" "gtaa_report.json" "--html" "gtaa_report.html")
 
         # Opciones condicionales
         if [ "${{ inputs.verbose }}" = "true" ]; then
-          CMD="$CMD --verbose"
+          ARGS+=("--verbose")
         fi
         if [ "${{ inputs.ai }}" = "true" ]; then
-          CMD="$CMD --ai"
+          ARGS+=("--ai")
         fi
         if [ -n "${{ inputs.provider }}" ]; then
-          CMD="$CMD --provider ${{ inputs.provider }}"
+          ARGS+=("--provider" "${{ inputs.provider }}")
         fi
         if [ -n "${{ inputs.config_path }}" ]; then
-          CMD="$CMD --config ${{ inputs.config_path }}"
+          ARGS+=("--config" "${{ inputs.config_path }}")
         fi
 
-        echo "Executing: $CMD"
+        echo "Executing: gtaa-validator ${ARGS[*]}"
 
-        # Ejecutar (exit code 1 si hay violaciones criticas)
+        # Ejecutar directamente sin eval (exit code 1 si hay violaciones criticas)
         set +e
-        eval $CMD
+        gtaa-validator "${ARGS[@]}"
         VALIDATOR_EXIT=$?
         set -e
 
@@ -117,7 +118,7 @@ runs:
 
     - name: Upload reports as artifacts
       if: inputs.upload_reports == 'true' && always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: gtaa-validator-reports
         path: |

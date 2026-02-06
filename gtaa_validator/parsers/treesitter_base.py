@@ -12,6 +12,8 @@ from pathlib import Path
 from typing import List, Optional, Set, Dict, Any
 from abc import ABC, abstractmethod
 
+from gtaa_validator.file_utils import read_file_safe
+
 # tree-sitter imports
 from tree_sitter import Parser, Language, Node
 
@@ -154,8 +156,11 @@ class TreeSitterBaseParser(ABC):
             ParseResult con información extraída
         """
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                source = f.read()
+            source = read_file_safe(file_path)
+            if not source:
+                result = ParseResult(language=self.language)
+                result.parse_errors.append("Archivo vacio o excede limite de tamano")
+                return result
             return self.parse(source)
         except Exception as e:
             result = ParseResult(language=self.language)

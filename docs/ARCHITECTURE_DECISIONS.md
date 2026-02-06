@@ -64,6 +64,7 @@ El formato sigue la estructura de un ADR (Architecture Decision Record) adaptado
 52. [Docker multistage con wheels frente a imagen monolítica](#52-docker-multistage-con-wheels-frente-a-imagen-monolítica)
 53. [GitHub Action composite frente a Docker-based](#53-github-action-composite-frente-a-docker-based)
 54. [build-backend setuptools.build_meta frente a _legacy](#54-build-backend-setuptoolsbuild_meta-frente-a-_legacy)
+55. [Auditoría de seguridad como documentación formal](#55-auditoría-de-seguridad-como-documentación-formal)
 
 ---
 
@@ -3246,6 +3247,24 @@ ENTRYPOINT ["gtaa-validator"]
 
 ---
 
+## 55. Auditoría de seguridad como documentación formal
+
+**Problema:** El proyecto se distribuye como CLI, Docker y GitHub Action. Cada vector de distribución introduce superficies de ataque distintas. Se necesita una evaluación formal de seguridad para un TFM de calidad profesional.
+
+**Alternativas evaluadas:**
+
+| Alternativa | Evaluación |
+|---|---|
+| Sin auditoría | Incompleto para un TFM. Ignora riesgos reales en action.yml (eval), Docker (root), etc. |
+| Auditoría informal (solo comentarios en código) | No trazable, no demostrable al evaluador |
+| **Documento formal con hallazgos clasificados** | Trazable, clasificado por OWASP, con recomendaciones accionables |
+
+**Solución elegida:** Documento dedicado `docs/PHASE10_SECURITY_AUDIT.md` con 9 hallazgos clasificados por severidad (CRITICA/ALTA/MEDIA), referencias OWASP Top 10, vectores de ataque, código afectado, recomendaciones y matriz de riesgo probabilidad-impacto.
+
+**Justificación:** Demuestra madurez profesional ante el evaluador del TFM. Documenta tanto los riesgos encontrados como las buenas prácticas ya implementadas (XSS prevention con `html.escape()`, `yaml.safe_load()`, secrets via env vars). La clasificación OWASP permite priorizar remediación de forma estándar.
+
+---
+
 ## Resumen de decisiones
 
 | Decisión | Solución elegida | Alternativa descartada | Justificación principal |
@@ -3301,7 +3320,8 @@ ENTRYPOINT ["gtaa-validator"]
 | Docker | Multistage con `pip wheel` | Imagen monolítica | ~150MB vs ~400MB, sin build tools en runtime |
 | GitHub Action | Composite action | Docker-based action | Rápido, versión Python flexible, sin overhead Docker |
 | build-backend | `setuptools.build_meta` | `_legacy` (privado) | API pública, PEP 517, estable |
+| Auditoría de seguridad | Documento formal OWASP | Sin auditoría / comentarios | Trazable, clasificado, accionable, demuestra madurez profesional |
 
 ---
 
-*Última actualización: 6 de febrero de 2026 (Fase 10.4)*
+*Última actualización: 6 de febrero de 2026 (Fase 10.4 — Auditoría de seguridad)*

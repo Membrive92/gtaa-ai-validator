@@ -25,6 +25,7 @@ from typing import List, Optional, Union, Set
 logger = logging.getLogger(__name__)
 
 from gtaa_validator.checkers.base import BaseChecker
+from gtaa_validator.file_utils import read_file_safe
 from gtaa_validator.models import Violation, ViolationType, Severity
 from gtaa_validator.parsers.treesitter_base import (
     ParseResult, ParsedFunction, ParsedString
@@ -136,8 +137,9 @@ class QualityChecker(BaseChecker):
         extension = file_path.suffix.lower()
 
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                source_code = f.read()
+            source_code = read_file_safe(file_path)
+            if not source_code:
+                return violations
             lines = source_code.splitlines()
 
             # Obtener ParseResult

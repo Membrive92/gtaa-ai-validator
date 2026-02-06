@@ -111,6 +111,10 @@ class APILLMClient:
         self.client = genai.Client(api_key=api_key)
         self.usage = TokenUsage()  # Tracking de consumo
 
+    def __repr__(self) -> str:
+        """Representación segura que nunca expone la API key (SEC-04)."""
+        return f"APILLMClient(model='{self.model}')"
+
     def analyze_file(self, file_content: str, file_path: str,
                      file_type: str = "unknown",
                      has_auto_wait: bool = False) -> List[dict]:

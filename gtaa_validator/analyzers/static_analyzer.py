@@ -39,6 +39,7 @@ from gtaa_validator.checkers.bdd_checker import BDDChecker
 from gtaa_validator.file_classifier import FileClassifier
 from gtaa_validator.config import ProjectConfig, load_config
 from gtaa_validator.parsers.treesitter_base import ParseResult, get_parser_for_file
+from gtaa_validator.file_utils import read_file_safe
 
 logger = logging.getLogger(__name__)
 
@@ -250,8 +251,9 @@ class StaticAnalyzer:
         file_type = "unknown"
 
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                source_code = f.read()
+            source_code = read_file_safe(file_path)
+            if not source_code:
+                return violations
 
             # Obtener parser apropiado para el lenguaje
             parser = get_parser_for_file(file_path)

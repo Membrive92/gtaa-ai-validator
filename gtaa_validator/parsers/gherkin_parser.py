@@ -19,6 +19,8 @@ import re
 from dataclasses import dataclass, field
 from typing import List, Optional
 
+from gtaa_validator.file_utils import read_file_safe
+
 logger = logging.getLogger(__name__)
 
 
@@ -178,8 +180,9 @@ class GherkinParser:
             GherkinFeature o None si no se puede leer/parsear
         """
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                content = f.read()
+            content = read_file_safe(file_path)
+            if not content:
+                return None
             return self.parse(content)
         except Exception as e:
             logger.debug("Error parsing gherkin file %s: %s", file_path, e)

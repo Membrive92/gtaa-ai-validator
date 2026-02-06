@@ -262,7 +262,7 @@ class TestReport:
         assert "summary" in d
         assert "violations" in d
 
-        assert d["metadata"]["project_path"] == str(Path("/fake/project"))
+        assert d["metadata"]["project_path"] == "project"
         assert d["summary"]["files_analyzed"] == 10
         assert d["summary"]["total_violations"] == 4
         assert len(d["violations"]) == 4

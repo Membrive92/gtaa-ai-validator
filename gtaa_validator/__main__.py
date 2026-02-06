@@ -18,7 +18,11 @@ import time
 from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+# Cargar .env desde el directorio del paquete, NO desde CWD del proyecto analizado (SEC-08)
+_package_dir = Path(__file__).resolve().parent.parent
+load_dotenv(_package_dir / ".env")
+# Tambien cargar desde home del usuario como fallback
+load_dotenv(Path.home() / ".env")
 
 from gtaa_validator.analyzers.static_analyzer import StaticAnalyzer
 from gtaa_validator.reporters.json_reporter import JsonReporter

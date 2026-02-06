@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import List, Optional, Dict, Set
 
 from gtaa_validator.checkers.base import BaseChecker
+from gtaa_validator.file_utils import read_file_safe
 from gtaa_validator.models import Violation, ViolationType, Severity
 from gtaa_validator.parsers.gherkin_parser import GherkinParser
 
@@ -47,8 +48,8 @@ class BDDChecker(BaseChecker):
         re.compile(r'\.[\w-]{3,}\b'),                   # CSS class selector
         re.compile(r'By\.\w+'),                         # Selenium By.*
         re.compile(r'\[data-[\w-]+'),                   # data attributes
-        re.compile(r'https?://\S+'),                    # URLs
-        re.compile(r'SELECT\s+.+\s+FROM', re.IGNORECASE),  # SQL
+        re.compile(r'https?://\S{1,2000}'),               # URLs (SEC-07: limite ReDoS)
+        re.compile(r'SELECT\s+.{1,500}\s+FROM', re.IGNORECASE),  # SQL (SEC-07)
         re.compile(r'INSERT\s+INTO', re.IGNORECASE),   # SQL
         re.compile(r'localhost:\d+'),                   # localhost URLs
         re.compile(r'<[\w/]+>'),                        # HTML tags
@@ -142,11 +143,8 @@ class BDDChecker(BaseChecker):
             return violations
 
         # Leer contenido para regex
-        try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                content = f.read()
-        except Exception as e:
-            logger.debug("Error reading feature file %s: %s", file_path, e)
+        content = read_file_safe(file_path)
+        if not content:
             return violations
 
         lines = content.splitlines()
@@ -211,11 +209,8 @@ class BDDChecker(BaseChecker):
         """Verificar step definitions en busca de violaciones."""
         violations = []
 
-        try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                source_code = f.read()
-        except Exception as e:
-            logger.debug("Error reading step definition %s: %s", file_path, e)
+        source_code = read_file_safe(file_path)
+        if not source_code:
             return violations
 
         if tree is None:
@@ -341,8 +336,9 @@ class BDDChecker(BaseChecker):
     def _collect_step_patterns(self, file_path: Path):
         """Recolectar step patterns de un archivo para detección de duplicados."""
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                source = f.read()
+            source = read_file_safe(file_path)
+            if not source:
+                return
             tree = ast.parse(source)
         except Exception as e:
             logger.debug("Error parsing step patterns from %s: %s", file_path, e)
