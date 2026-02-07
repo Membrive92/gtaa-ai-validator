@@ -5,10 +5,10 @@
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Estado](https://img.shields.io/badge/estado-en%20desarrollo-yellow)](https://github.com/Membrive92/gtaa-ai-validator)
-[![Fase](https://img.shields.io/badge/fase-10.6%2F10-blue)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Fase](https://img.shields.io/badge/fase-10.7%2F10-blue)](https://github.com/Membrive92/gtaa-ai-validator)
 [![Progreso](https://img.shields.io/badge/progreso-99%25-green)](https://github.com/Membrive92/gtaa-ai-validator)
 [![Coverage](https://img.shields.io/badge/coverage-93%25-brightgreen)](https://github.com/Membrive92/gtaa-ai-validator)
-[![Tests](https://img.shields.io/badge/tests-667-brightgreen)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Tests](https://img.shields.io/badge/tests-672-brightgreen)](https://github.com/Membrive92/gtaa-ai-validator)
 [![CI](https://github.com/Membrive92/gtaa-ai-validator/actions/workflows/ci.yml/badge.svg)](https://github.com/Membrive92/gtaa-ai-validator/actions/workflows/ci.yml)
 [![Docker](https://img.shields.io/badge/docker-ready-blue)](https://github.com/Membrive92/gtaa-ai-validator/blob/main/Dockerfile)
 
@@ -16,7 +16,7 @@
 >
 > Autor: Jose Antonio Membrive Guillen
 > Año: 2025-2026
-> **Estado:** Fase 10.6/10 Completa | Última actualización: 6 Febrero 2026
+> **Estado:** Fase 10.7/10 Completa | Última actualización: 7 Febrero 2026
 
 ---
 
@@ -46,6 +46,7 @@
 | ↳ **✅ 10.4** | Despliegue: Docker + GitHub Actions CI + reusable action | **COMPLETO** | **06/02/2026** |
 | ↳ **✅ 10.5** | Cobertura de código: 84% a 93% (633 tests) | **COMPLETO** | **06/02/2026** |
 | ↳ **✅ 10.6** | Tests de regresión de seguridad (34 tests, SEC-01 a SEC-09) | **COMPLETO** | **06/02/2026** |
+| ↳ **✅ 10.7** | Refactor quality_checker + Reportes Allure-style + HTML redesign | **COMPLETO** | **07/02/2026** |
 
 ### 📊 Funcionalidades Implementadas vs Planeadas
 
@@ -58,10 +59,11 @@
 | ✅ Detección de 23 tipos de violaciones gTAA | Implementado | Fase 2-8 — 5 checkers + LLM |
 | ✅ Sistema de scoring (0-100) | Implementado | Penalización por severidad |
 | ✅ Proyectos de ejemplo (bueno/malo) | Implementado | En directorio examples/ |
-| ✅ Tests unitarios + integración + seguridad (667 tests, 93% coverage) | Implementado | pytest + pytest-cov con unit/ e integration/ |
+| ✅ Tests unitarios + integración + seguridad (672 tests, 93% coverage) | Implementado | pytest + pytest-cov con unit/ e integration/ |
 | ✅ Documentación técnica con diagramas | Implementado | docs/ con flujos Fase 1-10, 55 ADRs |
-| ✅ Reportes HTML dashboard | Implementado | Fase 4 — SVG inline, autocontenido |
+| ✅ Reportes HTML dashboard | Implementado | Fase 4+10.7 — SVG inline, autocontenido, rediseño visual |
 | ✅ Reportes JSON para CI/CD | Implementado | Fase 4 — `--json` / `--html` |
+| ✅ Auto-generación de reportes (Allure-style) | Implementado | Fase 10.7 — `--output-dir`, `--no-report`, timestamps |
 | ✅ Análisis semántico con LLM | Implementado | Fase 5 — Gemini Flash API + MockLLM fallback |
 | ✅ Soporte proyectos mixtos (API + UI) | Implementado | Fase 7 — FileClassifier, .gtaa.yaml, auto-wait Playwright |
 | ✅ Soporte Gherkin/BDD (Behave + pytest-bdd) | Implementado | Fase 8 — GherkinParser, BDDChecker, 5 violaciones BDD |
@@ -297,12 +299,13 @@ jobs:
 
 ---
 
-### ✅ Funcionalidad ACTUAL (Fase 10.4)
+### ✅ Funcionalidad ACTUAL (Fase 10.7)
 
 **Funcionalidad disponible en la versión actual:**
 
 ```bash
 # Análisis estático multilenguaje (Python, Java, JS/TS, C#)
+# Genera reportes automáticamente en gtaa-reports/ (Allure-style)
 python -m gtaa_validator /path/to/your/test-project
 
 # Modo verbose para ver detalles de cada violación
@@ -317,7 +320,12 @@ python -m gtaa_validator /path/to/project --ai --max-llm-calls 5
 # Configuración por proyecto (.gtaa.yaml)
 python -m gtaa_validator /path/to/project --config /path/.gtaa.yaml
 
-# Exportar reportes
+# Reportes automáticos (por defecto en gtaa-reports/)
+python -m gtaa_validator examples/bad_project                          # → gtaa-reports/gtaa_report_bad_project_2026-02-07.json/.html
+python -m gtaa_validator examples/bad_project --output-dir mis-reportes # → mis-reportes/gtaa_report_bad_project_2026-02-07.json/.html
+python -m gtaa_validator examples/bad_project --no-report              # Sin reportes
+
+# Exportar reportes a rutas explícitas (desactiva auto-generación)
 python -m gtaa_validator examples/bad_project --html report.html
 python -m gtaa_validator examples/bad_project --json report.json
 python -m gtaa_validator examples/bad_project --ai --html report.html --json report.json --verbose
@@ -325,12 +333,13 @@ python -m gtaa_validator examples/bad_project --ai --html report.html --json rep
 # Probar con ejemplos incluidos (Python, Java, JS, C#)
 python -m gtaa_validator examples/bad_project --verbose
 python -m gtaa_validator examples/good_project
+python -m gtaa_validator examples/python_live_project --verbose
 python -m gtaa_validator examples/java_project --verbose
 python -m gtaa_validator examples/js_project --verbose
 python -m gtaa_validator examples/csharp_project --verbose
 
 # Ejecutar tests
-pytest tests/                                        # Todos (667 tests)
+pytest tests/                                        # Todos (672 tests)
 pytest tests/unit/                                   # Solo unitarios
 pytest tests/integration/                            # Solo integración
 pytest tests/ --cov=gtaa_validator --cov-report=term  # Con cobertura
@@ -355,13 +364,14 @@ pytest tests/ --cov=gtaa_validator --cov-report=term  # Con cobertura
 - ✅ Sistema de scoring 0-100 basado en severidad de violaciones
 - ✅ Modo verbose con detalles: archivo, línea, código, mensaje, sugerencias AI
 - ✅ Exit code 1 si hay violaciones críticas (útil para CI/CD)
-- ✅ Reporte HTML dashboard autocontenido con SVG inline (score gauge, gráficos, tablas)
+- ✅ Reporte HTML dashboard autocontenido con SVG inline (score gauge, gráficos, tablas, accesibilidad ARIA)
 - ✅ Reporte JSON estructurado para integración CI/CD
-- ✅ Flags `--json`, `--html`, `--ai` y `--config` compatibles entre sí
+- ✅ Auto-generación de reportes en `gtaa-reports/` con nombres `gtaa_report_{proyecto}_{fecha}.json/.html`
+- ✅ Flags `--output-dir`, `--no-report`, `--json`, `--html`, `--ai` y `--config` compatibles entre sí
 - ✅ Soporte BDD: analiza archivos .feature y step definitions (Behave, pytest-bdd)
 - ✅ GherkinParser regex-based sin dependencias externas
 - ✅ 5 violaciones BDD: detalles técnicos en Gherkin, browser calls en steps, complejidad, falta de Then, duplicados
-- ✅ 667 tests automatizados (93% cobertura de código)
+- ✅ 672 tests automatizados (93% cobertura de código)
 
 **Ejemplo de salida (con --ai):**
 ```
@@ -414,6 +424,12 @@ examples/
 │   │   └── search_steps.py    # Step pattern duplicado
 │   └── pages/
 │       └── checkout_page.py   # POM con asserts, imports prohibidos, lógica
+├── python_live_project/       # Proyecto realista Playwright con Page Objects (78 violaciones)
+│   ├── pages/                 # Page Objects (login, cart, checkout, products...)
+│   ├── tests/                 # Tests E2E, API, cart, dashboard
+│   ├── api/                   # Cliente API y schemas
+│   ├── config/                # Configuración del proyecto
+│   └── utils/                 # Helpers y reporter
 └── good_project/              # Proyecto con arquitectura gTAA correcta
     ├── tests/
     │   └── test_login.py      # Tests usando Page Objects
@@ -426,6 +442,9 @@ examples/
 ```bash
 # Analizar proyecto con violaciones (score esperado: 0/100)
 python -m gtaa_validator examples/bad_project --verbose
+
+# Analizar proyecto realista Playwright (78 violaciones)
+python -m gtaa_validator examples/python_live_project --verbose
 
 # Analizar proyecto correcto (score esperado: 100/100)
 python -m gtaa_validator examples/good_project
@@ -658,7 +677,7 @@ gtaa-ai-validator/
 │       ├── quality_checker.py          # Calidad de tests (AST + Regex)
 │       └── bdd_checker.py              # BDD/Gherkin (Fase 8)
 │
-├── tests/                              # 🧪 Tests automatizados (667 tests, 93% coverage)
+├── tests/                              # 🧪 Tests automatizados (672 tests, 93% coverage)
 │   ├── conftest.py                     # Fixtures compartidas
 │   ├── unit/                           # Tests unitarios
 │   │   ├── test_models.py             # Modelos de datos
@@ -682,7 +701,8 @@ gtaa-ai-validator/
 │   │   ├── test_llm_factory.py        # Factory LLM (Fase 10.1)
 │   │   ├── test_semantic_analyzer.py  # SemanticAnalyzer + fallback + tracking
 │   │   ├── test_classifier.py        # FileClassifier (Fase 7)
-│   │   └── test_config.py            # ProjectConfig (Fase 7)
+│   │   ├── test_config.py            # ProjectConfig (Fase 7)
+│   │   └── test_security.py         # Tests de regresión de seguridad (SEC-01 a SEC-09)
 │   └── integration/                    # Tests de integración
 │       ├── test_static_analyzer.py    # Pipeline completo
 │       └── test_reporters.py          # Análisis → JSON/HTML
@@ -691,6 +711,7 @@ gtaa-ai-validator/
 │   ├── README.md                       # Documentación de violaciones
 │   ├── bad_project/                    # Proyecto Python con ~35 violaciones
 │   ├── good_project/                   # Proyecto Python gTAA correcto (score 100)
+│   ├── python_live_project/            # Proyecto realista Playwright (78 violaciones)
 │   ├── java_project/                   # Proyecto Java con violaciones (Fase 9)
 │   ├── js_project/                     # Proyecto JS/TS con violaciones (Fase 9)
 │   └── csharp_project/                 # Proyecto C# con violaciones (Fase 9)
@@ -754,15 +775,24 @@ gtaa-ai-validator/
 
 Puntuación = max(0, 100 - suma de penalizaciones)
 
-### 3. 📈 Reportes Visuales (✅ Fase 4)
+### 3. 📈 Reportes Visuales (✅ Fase 4 + 10.7)
+
+#### Auto-generación Allure-style (✅ Fase 10.7)
+- Por defecto genera reportes en `gtaa-reports/` con nombre `gtaa_report_{proyecto}_{fecha}.json/.html`
+- Cada ejecución acumula reportes con fecha (como Allure Report)
+- `--output-dir` para personalizar directorio de salida
+- `--no-report` para desactivar generación automática
+- Rutas explícitas `--json`/`--html` desactivan auto-generación
 
 #### Reporte HTML (`--html report.html`)
 - Dashboard autocontenido (HTML + CSS + SVG inline, sin dependencias externas)
-- Score gauge circular SVG con color según rango
-- Tarjetas de conteo por severidad (CRÍTICA, ALTA, MEDIA, BAJA)
+- Header oscuro profesional con metadatos del proyecto
+- Score gauge circular SVG con color según rango (maneja score=0)
+- Tarjetas blancas con sombra por severidad (opacity para valores 0)
 - Gráfico de barras SVG con distribución de violaciones
 - Tabla de violaciones agrupadas por checker con badges de severidad
 - Protección XSS con `html.escape()` en todo contenido dinámico
+- Accesibilidad: `role="img"`, `aria-label`, `<title>` en SVGs, `role="table"` en tablas
 - Responsive (viewport meta)
 
 #### Reporte JSON (`--json report.json`)
@@ -823,6 +853,7 @@ Puntuación = max(0, 100 - suma de penalizaciones)
   - ✅ 10.1: Optimización capa LLM (factory, fallback, rate limit, --max-llm-calls)
   - ✅ 10.5: Cobertura de código 84% a 93% (633 tests)
   - ✅ 10.6: Tests de regresión de seguridad (34 tests para SEC-01 a SEC-09)
+  - ✅ 10.7: Refactor quality_checker + reportes Allure-style + HTML redesign
 
 ---
 
@@ -1119,17 +1150,40 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 
 ---
 
+### Versión 0.10.6 - Fase 10.6 (6 Febrero 2026) ✅
+
+**Implementado:**
+- ✅ 34 tests de regresión de seguridad (SEC-01 a SEC-09)
+- ✅ Cobertura de todas las remediaciones de la auditoría de seguridad
+- ✅ Documentación: PHASE10_SECURITY_AUDIT.md
+
+---
+
+### Versión 0.10.7 - Fase 10.7 (7 Febrero 2026) ✅
+
+**Implementado:**
+- ✅ Refactor `quality_checker.py`: eliminación de 48 líneas duplicadas en detección de datos hardcodeados
+- ✅ Auto-generación de reportes estilo Allure: `gtaa-reports/gtaa_report_{proyecto}_{fecha}.json/.html`
+- ✅ Nuevas opciones CLI: `--output-dir` (default: `gtaa-reports/`) y `--no-report`
+- ✅ Creación automática de directorios padre para rutas de reporte explícitas
+- ✅ Rediseño completo del dashboard HTML: header oscuro, cards blancas con sombra, tipografía consolidada
+- ✅ Score gauge maneja score=0 (anillo rojo semi-transparente)
+- ✅ Accesibilidad HTML: `role="img"`, `aria-label`, `<title>` en SVGs, `role="table"` en tablas
+- ✅ Cards de severidad con opacity para valores 0
+- ✅ Ejemplo realista: `examples/python_live_project/` (Playwright + Page Objects, 78 violaciones)
+- ✅ 5 tests nuevos para auto-generación de reportes (672 tests totales)
+
+---
+
 ### Versión 1.0.0 - Fase 10 Final (Pendiente) ⏳
 
 **Planificado:**
-- ⏳ CLI: `--min-score` threshold mínimo para exit code
-- ⏳ CLI: `--lang` forzar lenguaje si auto-detección falla
 - ⏳ Documentación TFM final
 
 ---
 
 <div align="center">
 
-**Estado del proyecto:** Fase 10.6/10 | 23 violaciones | 4 lenguajes (Python, Java, JS/TS, C#) | 667 tests | 93% cobertura
+**Estado del proyecto:** Fase 10.7/10 | 23 violaciones | 4 lenguajes (Python, Java, JS/TS, C#) | 672 tests | 93% cobertura
 
 </div>
