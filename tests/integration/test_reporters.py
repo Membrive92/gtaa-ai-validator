@@ -80,7 +80,7 @@ class TestHtmlReporterIntegration:
         assert "CRÍTICA" in content
         assert "<svg" in content
         assert "DefinitionChecker" in content
-        assert "<table>" in content
+        assert "<table " in content
 
     def test_good_project_html(self, good_project_path, tmp_path):
         """Análisis de good_project genera HTML con score perfecto."""

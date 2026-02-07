@@ -15,6 +15,7 @@ Análisis estático con AST:
 import click
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -48,7 +49,11 @@ from gtaa_validator.models import AnalysisMetrics
               help='Limite de llamadas al LLM real antes de fallback a mock (default: sin limite)')
 @click.option('--log-file', type=click.Path(), default=None,
               help='Escribir log detallado a fichero (siempre nivel DEBUG)')
-def main(project_path: str, verbose: bool, json_path: str, html_path: str, ai: bool, provider: str, config_path: str, max_llm_calls: int, log_file: str):
+@click.option('--output-dir', type=click.Path(), default='gtaa-reports',
+              help='Directorio de salida para reportes (default: gtaa-reports/)')
+@click.option('--no-report', is_flag=True,
+              help='Desactivar generación automática de reportes')
+def main(project_path: str, verbose: bool, json_path: str, html_path: str, ai: bool, provider: str, config_path: str, max_llm_calls: int, log_file: str, output_dir: str, no_report: bool):
     """
     Valida el cumplimiento de la arquitectura gTAA en un proyecto de test automation.
 
@@ -200,15 +205,28 @@ def main(project_path: str, verbose: bool, json_path: str, html_path: str, ai: b
             metrics.llm_total_tokens = token_usage.get('total_tokens', 0)
             metrics.llm_estimated_cost_usd = token_usage.get('estimated_cost_usd', 0.0)
 
-    # Exportar reportes si se solicitaron
+    # Auto-generación de reportes con fecha y nombre de proyecto
+    if not json_path and not html_path and not no_report:
+        date_stamp = datetime.now().strftime("%Y-%m-%d")
+        project_name = project_path.name
+        out_dir = Path(output_dir)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        json_path = str(out_dir / f"gtaa_report_{project_name}_{date_stamp}.json")
+        html_path = str(out_dir / f"gtaa_report_{project_name}_{date_stamp}.html")
+
+    # Exportar reportes
     if json_path:
         report.metrics = metrics
-        JsonReporter().generate(report, Path(json_path))
+        json_out = Path(json_path)
+        json_out.parent.mkdir(parents=True, exist_ok=True)
+        JsonReporter().generate(report, json_out)
         click.echo(f"\nReporte JSON exportado: {json_path}")
 
     if html_path:
         report.metrics = metrics
-        HtmlReporter().generate(report, Path(html_path))
+        html_out = Path(html_path)
+        html_out.parent.mkdir(parents=True, exist_ok=True)
+        HtmlReporter().generate(report, html_out)
         click.echo(f"Reporte HTML exportado: {html_path}")
 
     t3 = time.time()

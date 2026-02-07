@@ -176,7 +176,7 @@ class TestHtmlReporter:
         reporter.generate(sample_report, output)
         content = output.read_text(encoding="utf-8")
 
-        assert "Generado por gTAA AI Validator" in content
+        assert "gTAA AI Validator" in content
 
     def test_html_responsive(self, reporter, sample_report, tmp_path):
         """El HTML incluye viewport meta para responsividad."""

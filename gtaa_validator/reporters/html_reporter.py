@@ -149,7 +149,11 @@ class HtmlReporter:
 {self._build_violations_by_checker(report)}
 
         <footer>
-            <p>Generado por gTAA AI Validator v{report.validator_version}</p>
+            <p>Generado por <strong>gTAA AI Validator</strong> v{report.validator_version}</p>
+            <div class="footer-links">
+                Proyecto: {html.escape(str(report.project_path.name))}
+                &middot; {report.timestamp.strftime('%d/%m/%Y %H:%M')}
+            </div>
         </footer>
     </div>
 </body>
@@ -160,85 +164,165 @@ class HtmlReporter:
         return """        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f1f5f9; color: #1e293b; line-height: 1.6;
+            background: #f8fafc; color: #1e293b; line-height: 1.6;
         }
-        .container { max-width: 1400px; margin: 0 auto; padding: 2rem 1rem; }
-        header { text-align: center; margin-bottom: 2rem; }
-        header h1 { font-size: 1.8rem; color: #0f172a; }
-        header .subtitle { color: #64748b; font-size: 1rem; margin-bottom: 0.5rem; }
-        header .meta { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.5rem; color: #475569; font-size: 0.875rem; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 1rem 2rem; }
 
-        .score-section { text-align: center; margin-bottom: 2rem; }
+        /* --- Header: dark solid --- */
+        header {
+            background: #0f172a; color: #fff; text-align: center;
+            padding: 2rem 1rem 1.5rem; margin-bottom: 2rem;
+        }
+        header h1 { font-size: 1.5rem; font-weight: 700; color: #fff; }
+        header .subtitle { color: #94a3b8; font-size: 0.9375rem; margin-bottom: 0.75rem; }
+        header .meta {
+            display: flex; flex-wrap: wrap; justify-content: center; gap: 1.5rem;
+            color: #94a3b8; font-size: 0.8125rem;
+        }
+        header .meta strong { color: #e2e8f0; }
+
+        /* --- Score section: hero gradient (only gradient in page) --- */
+        .score-section {
+            text-align: center; margin-bottom: 2rem;
+            background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
+            border-radius: 12px; padding: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
         .score-gauge { display: inline-block; }
-        .score-label { font-size: 1.1rem; font-weight: 600; margin-top: 0.5rem; color: #334155; }
-        .score-context { margin-top: 0.8rem; font-size: 0.85rem; color: #64748b; max-width: 500px; margin-left: auto; margin-right: auto; }
+        .score-label { font-size: 1.125rem; font-weight: 600; margin-top: 0.5rem; color: #334155; }
+        .score-context { margin-top: 0.8rem; font-size: 0.8125rem; color: #64748b; max-width: 500px; margin-left: auto; margin-right: auto; }
 
+        /* --- Summary cards: white + shadow --- */
         .summary-cards {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             gap: 1rem; margin-bottom: 2rem;
         }
         .card {
-            background: #fff; border-radius: 8px; padding: 1.2rem;
-            text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            background: #ffffff; border-radius: 10px; padding: 1.2rem;
+            text-align: center; border-left: 4px solid #94a3b8;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            transition: transform 0.15s;
         }
-        .card-value { font-size: 2rem; font-weight: 700; }
-        .card-label { font-size: 0.8rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+        .card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .card-value { font-size: 1.5rem; font-weight: 700; }
+        .card-label { font-size: 0.75rem; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.2rem; }
+        .card.total { border-left-color: #334155; }
         .card.total .card-value { color: #0f172a; }
-        .card.files .card-value { color: #0f172a; }
+        .card.files { border-left-color: #6366f1; }
+        .card.files .card-value { color: #4f46e5; }
+        .card.critical { border-left-color: #dc2626; }
         .card.critical .card-value { color: #dc2626; }
+        .card.high { border-left-color: #ea580c; }
         .card.high .card-value { color: #ea580c; }
-        .card.medium .card-value { color: #ca8a04; }
+        .card.medium { border-left-color: #ca8a04; }
+        .card.medium .card-value { color: #a16207; }
+        .card.low { border-left-color: #2563eb; }
         .card.low .card-value { color: #2563eb; }
+        .card-zero { opacity: 0.5; }
 
-        .chart-section { background: #fff; border-radius: 8px; padding: 1.5rem; margin-bottom: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
-        .chart-section h2 { font-size: 1.1rem; margin-bottom: 1rem; color: #334155; }
-        .chart-legend { display: flex; justify-content: center; gap: 1.5rem; margin-top: 1rem; font-size: 0.85rem; }
+        /* --- Chart section --- */
+        .chart-section {
+            background: #ffffff; border-radius: 12px; padding: 1.5rem;
+            margin-bottom: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+        .chart-section h2 { font-size: 1.125rem; margin-bottom: 1rem; color: #334155; }
+        .chart-legend { display: flex; justify-content: center; gap: 1.5rem; margin-top: 1rem; font-size: 0.8125rem; }
         .legend-item { display: flex; align-items: center; gap: 0.4rem; }
         .legend-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
 
-        .action-summary { background: #fff; border-radius: 8px; padding: 1.5rem; margin-bottom: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .action-summary h2 { font-size: 1.1rem; margin-bottom: 1rem; color: #334155; }
-        .action-item { padding: 0.6rem 0; border-bottom: 1px solid #f1f5f9; display: flex; gap: 0.8rem; align-items: baseline; }
+        /* --- Action summary --- */
+        .action-summary {
+            background: #ffffff; border-radius: 12px; padding: 1.5rem;
+            margin-bottom: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            border-left: 4px solid #6366f1;
+        }
+        .action-summary h2 { font-size: 1.125rem; margin-bottom: 1rem; color: #334155; }
+        .action-item {
+            padding: 0.7rem 0.8rem; border-bottom: 1px solid #f1f5f9;
+            display: flex; gap: 0.8rem; align-items: baseline;
+            border-radius: 6px; margin-bottom: 2px;
+        }
+        .action-item:hover { background: #f8fafc; }
         .action-item:last-child { border-bottom: none; }
-        .action-count { font-weight: 700; min-width: 30px; text-align: right; }
-        .action-text { color: #475569; font-size: 0.9rem; }
+        .action-count { font-weight: 700; min-width: 30px; text-align: right; font-size: 1.125rem; }
+        .action-text { color: #475569; font-size: 0.9375rem; }
 
-        .checker-group { background: #fff; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow-x: auto; }
-        .checker-group h3 { font-size: 1rem; margin-bottom: 0.3rem; color: #0f172a; }
-        .checker-subtitle { font-size: 0.85rem; color: #64748b; margin-bottom: 1rem; }
-        .no-violations { text-align: center; padding: 2rem; color: #16a34a; font-size: 1.1rem; font-weight: 600; }
-        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-        th { background: #f8fafc; padding: 0.6rem 0.8rem; text-align: left; font-weight: 600; color: #475569; border-bottom: 2px solid #e2e8f0; }
-        td { padding: 0.6rem 0.8rem; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
-        tr:hover { background: #f8fafc; }
+        /* --- Checker groups (violation tables) --- */
+        .checker-group {
+            background: #ffffff; border-radius: 12px; padding: 1.5rem;
+            margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            overflow-x: auto; border-left: 4px solid #94a3b8;
+        }
+        .checker-group h3 { font-size: 1.125rem; margin-bottom: 0.3rem; color: #0f172a; }
+        .checker-subtitle { font-size: 0.8125rem; color: #64748b; margin-bottom: 1rem; }
+        .no-violations {
+            text-align: center; padding: 2.5rem; color: #16a34a;
+            font-size: 1.125rem; font-weight: 600;
+            background: #f0fdf4; border-radius: 8px;
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+        th {
+            background: #f1f5f9; padding: 0.7rem 0.8rem; text-align: left;
+            font-weight: 600; color: #334155; border-bottom: 2px solid #e2e8f0;
+            font-size: 0.8125rem;
+        }
+        td {
+            padding: 0.7rem 0.8rem; border-bottom: 1px solid #f1f5f9;
+            vertical-align: top; max-width: 300px; overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        tr:nth-child(even) td { background: #f8fafc; }
+        tr:nth-child(odd) td { background: #ffffff; }
+        tr:hover td { background: #f1f5f9; }
         .severity-badge {
-            display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px;
+            display: inline-block; padding: 0.2rem 0.6rem; border-radius: 6px;
             font-size: 0.75rem; font-weight: 600; color: #fff; white-space: nowrap;
         }
         .badge-critical { background: #dc2626; }
         .badge-high { background: #ea580c; }
         .badge-medium { background: #ca8a04; }
         .badge-low { background: #2563eb; }
-        .code-snippet { font-family: 'Consolas', 'Monaco', monospace; font-size: 0.8rem; background: #f1f5f9; padding: 0.3rem 0.5rem; border-radius: 3px; display: block; white-space: pre-wrap; word-break: break-word; margin-top: 0.3rem; }
-        .ai-badge { display: inline-block; padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600; background: #7c3aed; color: #fff; margin-left: 0.4rem; }
-        .ai-suggestion { font-size: 0.8rem; color: #6d28d9; background: #f5f3ff; padding: 0.4rem 0.6rem; border-radius: 4px; margin-top: 0.3rem; border-left: 3px solid #7c3aed; }
-        .violation-type { font-weight: 600; color: #334155; font-size: 0.85rem; }
-        .violation-desc { font-size: 0.8rem; color: #64748b; }
+        .code-snippet {
+            font-family: 'Consolas', 'Monaco', monospace; font-size: 0.8125rem;
+            background: #1e293b; color: #e2e8f0; padding: 0.4rem 0.6rem;
+            border-radius: 4px; display: block; white-space: pre-wrap;
+            word-break: break-word; margin-top: 0.3rem;
+        }
+        .ai-badge { display: inline-block; padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; background: #7c3aed; color: #fff; margin-left: 0.4rem; }
+        .ai-suggestion { font-size: 0.8125rem; color: #6d28d9; background: #f5f3ff; padding: 0.4rem 0.6rem; border-radius: 4px; margin-top: 0.3rem; border-left: 3px solid #7c3aed; }
+        .violation-type { font-weight: 600; color: #334155; font-size: 0.875rem; }
+        .violation-desc { font-size: 0.8125rem; color: #64748b; }
 
-        .metrics-section { background: #fff; border-radius: 8px; padding: 1.5rem; margin-bottom: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .metrics-section h2 { font-size: 1.1rem; margin-bottom: 1rem; color: #334155; }
+        /* --- Metrics section --- */
+        .metrics-section {
+            background: #ffffff; border-radius: 12px; padding: 1.5rem;
+            margin-bottom: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .metrics-section h2 { font-size: 1.125rem; margin-bottom: 1rem; color: #334155; }
         .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
-        .metric-card { background: #f8fafc; border-radius: 6px; padding: 1rem; text-align: center; border: 1px solid #e2e8f0; }
-        .metric-value { font-size: 1.4rem; font-weight: 700; color: #0f172a; }
+        .metric-card {
+            background: #f8fafc; border-radius: 8px; padding: 1rem;
+            text-align: center; border: 1px solid #e2e8f0;
+        }
+        .metric-value { font-size: 1.5rem; font-weight: 700; color: #0f172a; }
         .metric-label { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.2rem; }
         .metric-card.llm { border-left: 3px solid #7c3aed; }
 
-        footer { text-align: center; color: #94a3b8; font-size: 0.8rem; margin-top: 1rem; }
+        /* --- Footer --- */
+        footer {
+            text-align: center; color: #64748b; font-size: 0.8125rem;
+            margin-top: 2rem; padding: 1.5rem 0; border-top: 2px solid #e2e8f0;
+        }
+        footer strong { color: #334155; }
+        footer a { color: #4f46e5; text-decoration: none; }
+        footer a:hover { text-decoration: underline; }
+        footer .footer-links { margin-top: 0.5rem; }
 
         @media (max-width: 600px) {
             .summary-cards { grid-template-columns: repeat(2, 1fr); }
             header .meta { flex-direction: column; gap: 0.3rem; }
-            table { font-size: 0.75rem; }
+            table { font-size: 0.8125rem; }
         }"""
 
     def _build_llm_provider_meta(self, report: Report) -> str:
@@ -289,16 +373,27 @@ class HtmlReporter:
         """SVG de gauge circular para el score."""
         radius = 70
         circumference = 2 * 3.14159 * radius
-        filled = circumference * (score / 100)
-        empty = circumference - filled
 
-        return f"""            <svg width="200" height="200" viewBox="0 0 200 200">
+        if score <= 0:
+            # Score 0: full red ring as visual indicator
+            arc_html = (
+                f'<circle cx="100" cy="100" r="{radius}" fill="none" stroke="{color}" '
+                f'stroke-width="14" opacity="0.3"/>'
+            )
+        else:
+            filled = circumference * (score / 100)
+            empty = circumference - filled
+            arc_html = (
+                f'<circle cx="100" cy="100" r="{radius}" fill="none" stroke="{color}" '
+                f'stroke-width="14" stroke-dasharray="{filled:.1f} {empty:.1f}" '
+                f'stroke-dashoffset="{circumference * 0.25:.1f}" stroke-linecap="round" '
+                f'transform="rotate(-90 100 100)"/>'
+            )
+
+        return f"""            <svg width="200" height="200" viewBox="0 0 200 200" role="img" aria-label="Puntuación de cumplimiento: {score:.0f} de 100">
+                <title>Puntuación: {score:.0f}/100</title>
                 <circle cx="100" cy="100" r="{radius}" fill="none" stroke="#e2e8f0" stroke-width="14"/>
-                <circle cx="100" cy="100" r="{radius}" fill="none" stroke="{color}" stroke-width="14"
-                    stroke-dasharray="{filled:.1f} {empty:.1f}"
-                    stroke-dashoffset="{circumference * 0.25:.1f}"
-                    stroke-linecap="round"
-                    transform="rotate(-90 100 100)"/>
+                {arc_html}
                 <text x="100" y="92" text-anchor="middle" font-size="36" font-weight="700" fill="{color}">{score:.0f}</text>
                 <text x="100" y="116" text-anchor="middle" font-size="14" fill="#64748b">/ 100</text>
             </svg>"""
@@ -308,7 +403,8 @@ class HtmlReporter:
         cards = []
         for sev, css_class in [("CRITICAL", "critical"), ("HIGH", "high"), ("MEDIUM", "medium"), ("LOW", "low")]:
             label = self._SEVERITY_LABELS[sev]
-            cards.append(f"""            <div class="card {css_class}">
+            zero_class = " card-zero" if counts[sev] == 0 else ""
+            cards.append(f"""            <div class="card {css_class}{zero_class}">
                 <div class="card-value">{counts[sev]}</div>
                 <div class="card-label">{label}</div>
             </div>""")
@@ -378,11 +474,14 @@ class HtmlReporter:
         bar_width = 60
         gap = 20
         max_height = 150
+        min_bar_height = 4
         max_val = max(counts.values()) if max(counts.values()) > 0 else 1
 
         for sev in ["CRITICAL", "HIGH", "MEDIUM", "LOW"]:
             val = counts[sev]
             bar_height = (val / max_val) * max_height if max_val > 0 else 0
+            if val > 0 and bar_height < min_bar_height:
+                bar_height = min_bar_height
             color = self._COLORS[sev]
             y = 180 - bar_height
 
@@ -407,7 +506,8 @@ class HtmlReporter:
 
         return f"""        <section class="chart-section">
             <h2>Distribución por Severidad</h2>
-            <svg width="{chart_width}" height="210" viewBox="0 0 {chart_width} 210">
+            <svg width="{chart_width}" height="210" viewBox="0 0 {chart_width} 210" role="img" aria-label="Gráfico de barras: distribución de violaciones por severidad">
+                <title>Distribución de violaciones por severidad</title>
                 {svg_content}
             </svg>
         </section>"""
@@ -523,7 +623,7 @@ class HtmlReporter:
             rows_html = "\n".join(rows)
             sections.append(f"""        <section class="checker-group">
             <h3>{html.escape(checker_name)} ({count})</h3>
-            <table>
+            <table role="table" aria-label="Violaciones de {html.escape(checker_name)}">
                 <thead>
                     <tr>
                         <th style="width:90px">Severidad</th>

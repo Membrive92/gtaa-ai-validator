@@ -396,3 +396,66 @@ class TestCLIAIBranch:
 
         result = self.runner.invoke(main, [self.bad_project, "--ai"])
         assert "Fallback" in result.output or "fallback" in result.output
+
+
+class TestAutoReports:
+    """Tests for automatic report generation with timestamps (Allure-style)."""
+
+    def setup_method(self):
+        self.runner = CliRunner()
+        self.bad_project = os.path.join(
+            os.path.dirname(__file__), os.pardir, os.pardir,
+            "examples", "bad_project"
+        )
+
+    def test_auto_generates_reports_by_default(self, tmp_path):
+        """Without --json/--html, reports are auto-generated in output-dir."""
+        out_dir = tmp_path / "reports"
+        result = self.runner.invoke(
+            main, [self.bad_project, "--output-dir", str(out_dir)]
+        )
+        assert result.exit_code in (0, 1)
+        json_files = list(out_dir.glob("gtaa_report_*.json"))
+        html_files = list(out_dir.glob("gtaa_report_*.html"))
+        assert len(json_files) == 1, f"Expected 1 JSON report, got {json_files}"
+        assert len(html_files) == 1, f"Expected 1 HTML report, got {html_files}"
+
+    def test_explicit_json_skips_auto(self, tmp_path):
+        """With explicit --json, no auto-generation in output-dir."""
+        out_dir = tmp_path / "reports"
+        json_file = tmp_path / "custom.json"
+        result = self.runner.invoke(
+            main, [self.bad_project, "--json", str(json_file), "--output-dir", str(out_dir)]
+        )
+        assert result.exit_code in (0, 1)
+        assert json_file.exists()
+        # output-dir should not be created since explicit path was given
+        assert not out_dir.exists()
+
+    def test_no_report_flag(self, tmp_path):
+        """--no-report disables automatic report generation."""
+        out_dir = tmp_path / "reports"
+        result = self.runner.invoke(
+            main, [self.bad_project, "--no-report", "--output-dir", str(out_dir)]
+        )
+        assert result.exit_code in (0, 1)
+        assert not out_dir.exists()
+
+    def test_creates_nested_directories(self, tmp_path):
+        """Parent directories are created for explicit report paths."""
+        nested_json = tmp_path / "a" / "b" / "report.json"
+        result = self.runner.invoke(
+            main, [self.bad_project, "--json", str(nested_json), "--no-report"]
+        )
+        assert result.exit_code in (0, 1)
+        assert nested_json.exists()
+
+    def test_filename_format(self, tmp_path):
+        """Auto-generated filenames follow gtaa_report_<project>_YYYY-MM-DD pattern."""
+        import re
+        out_dir = tmp_path / "reports"
+        self.runner.invoke(main, [self.bad_project, "--output-dir", str(out_dir)])
+        json_files = list(out_dir.glob("gtaa_report_*.json"))
+        assert len(json_files) == 1
+        pattern = r"gtaa_report_bad_project_\d{4}-\d{2}-\d{2}\.json"
+        assert re.match(pattern, json_files[0].name), f"Filename {json_files[0].name} doesn't match pattern"
