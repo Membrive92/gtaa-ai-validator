@@ -221,57 +221,9 @@ class QualityChecker(BaseChecker):
                 continue
 
             # Verificar patrones de datos hardcodeados
-            if self.EMAIL_PATTERN.search(s.value):
-                snippet = lines[s.line - 1].strip() if s.line <= len(lines) else f'"{s.value}"'
-                violations.append(
-                    Violation(
-                        violation_type=ViolationType.HARDCODED_TEST_DATA,
-                        severity=Severity.HIGH,
-                        file_path=file_path,
-                        line_number=s.line,
-                        message=f"Email hardcodeado encontrado: '{s.value}'. Los datos de test deben externalizarse.",
-                        code_snippet=snippet,
-                    )
-                )
-
-            elif self.URL_PATTERN.search(s.value):
-                snippet = lines[s.line - 1].strip() if s.line <= len(lines) else f'"{s.value}"'
-                violations.append(
-                    Violation(
-                        violation_type=ViolationType.HARDCODED_TEST_DATA,
-                        severity=Severity.HIGH,
-                        file_path=file_path,
-                        line_number=s.line,
-                        message=f"URL hardcodeada encontrada: '{s.value}'. Los datos de test deben externalizarse.",
-                        code_snippet=snippet,
-                    )
-                )
-
-            elif self.PHONE_PATTERN.search(s.value):
-                snippet = lines[s.line - 1].strip() if s.line <= len(lines) else f'"{s.value}"'
-                violations.append(
-                    Violation(
-                        violation_type=ViolationType.HARDCODED_TEST_DATA,
-                        severity=Severity.HIGH,
-                        file_path=file_path,
-                        line_number=s.line,
-                        message=f"Teléfono hardcodeado encontrado: '{s.value}'. Los datos de test deben externalizarse.",
-                        code_snippet=snippet,
-                    )
-                )
-
-            elif any(kw in s.value.lower() for kw in self.PASSWORD_KEYWORDS):
-                snippet = lines[s.line - 1].strip() if s.line <= len(lines) else f'"{s.value}"'
-                violations.append(
-                    Violation(
-                        violation_type=ViolationType.HARDCODED_TEST_DATA,
-                        severity=Severity.HIGH,
-                        file_path=file_path,
-                        line_number=s.line,
-                        message="Posible contraseña/secreto hardcodeado. Los datos de test deben externalizarse.",
-                        code_snippet=snippet,
-                    )
-                )
+            violation = self._check_string_for_hardcoded_data(file_path, s, lines)
+            if violation:
+                violations.append(violation)
 
         return violations
 
