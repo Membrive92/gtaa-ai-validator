@@ -100,56 +100,10 @@ class DefinitionChecker(BaseChecker):
     def __init__(self):
         """Inicializar el DefinitionChecker."""
         super().__init__()
-        self.violations: List[Violation] = []
-        self.current_file: Path = None
 
     def can_check(self, file_path: Path) -> bool:
-        """
-        True para archivos de test en cualquier lenguaje soportado.
-
-        Args:
-            file_path: Ruta al archivo a verificar
-
-        Returns:
-            True si es un archivo de test soportado
-        """
-        extension = file_path.suffix.lower()
-
-        # Solo verificar extensiones soportadas
-        if extension not in {".py", ".java", ".js", ".ts", ".jsx", ".tsx", ".cs", ".mjs", ".cjs"}:
-            return False
-
-        filename = file_path.name.lower()
-        parts_lower = [p.lower() for p in file_path.parts]
-
-        # Detectar archivos de test según el lenguaje
-        if extension == ".py":
-            return (
-                filename.startswith("test_") or
-                filename.endswith("_test.py") or
-                any(part in ("test", "tests") for part in parts_lower)
-            )
-
-        if extension == ".java":
-            return (
-                "test" in filename or
-                any(part in ("test", "tests") for part in parts_lower)
-            )
-
-        if extension in {".js", ".ts", ".jsx", ".tsx", ".mjs", ".cjs"}:
-            return (
-                ".spec." in filename or
-                ".test." in filename or
-                any(part in ("tests", "test", "specs", "__tests__") for part in parts_lower)
-            )
-
-        if extension == ".cs":
-            return (
-                "test" in filename or
-                any(part in ("test", "tests") for part in parts_lower)
-            )
-
-        return False
+        """True para archivos de test en cualquier lenguaje soportado."""
+        return self._is_test_file(file_path)
 
     def check(self, file_path: Path,
               tree_or_result: Optional[Union[ast.Module, ParseResult]] = None,
@@ -170,7 +124,6 @@ class DefinitionChecker(BaseChecker):
             return []
 
         violations: List[Violation] = []
-        self.current_file = file_path
         extension = file_path.suffix.lower()
 
         try:
@@ -300,50 +253,17 @@ class DefinitionChecker(BaseChecker):
 
         return violations
 
-    def _is_test_function(self, func: ParsedFunction, extension: str) -> bool:
-        """Determina si una función es un test."""
-        # Python: test_*
-        if extension == ".py":
-            return func.name.startswith("test_")
-
-        # Java: @Test decorator
-        if extension == ".java":
-            test_annotations = {"Test", "ParameterizedTest", "RepeatedTest"}
-            return any(d in test_annotations for d in func.decorators)
-
-        # C#: [Test], [Fact], [Theory]
-        if extension == ".cs":
-            test_attributes = {"Test", "Fact", "Theory", "TestMethod"}
-            return any(d in test_attributes for d in func.decorators)
-
-        # JS/TS: funciones dentro de describe/it/test
-        if extension in {".js", ".ts", ".jsx", ".tsx", ".mjs", ".cjs"}:
-            # Heurística: funciones con ciertos nombres o async arrow functions
-            return func.name in {"it", "test"} or func.name.startswith("test")
-
-        return False
-
     def _get_browser_methods(self, extension: str) -> Set[str]:
         """Obtiene los métodos de browser API para un lenguaje."""
-        if extension == ".py":
-            return self.BROWSER_METHODS_PYTHON
-        elif extension == ".java":
-            return self.BROWSER_METHODS_JAVA
-        elif extension in {".js", ".ts", ".jsx", ".tsx", ".mjs", ".cjs"}:
-            return self.BROWSER_METHODS_JS
-        elif extension == ".cs":
-            return self.BROWSER_METHODS_CSHARP
-        return set()
+        return self._get_config_for_extension(extension, {
+            "py": self.BROWSER_METHODS_PYTHON, "java": self.BROWSER_METHODS_JAVA,
+            "js": self.BROWSER_METHODS_JS, "cs": self.BROWSER_METHODS_CSHARP,
+        })
 
     def _get_browser_objects(self, extension: str) -> Set[str]:
         """Obtiene los nombres de objetos browser para un lenguaje."""
-        if extension == ".py":
-            return self.BROWSER_OBJECTS_PYTHON
-        elif extension == ".java":
-            return self.BROWSER_OBJECTS_JAVA
-        elif extension in {".js", ".ts", ".jsx", ".tsx", ".mjs", ".cjs"}:
-            return self.BROWSER_OBJECTS_JS
-        elif extension == ".cs":
-            return self.BROWSER_OBJECTS_CSHARP
-        return set()
+        return self._get_config_for_extension(extension, {
+            "py": self.BROWSER_OBJECTS_PYTHON, "java": self.BROWSER_OBJECTS_JAVA,
+            "js": self.BROWSER_OBJECTS_JS, "cs": self.BROWSER_OBJECTS_CSHARP,
+        })
 

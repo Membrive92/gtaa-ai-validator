@@ -81,46 +81,8 @@ class QualityChecker(BaseChecker):
     MAX_TEST_LINES = 50
 
     def can_check(self, file_path: Path) -> bool:
-        """
-        True para archivos de test en cualquier lenguaje soportado.
-        """
-        extension = file_path.suffix.lower()
-
-        # Solo verificar extensiones soportadas
-        if extension not in {".py", ".java", ".js", ".ts", ".jsx", ".tsx", ".cs", ".mjs", ".cjs"}:
-            return False
-
-        filename = file_path.name.lower()
-        parts_lower = [p.lower() for p in file_path.parts]
-
-        # Detectar archivos de test según el lenguaje
-        if extension == ".py":
-            return (
-                filename.startswith("test_") or
-                filename.endswith("_test.py") or
-                any(part in ("test", "tests") for part in parts_lower)
-            )
-
-        if extension == ".java":
-            return (
-                "test" in filename or
-                any(part in ("test", "tests") for part in parts_lower)
-            )
-
-        if extension in {".js", ".ts", ".jsx", ".tsx", ".mjs", ".cjs"}:
-            return (
-                ".spec." in filename or
-                ".test." in filename or
-                any(part in ("tests", "test", "specs", "__tests__") for part in parts_lower)
-            )
-
-        if extension == ".cs":
-            return (
-                "test" in filename or
-                any(part in ("test", "tests") for part in parts_lower)
-            )
-
-        return False
+        """True para archivos de test en cualquier lenguaje soportado."""
+        return self._is_test_file(file_path)
 
     def check(self, file_path: Path,
               tree_or_result: Optional[Union[ast.Module, ParseResult]] = None,
@@ -529,32 +491,10 @@ class QualityChecker(BaseChecker):
 
         return test_functions
 
-    def _is_test_function(self, func: ParsedFunction, extension: str) -> bool:
-        """Determina si una función es un test."""
-        if extension == ".py":
-            return func.name.startswith("test_")
-
-        if extension == ".java":
-            test_annotations = {"Test", "ParameterizedTest", "RepeatedTest"}
-            return any(d in test_annotations for d in func.decorators)
-
-        if extension == ".cs":
-            test_attributes = {"Test", "Fact", "Theory", "TestMethod"}
-            return any(d in test_attributes for d in func.decorators)
-
-        if extension in {".js", ".ts", ".jsx", ".tsx", ".mjs", ".cjs"}:
-            return func.name in {"it", "test"} or func.name.startswith("test")
-
-        return False
-
     def _get_generic_name_pattern(self, extension: str):
         """Obtiene el patrón de nombres genéricos para un lenguaje."""
-        if extension == ".py":
-            return self.GENERIC_NAME_PATTERNS_PYTHON
-        elif extension == ".java":
-            return self.GENERIC_NAME_PATTERNS_JAVA
-        elif extension in {".js", ".ts", ".jsx", ".tsx", ".mjs", ".cjs"}:
-            return self.GENERIC_NAME_PATTERNS_JS
-        elif extension == ".cs":
-            return self.GENERIC_NAME_PATTERNS_CSHARP
-        return None
+        return self._get_config_for_extension(extension, {
+            "py": self.GENERIC_NAME_PATTERNS_PYTHON, "java": self.GENERIC_NAME_PATTERNS_JAVA,
+            "js": self.GENERIC_NAME_PATTERNS_JS, "cs": self.GENERIC_NAME_PATTERNS_CSHARP,
+            "default": None,
+        })

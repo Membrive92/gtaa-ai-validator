@@ -361,27 +361,17 @@ class AdaptationChecker(BaseChecker):
 
     def _get_forbidden_modules(self, extension: str) -> Set[str]:
         """Obtiene los módulos prohibidos para un lenguaje."""
-        if extension == ".py":
-            return self.FORBIDDEN_MODULES_PYTHON
-        elif extension == ".java":
-            return self.FORBIDDEN_MODULES_JAVA
-        elif extension in {".js", ".ts", ".jsx", ".tsx", ".mjs", ".cjs"}:
-            return self.FORBIDDEN_MODULES_JS
-        elif extension == ".cs":
-            return self.FORBIDDEN_MODULES_CSHARP
-        return set()
+        return self._get_config_for_extension(extension, {
+            "py": self.FORBIDDEN_MODULES_PYTHON, "java": self.FORBIDDEN_MODULES_JAVA,
+            "js": self.FORBIDDEN_MODULES_JS, "cs": self.FORBIDDEN_MODULES_CSHARP,
+        })
 
     def _get_assertion_methods(self, extension: str) -> Set[str]:
         """Obtiene los métodos de aserción para un lenguaje."""
-        if extension == ".py":
-            return self.ASSERTION_METHODS_PYTHON
-        elif extension == ".java":
-            return self.ASSERTION_METHODS_JAVA
-        elif extension in {".js", ".ts", ".jsx", ".tsx", ".mjs", ".cjs"}:
-            return self.ASSERTION_METHODS_JS
-        elif extension == ".cs":
-            return self.ASSERTION_METHODS_CSHARP
-        return set()
+        return self._get_config_for_extension(extension, {
+            "py": self.ASSERTION_METHODS_PYTHON, "java": self.ASSERTION_METHODS_JAVA,
+            "js": self.ASSERTION_METHODS_JS, "cs": self.ASSERTION_METHODS_CSHARP,
+        })
 
     def _find_assertion_calls_in_method(
         self, method: ParsedFunction, all_calls: List[ParsedCall], assertion_methods: Set[str]

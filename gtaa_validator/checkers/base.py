@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, List, Optional, Union
 from gtaa_validator.models import Violation
 
 if TYPE_CHECKING:
-    from gtaa_validator.parsers.treesitter_base import ParseResult
+    from gtaa_validator.parsers.treesitter_base import ParseResult, ParsedFunction
 
 
 class BaseChecker(ABC):
@@ -109,6 +109,80 @@ class BaseChecker(ABC):
                 return "tests" in file_path.parts
         """
         return file_path.suffix == ".py"
+
+    # Extensiones JS/TS compartidas por todos los checkers
+    _JS_EXTENSIONS = frozenset({".js", ".ts", ".jsx", ".tsx", ".mjs", ".cjs"})
+
+    # Extensiones soportadas por el análisis multilenguaje
+    _SUPPORTED_EXTENSIONS = frozenset(
+        {".py", ".java", ".cs"} | {".js", ".ts", ".jsx", ".tsx", ".mjs", ".cjs"}
+    )
+
+    def _is_test_file(self, file_path: Path) -> bool:
+        """Determina si un archivo es un archivo de test (multilenguaje).
+
+        Lógica compartida por DefinitionChecker y QualityChecker.
+        """
+        extension = file_path.suffix.lower()
+        if extension not in self._SUPPORTED_EXTENSIONS:
+            return False
+
+        filename = file_path.name.lower()
+        parts_lower = [p.lower() for p in file_path.parts]
+
+        if extension == ".py":
+            return (
+                filename.startswith("test_") or
+                filename.endswith("_test.py") or
+                any(part in ("test", "tests") for part in parts_lower)
+            )
+        if extension == ".java":
+            return (
+                "test" in filename or
+                any(part in ("test", "tests") for part in parts_lower)
+            )
+        if extension in self._JS_EXTENSIONS:
+            return (
+                ".spec." in filename or
+                ".test." in filename or
+                any(part in ("tests", "test", "specs", "__tests__") for part in parts_lower)
+            )
+        if extension == ".cs":
+            return (
+                "test" in filename or
+                any(part in ("test", "tests") for part in parts_lower)
+            )
+        return False
+
+    def _is_test_function(self, func: ParsedFunction, extension: str) -> bool:
+        """Determina si una función/método es un test (multilenguaje)."""
+        if extension == ".py":
+            return func.name.startswith("test_")
+        if extension == ".java":
+            test_annotations = {"Test", "ParameterizedTest", "RepeatedTest"}
+            return any(d in test_annotations for d in func.decorators)
+        if extension == ".cs":
+            test_attributes = {"Test", "Fact", "Theory", "TestMethod"}
+            return any(d in test_attributes for d in func.decorators)
+        if extension in self._JS_EXTENSIONS:
+            return func.name in {"it", "test"} or func.name.startswith("test")
+        return False
+
+    @staticmethod
+    def _get_config_for_extension(extension: str, config_map: dict):
+        """Dispatch genérico de extensión a configuración por lenguaje.
+
+        Args:
+            extension: Extensión del archivo (ej: ".py", ".java")
+            config_map: Dict con claves "py", "java", "js", "cs" y opcionalmente "default"
+
+        Returns:
+            El valor correspondiente al lenguaje, o config_map["default"] si existe, o set().
+        """
+        ext = extension.lstrip(".")
+        if ext in ("js", "ts", "jsx", "tsx", "mjs", "cjs"):
+            ext = "js"
+        return config_map.get(ext, config_map.get("default", set()))
 
     def __repr__(self) -> str:
         """Representación en cadena del checker."""
