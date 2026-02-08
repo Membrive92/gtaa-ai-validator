@@ -328,3 +328,33 @@ class TestSemanticAnalyzerProviderTracking:
 
         assert result.llm_provider_info["fallback_occurred"] is False
         assert "llm_calls" not in result.llm_provider_info
+
+
+class TestSemanticAnalyzerExcludedDirs:
+    """Tests for directory exclusion in SemanticAnalyzer."""
+
+    def test_excluded_dirs_filtering(self, mock_client, tmp_path, empty_report):
+        """Files inside excluded dirs (venv, __pycache__) are skipped."""
+        empty_report.project_path = tmp_path
+
+        # Create files in excluded directories
+        venv_dir = tmp_path / "venv"
+        venv_dir.mkdir()
+        (venv_dir / "test_venv.py").write_text("def test_x(): pass\n", encoding="utf-8")
+
+        cache_dir = tmp_path / "__pycache__"
+        cache_dir.mkdir()
+        (cache_dir / "test_cache.py").write_text("def test_y(): pass\n", encoding="utf-8")
+
+        # Create a real test file
+        tests_dir = tmp_path / "tests"
+        tests_dir.mkdir()
+        (tests_dir / "test_real.py").write_text("def test_z(): assert True\n", encoding="utf-8")
+
+        analyzer = SemanticAnalyzer(tmp_path, mock_client)
+        files = analyzer._discover_python_files()
+        filenames = [f.name for f in files]
+
+        assert "test_real.py" in filenames
+        assert "test_venv.py" not in filenames
+        assert "test_cache.py" not in filenames

@@ -22,18 +22,9 @@ from gtaa_validator.checkers.definition_checker import DefinitionChecker
 from gtaa_validator.checkers.adaptation_checker import AdaptationChecker
 from gtaa_validator.checkers.quality_checker import QualityChecker
 from gtaa_validator.models import ViolationType
-from gtaa_validator.parsers import get_parser_for_file
 from gtaa_validator.parsers.csharp_parser import CSharpParser
 from gtaa_validator.parsers.treesitter_base import ParsedFunction, ParsedImport, ParsedCall
-
-
-def parse_and_check(checker, file_path: Path):
-    """Helper to parse a file and run the checker."""
-    with open(file_path, "r", encoding="utf-8") as f:
-        source = f.read()
-    parser = get_parser_for_file(file_path)
-    parse_result = parser.parse(source) if parser else None
-    return checker.check(file_path, parse_result)
+from tests.conftest import parse_and_check
 
 
 class TestDefinitionCheckerCSharp:

@@ -322,3 +322,22 @@ def test_login():
         violations = checker.check(path, file_type="ui")
         assert len(violations) == 1
 
+
+# =========================================================================
+# check() — nested browser calls in class methods
+# =========================================================================
+
+class TestNestedBrowserCallInClass:
+    """Browser call inside a class method that is a test function."""
+
+    def test_nested_browser_call_in_class_method(self, checker, write_py_file):
+        """Browser call in a test method inside a class is still detected."""
+        path = write_py_file("test_example.py", """
+class TestLogin:
+    def test_login(self):
+        driver.find_element("id", "username")
+""")
+        violations = checker.check(path)
+        assert len(violations) == 1
+        assert violations[0].violation_type == ViolationType.ADAPTATION_IN_DEFINITION
+

@@ -400,3 +400,32 @@ class TestEdgeCases:
     def test_empty_file(self, checker, write_py_file):
         path = write_py_file("test_empty.py", "")
         assert checker.check(path) == []
+
+
+# =========================================================================
+# Long function boundary tests
+# =========================================================================
+
+class TestLongFunctionBoundary:
+
+    def test_exactly_50_lines_not_flagged(self, checker, write_py_file):
+        """A test function with exactly 50 lines should NOT be flagged."""
+        lines = ["def test_boundary():"]
+        for i in range(49):
+            lines.append(f"    step_{i} = {i}")
+        path = write_py_file("test_example.py", "\n".join(lines))
+
+        violations = checker.check(path)
+        assert not any(v.violation_type == ViolationType.LONG_TEST_FUNCTION for v in violations)
+
+    def test_exactly_51_lines_flagged(self, checker, write_py_file):
+        """A test function with exactly 51 lines should be flagged."""
+        lines = ["def test_boundary():"]
+        for i in range(50):
+            lines.append(f"    step_{i} = {i}")
+        path = write_py_file("test_example.py", "\n".join(lines))
+
+        violations = checker.check(path)
+        long = [v for v in violations if v.violation_type == ViolationType.LONG_TEST_FUNCTION]
+        assert len(long) == 1
+        assert long[0].severity == Severity.MEDIUM

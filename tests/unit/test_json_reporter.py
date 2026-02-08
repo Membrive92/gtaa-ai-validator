@@ -165,3 +165,43 @@ class TestJsonReporter:
         data = json.loads(output.read_text(encoding="utf-8"))
 
         assert "metrics" not in data["metadata"]
+
+    def test_ai_suggestion_in_json_output(self, reporter, tmp_path):
+        """ai_suggestion field appears in JSON violations when present."""
+        report = Report(
+            project_path=tmp_path / "project",
+            files_analyzed=1,
+            timestamp=datetime(2026, 1, 29, 12, 0, 0),
+            score=90.0,
+        )
+        report.violations = [
+            Violation(
+                violation_type=ViolationType.ADAPTATION_IN_DEFINITION,
+                severity=Severity.CRITICAL,
+                file_path=tmp_path / "project" / "test.py",
+                line_number=1,
+                message="Direct browser call",
+                ai_suggestion="Use a Page Object pattern for browser interactions",
+            ),
+        ]
+        output = tmp_path / "report.json"
+        reporter.generate(report, output)
+        data = json.loads(output.read_text(encoding="utf-8"))
+
+        assert data["violations"][0]["ai_suggestion"] == "Use a Page Object pattern for browser interactions"
+
+    def test_llm_provider_in_metadata(self, reporter, tmp_path):
+        """llm_provider appears in metadata when report has provider info."""
+        report = Report(
+            project_path=tmp_path / "project",
+            files_analyzed=1,
+            timestamp=datetime(2026, 1, 29, 12, 0, 0),
+            score=100.0,
+            llm_provider_info={"current_provider": "gemini", "fallback_occurred": False},
+        )
+        output = tmp_path / "report.json"
+        reporter.generate(report, output)
+        data = json.loads(output.read_text(encoding="utf-8"))
+
+        assert "llm_provider" in data["metadata"]
+        assert data["metadata"]["llm_provider"]["current_provider"] == "gemini"

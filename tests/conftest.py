@@ -8,6 +8,7 @@ import pytest
 from pathlib import Path
 
 from gtaa_validator.models import Violation, Report, Severity, ViolationType
+from gtaa_validator.parsers import get_parser_for_file
 
 
 # ---------------------------------------------------------------------------
@@ -146,3 +147,22 @@ def write_py_file(tmp_path):
         return file_path
 
     return _write
+
+
+# ---------------------------------------------------------------------------
+# Cross-language parse-and-check helper
+# ---------------------------------------------------------------------------
+
+def parse_and_check(checker, file_path: Path):
+    """
+    Parse a source file with the appropriate tree-sitter parser
+    and run the given checker on it.
+
+    Used by Java, JS/TS, and C# checker tests to avoid duplicating
+    the parse→check boilerplate.
+    """
+    with open(file_path, "r", encoding="utf-8") as f:
+        source = f.read()
+    parser = get_parser_for_file(file_path)
+    parse_result = parser.parse(source) if parser else None
+    return checker.check(file_path, parse_result)

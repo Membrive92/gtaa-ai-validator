@@ -107,6 +107,18 @@ class TestFileDiscovery:
         files = analyzer._discover_python_files()
         assert files == []
 
+    def test_discovers_java_files(self, tmp_path):
+        """StaticAnalyzer discovers .java files alongside .py files."""
+        (tmp_path / "test_login.py").write_text("pass", encoding="utf-8")
+        (tmp_path / "LoginTest.java").write_text("class LoginTest {}", encoding="utf-8")
+
+        analyzer = StaticAnalyzer(tmp_path)
+        files = analyzer._discover_python_files()
+        extensions = {f.suffix for f in files}
+
+        assert ".py" in extensions
+        assert ".java" in extensions
+
 
 # =========================================================================
 # End-to-end analysis — bad_project

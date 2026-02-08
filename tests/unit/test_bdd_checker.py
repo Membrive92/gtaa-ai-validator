@@ -300,3 +300,45 @@ class TestIsStepDefinitionPath:
 
     def test_regular_file(self, checker):
         assert checker._is_step_definition_path(Path("login_page.py")) is False
+
+
+# =========================================================================
+# Additional feature file edge cases
+# =========================================================================
+
+class TestFeatureFileEdgeCases:
+
+    def _check_feature(self, checker, content):
+        feature_path = Path("test.feature")
+        with patch("builtins.open", mock_open(read_data=content)):
+            return checker._check_feature_file(feature_path)
+
+    def test_detect_css_id_selector_in_feature(self, checker):
+        """CSS #id selector in feature step is an implementation detail."""
+        content = """Feature: Login
+  Scenario: CSS selector
+    When I click on #submit-button
+    Then I see the dashboard
+"""
+        violations = self._check_feature(checker, content)
+        impl = [v for v in violations if v.violation_type == ViolationType.GHERKIN_IMPLEMENTATION_DETAIL]
+        assert len(impl) >= 1
+
+    def test_background_implementation_detail(self, checker):
+        """Implementation details in Background steps are also detected."""
+        content = """Feature: Login
+  Background:
+    Given I navigate to http://localhost:3000/login
+
+  Scenario: Login
+    When I enter valid credentials
+    Then I see the dashboard
+"""
+        violations = self._check_feature(checker, content)
+        impl = [v for v in violations if v.violation_type == ViolationType.GHERKIN_IMPLEMENTATION_DETAIL]
+        assert len(impl) >= 1
+
+    def test_empty_feature_file(self, checker):
+        """Empty feature file produces no violations."""
+        violations = self._check_feature(checker, "")
+        assert violations == []
