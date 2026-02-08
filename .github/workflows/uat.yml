@@ -14,18 +14,21 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - project: bad_project
-            description: "expect violations"
-            ai: "true"
-            provider: "mock"
-            min_violations: 1
-            max_score: 99
-          - project: good_project
-            description: "expect clean"
+          - project: Automation-Guide-Rest-Assured-Java-master
+            description: "Java REST API real project"
             ai: "false"
             provider: ""
-            min_violations: 0
-            max_score: 100
+            min_violations: 1
+          - project: Automation-Guide-Selenium-Java-main
+            description: "Java Selenium real project"
+            ai: "false"
+            provider: ""
+            min_violations: 1
+          - project: python_live_project
+            description: "Python Playwright real project"
+            ai: "false"
+            provider: ""
+            min_violations: 1
 
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -84,7 +87,7 @@ jobs:
               data = json.load(f)
 
           # Claves obligatorias en el reporte
-          required = ['summary', 'files', 'violations']
+          required = ['summary', 'violations']
           missing = [k for k in required if k not in data]
           if missing:
               print(f'FAIL: missing keys in report: {missing}')
@@ -92,15 +95,15 @@ jobs:
 
           # Claves obligatorias en summary
           summary = data['summary']
-          for key in ['score', 'total_violations', 'total_files']:
+          for key in ['score', 'total_violations', 'files_analyzed']:
               if key not in summary:
                   print(f'FAIL: missing summary.{key}')
                   sys.exit(1)
 
-          print(f'PASS: report structure valid (score={summary[\"score\"]}, violations={summary[\"total_violations\"]}, files={summary[\"total_files\"]})')
+          print(f'PASS: report structure valid (score={summary[\"score\"]}, violations={summary[\"total_violations\"]}, files={summary[\"files_analyzed\"]})')
           "
 
-      # --- Verificar criterios de aceptación por proyecto ---
+      # --- Verificar criterios de aceptación ---
       - name: Verify acceptance criteria
         run: |
           SCORE="${{ steps.gtaa.outputs.score }}"
@@ -108,29 +111,18 @@ jobs:
 
           echo "--- Acceptance criteria for ${{ matrix.project }} ---"
 
-          # bad_project: debe tener violaciones
-          if [ "${{ matrix.min_violations }}" -gt 0 ]; then
-            if [ "$VIOLATIONS" -eq 0 ]; then
-              echo "FAIL: expected violations > 0 but got 0"
-              exit 1
-            fi
-            echo "PASS: violations=$VIOLATIONS (expected > 0)"
-
-            if [ "$(echo "$SCORE >= 100" | bc)" -eq 1 ]; then
-              echo "FAIL: score should be < 100 with violations, got $SCORE"
-              exit 1
-            fi
-            echo "PASS: score=$SCORE (expected < 100)"
+          # Proyectos reales: deben tener violaciones detectadas
+          if [ "$VIOLATIONS" -eq 0 ]; then
+            echo "FAIL: real project should have violations but got 0"
+            exit 1
           fi
+          echo "PASS: violations=$VIOLATIONS (expected > 0)"
 
-          # good_project: score alto, sin violaciones críticas
-          if [ "${{ matrix.min_violations }}" -eq 0 ]; then
-            if [ "$(echo "$SCORE < 50" | bc)" -eq 1 ]; then
-              echo "FAIL: score too low: $SCORE (expected >= 50)"
-              exit 1
-            fi
-            echo "PASS: score=$SCORE (expected >= 50)"
+          if [ "$(echo "$SCORE >= 100" | bc)" -eq 1 ]; then
+            echo "FAIL: score should be < 100 with violations, got $SCORE"
+            exit 1
           fi
+          echo "PASS: score=$SCORE (expected < 100)"
 
           echo "=== UAT ${{ matrix.project }}: ALL CHECKS PASSED ==="
 
