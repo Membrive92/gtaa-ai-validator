@@ -20,21 +20,16 @@ import ast
 import logging
 import re
 from pathlib import Path
-from typing import List, Set, Union
+from typing import Any, List, Set
 
-from gtaa_validator.models import Report, Violation, ViolationType, Severity
+from gtaa_validator.models import Report, Violation, ViolationType
 from gtaa_validator.llm.client import MockLLMClient
 from gtaa_validator.llm.api_client import APILLMClient, RateLimitError
+from gtaa_validator.llm.protocol import LLMClientProtocol
 from gtaa_validator.file_classifier import FileClassifier
+from gtaa_validator.config import EXCLUDED_DIRS
 
 logger = logging.getLogger(__name__)
-
-
-# Directorios excluidos del análisis (mismos que StaticAnalyzer)
-EXCLUDED_DIRS = {
-    "venv", "env", ".venv", ".env", ".git", "__pycache__",
-    "node_modules", ".pytest_cache", "build", "dist",
-}
 
 # Patrones sospechosos que ameritan análisis semántico
 SUSPICIOUS_PATTERNS = [
@@ -63,7 +58,7 @@ class SemanticAnalyzer:
     def __init__(
         self,
         project_path: Path,
-        llm_client: Union[MockLLMClient, APILLMClient],
+        llm_client: LLMClientProtocol,
         verbose: bool = False,
         max_llm_calls: int = None,
     ):
@@ -111,6 +106,14 @@ class SemanticAnalyzer:
             self._fallback_to_mock(
                 f"Limite de {self.max_llm_calls} llamadas LLM alcanzado"
             )
+
+    def _call_with_fallback(self, method_name: str, *args: Any, **kwargs: Any) -> Any:
+        """Llama a un método del LLM client con fallback automático por rate limit."""
+        try:
+            return getattr(self.llm_client, method_name)(*args, **kwargs)
+        except RateLimitError as e:
+            self._fallback_to_mock(str(e))
+            return getattr(self.llm_client, method_name)(*args, **kwargs)
 
     def get_provider_info(self) -> dict:
         """
@@ -184,16 +187,11 @@ class SemanticAnalyzer:
             # Verificar límite de llamadas antes de llamar al LLM
             self._check_call_limit()
 
-            # Intentar análisis con fallback en caso de rate limit
-            try:
-                raw_violations = self.llm_client.analyze_file(
-                    content, file_str, file_type=file_type, has_auto_wait=has_auto_wait
-                )
-            except RateLimitError as e:
-                self._fallback_to_mock(str(e))
-                raw_violations = self.llm_client.analyze_file(
-                    content, file_str, file_type=file_type, has_auto_wait=has_auto_wait
-                )
+            # Análisis con fallback automático por rate limit
+            raw_violations = self._call_with_fallback(
+                "analyze_file", content, file_str,
+                file_type=file_type, has_auto_wait=has_auto_wait,
+            )
 
             for raw in raw_violations:
                 vtype_name = raw.get("type", "")
@@ -225,16 +223,10 @@ class SemanticAnalyzer:
             # Verificar límite de llamadas antes de llamar al LLM
             self._check_call_limit()
 
-            # Intentar enriquecimiento con fallback en caso de rate limit
-            try:
-                suggestion = self.llm_client.enrich_violation(
-                    violation.to_dict(), content
-                )
-            except RateLimitError as e:
-                self._fallback_to_mock(str(e))
-                suggestion = self.llm_client.enrich_violation(
-                    violation.to_dict(), content
-                )
+            # Enriquecimiento con fallback automático por rate limit
+            suggestion = self._call_with_fallback(
+                "enrich_violation", violation.to_dict(), content
+            )
 
             if suggestion:
                 violation.ai_suggestion = suggestion

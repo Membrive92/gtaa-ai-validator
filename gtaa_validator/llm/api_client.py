@@ -10,7 +10,6 @@ Incluye tracking de consumo de tokens para monitoreo de costos.
 import json
 import logging
 import re
-from dataclasses import dataclass, field
 from typing import List, Optional
 
 from google import genai
@@ -21,6 +20,7 @@ from gtaa_validator.llm.prompts import (
     extract_context_snippet,
     extract_functions_from_code,
 )
+from gtaa_validator.llm.protocol import TokenUsage
 
 logger = logging.getLogger(__name__)
 
@@ -28,54 +28,6 @@ logger = logging.getLogger(__name__)
 class RateLimitError(Exception):
     """Error cuando se alcanza el límite de rate/cuota de la API."""
     pass
-
-
-@dataclass
-class TokenUsage:
-    """Tracking de consumo de tokens del LLM."""
-    input_tokens: int = 0
-    output_tokens: int = 0
-    total_calls: int = 0
-
-    # Pricing Gemini 2.5 Flash Lite (USD por 1M tokens)
-    INPUT_PRICE_PER_MILLION: float = 0.075
-    OUTPUT_PRICE_PER_MILLION: float = 0.30
-
-    def add(self, input_tokens: int, output_tokens: int):
-        """Añade tokens de una llamada."""
-        self.input_tokens += input_tokens
-        self.output_tokens += output_tokens
-        self.total_calls += 1
-
-    @property
-    def total_tokens(self) -> int:
-        """Total de tokens consumidos."""
-        return self.input_tokens + self.output_tokens
-
-    @property
-    def estimated_cost_usd(self) -> float:
-        """Costo estimado en USD."""
-        input_cost = (self.input_tokens / 1_000_000) * self.INPUT_PRICE_PER_MILLION
-        output_cost = (self.output_tokens / 1_000_000) * self.OUTPUT_PRICE_PER_MILLION
-        return input_cost + output_cost
-
-    def to_dict(self) -> dict:
-        """Convierte a diccionario para reportes."""
-        return {
-            "input_tokens": self.input_tokens,
-            "output_tokens": self.output_tokens,
-            "total_tokens": self.total_tokens,
-            "total_calls": self.total_calls,
-            "estimated_cost_usd": round(self.estimated_cost_usd, 6),
-        }
-
-    def __str__(self) -> str:
-        return (
-            f"Tokens: {self.total_tokens:,} "
-            f"(input: {self.input_tokens:,}, output: {self.output_tokens:,}) | "
-            f"Llamadas: {self.total_calls} | "
-            f"Costo estimado: ${self.estimated_cost_usd:.4f} USD"
-        )
 
 
 class APILLMClient:
@@ -109,7 +61,11 @@ class APILLMClient:
             raise ValueError("Se requiere una API key. Configura LLM_API_KEY o GEMINI_API_KEY.")
         self.model = model
         self.client = genai.Client(api_key=api_key)
-        self.usage = TokenUsage()  # Tracking de consumo
+        # Pricing Gemini 2.5 Flash Lite (USD por 1M tokens)
+        self.usage = TokenUsage(
+            cost_per_million_input=0.075,
+            cost_per_million_output=0.30,
+        )
 
     def __repr__(self) -> str:
         """Representación segura que nunca expone la API key (SEC-04)."""

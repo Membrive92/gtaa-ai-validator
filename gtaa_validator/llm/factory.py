@@ -23,16 +23,17 @@ Ejemplo de uso:
 
 import logging
 import os
-from typing import Optional, Union
+from typing import Optional
 
 from gtaa_validator.llm.client import MockLLMClient
 from gtaa_validator.llm.api_client import APILLMClient
+from gtaa_validator.llm.protocol import LLMClientProtocol
 
 logger = logging.getLogger(__name__)
 
 
-# Type alias para cualquier cliente LLM
-LLMClient = Union[MockLLMClient, APILLMClient]
+# Type alias para cualquier cliente LLM (ahora basado en Protocol)
+LLMClient = LLMClientProtocol
 
 # Proveedores soportados
 SUPPORTED_PROVIDERS = {"gemini", "mock"}

@@ -12,6 +12,7 @@ Factory:
 
 from gtaa_validator.llm.client import MockLLMClient
 from gtaa_validator.llm.api_client import APILLMClient, RateLimitError
+from gtaa_validator.llm.protocol import LLMClientProtocol, TokenUsage
 from gtaa_validator.llm.factory import create_llm_client, get_available_providers
 
 # Alias para compatibilidad hacia atrás
@@ -22,6 +23,8 @@ __all__ = [
     "APILLMClient",
     "GeminiLLMClient",
     "RateLimitError",
+    "LLMClientProtocol",
+    "TokenUsage",
     "create_llm_client",
     "get_available_providers",
 ]

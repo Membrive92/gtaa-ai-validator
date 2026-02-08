@@ -10,41 +10,12 @@ Puede usarse como primera línea de defensa, con LLM solo para casos difíciles.
 
 import ast
 import re
-from dataclasses import dataclass
 from typing import List
 
+from gtaa_validator.llm.protocol import TokenUsage
 
-@dataclass
-class MockTokenUsage:
-    """Tracking simulado para compatibilidad de interfaz."""
-    input_tokens: int = 0
-    output_tokens: int = 0
-    total_calls: int = 0
-
-    def add(self, input_tokens: int, output_tokens: int):
-        self.input_tokens += input_tokens
-        self.output_tokens += output_tokens
-        self.total_calls += 1
-
-    @property
-    def total_tokens(self) -> int:
-        return self.input_tokens + self.output_tokens
-
-    @property
-    def estimated_cost_usd(self) -> float:
-        return 0.0  # Mock no tiene costo
-
-    def to_dict(self) -> dict:
-        return {
-            "input_tokens": self.input_tokens,
-            "output_tokens": self.output_tokens,
-            "total_tokens": self.total_tokens,
-            "total_calls": self.total_calls,
-            "estimated_cost_usd": 0.0,
-        }
-
-    def __str__(self) -> str:
-        return f"Mock: {self.total_calls} llamadas (sin costo)"
+# Alias para compatibilidad hacia atrás
+MockTokenUsage = TokenUsage
 
 
 class MockLLMClient:
@@ -61,7 +32,7 @@ class MockLLMClient:
     """
 
     def __init__(self):
-        self.usage = MockTokenUsage()
+        self.usage = TokenUsage()
 
     def analyze_file(self, file_content: str, file_path: str,
                      file_type: str = "unknown",
