@@ -3,13 +3,15 @@ Tests for gtaa_validator.file_utils
 
 Covers:
 - read_file_safe(): size limit, OSError handling, normal read, stat failure
+- safe_relative_path(): path within base, outside base, identical paths (SEC-03)
+- Boundary: exact size limit (> vs >=)
+- Unicode content handling
 """
 
-import pytest
 from pathlib import Path
 from unittest.mock import patch, mock_open, MagicMock
 
-from gtaa_validator.file_utils import read_file_safe
+from gtaa_validator.file_utils import read_file_safe, safe_relative_path, MAX_FILE_SIZE_BYTES
 
 
 class TestReadFileSafe:
@@ -52,3 +54,55 @@ class TestReadFileSafe:
         f.write_text("", encoding="utf-8")
         assert read_file_safe(f) == ""
 
+    def test_file_at_exact_size_limit(self, tmp_path):
+        """File at exactly max_size is NOT rejected (> not >=)."""
+        f = tmp_path / "exact.py"
+        content = "x" * 50
+        f.write_text(content, encoding="utf-8")
+        # max_size equals file size exactly → should be read (> check)
+        size = f.stat().st_size
+        result = read_file_safe(f, max_size=size)
+        assert result == content
+
+    def test_nonexistent_file_returns_empty(self, tmp_path):
+        """Path to nonexistent file returns empty string."""
+        f = tmp_path / "nonexistent.py"
+        result = read_file_safe(f)
+        assert result == ""
+
+    def test_unicode_file_content(self, tmp_path):
+        """Non-ASCII content is read correctly."""
+        f = tmp_path / "unicode.py"
+        content = '# Verificación de módulo con acentos: ñ, ü, é\nprint("café")'
+        f.write_text(content, encoding="utf-8")
+        result = read_file_safe(f)
+        assert "café" in result
+        assert "ñ" in result
+
+
+# =========================================================================
+# safe_relative_path() — SEC-03
+# =========================================================================
+
+class TestSafeRelativePath:
+    """Tests for safe_relative_path() — SEC-03 path sanitization."""
+
+    def test_path_within_base(self):
+        """File inside base directory returns relative path."""
+        base = Path("/project")
+        file = Path("/project/tests/test_login.py")
+        result = safe_relative_path(file, base)
+        assert result == Path("tests/test_login.py")
+
+    def test_path_outside_base(self):
+        """File outside base directory returns original path (ValueError catch)."""
+        base = Path("/project")
+        file = Path("/other/location/test.py")
+        result = safe_relative_path(file, base)
+        assert result == file  # Returns original, does not crash
+
+    def test_identical_paths(self):
+        """Same path as base returns '.' (relative to itself)."""
+        base = Path("/project")
+        result = safe_relative_path(base, base)
+        assert result == Path(".")
