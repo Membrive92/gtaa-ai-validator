@@ -266,3 +266,69 @@ class TestHtmlReporter:
 
         assert "Llamadas API" not in content
         assert "Tokens Totales" not in content
+
+    def test_xss_in_code_snippet(self, reporter, tmp_path):
+        """XSS payload in code_snippet is HTML-escaped."""
+        report = Report(
+            project_path=tmp_path / "project",
+            files_analyzed=1,
+            timestamp=datetime(2026, 1, 29, 12, 0, 0),
+            score=90.0,
+        )
+        report.violations = [
+            Violation(
+                violation_type=ViolationType.ADAPTATION_IN_DEFINITION,
+                severity=Severity.CRITICAL,
+                file_path=tmp_path / "project" / "test.py",
+                line_number=1,
+                message="Direct browser call",
+                code_snippet='<script>alert("xss")</script>',
+            ),
+        ]
+        output = tmp_path / "report.html"
+        reporter.generate(report, output)
+        content = output.read_text(encoding="utf-8")
+
+        assert '<script>alert("xss")</script>' not in content
+        assert "&lt;script&gt;" in content
+
+    def test_ai_suggestion_rendering(self, reporter, tmp_path):
+        """AI suggestion is rendered in HTML output."""
+        report = Report(
+            project_path=tmp_path / "project",
+            files_analyzed=1,
+            timestamp=datetime(2026, 1, 29, 12, 0, 0),
+            score=90.0,
+        )
+        report.violations = [
+            Violation(
+                violation_type=ViolationType.ADAPTATION_IN_DEFINITION,
+                severity=Severity.CRITICAL,
+                file_path=tmp_path / "project" / "test.py",
+                line_number=1,
+                message="Direct browser call",
+                ai_suggestion="Use a Page Object pattern for browser interactions",
+            ),
+        ]
+        output = tmp_path / "report.html"
+        reporter.generate(report, output)
+        content = output.read_text(encoding="utf-8")
+
+        assert "Page Object pattern" in content
+
+    def test_score_zero_svg(self, reporter, tmp_path):
+        """Score=0 renders SVG correctly without errors."""
+        report = Report(
+            project_path=tmp_path / "project",
+            files_analyzed=1,
+            timestamp=datetime(2026, 1, 29, 12, 0, 0),
+            score=0.0,
+        )
+        report.violations = []
+        output = tmp_path / "report.html"
+        reporter.generate(report, output)
+        content = output.read_text(encoding="utf-8")
+
+        assert "<svg" in content
+        assert "0" in content
+        assert "<!DOCTYPE html>" in content

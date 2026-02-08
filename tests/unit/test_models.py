@@ -350,3 +350,97 @@ class TestAnalysisMetrics:
         d = m.to_dict()
         assert d["timing"]["static_analysis_seconds"] == 1.235
         assert d["timing"]["files_per_second"] == 12.35
+
+
+# =========================================================================
+# get_score_label — boundary tests
+# =========================================================================
+
+from gtaa_validator.models import get_score_label
+
+
+class TestGetScoreLabel:
+    """Boundary tests for get_score_label() thresholds."""
+
+    def test_score_100(self):
+        assert get_score_label(100) == "EXCELENTE"
+
+    def test_score_90_boundary(self):
+        """90 is >= 90 → EXCELENTE."""
+        assert get_score_label(90) == "EXCELENTE"
+
+    def test_score_89_9_boundary(self):
+        """89.9 is < 90 → BUENO."""
+        assert get_score_label(89.9) == "BUENO"
+
+    def test_score_75_boundary(self):
+        """75 is >= 75 → BUENO."""
+        assert get_score_label(75) == "BUENO"
+
+    def test_score_74_9_boundary(self):
+        """74.9 is < 75 → NECESITA MEJORAS."""
+        assert get_score_label(74.9) == "NECESITA MEJORAS"
+
+    def test_score_50_boundary(self):
+        """50 is >= 50 → NECESITA MEJORAS."""
+        assert get_score_label(50) == "NECESITA MEJORAS"
+
+    def test_score_49_9_boundary(self):
+        """49.9 is < 50 → PROBLEMAS CRÍTICOS."""
+        assert get_score_label(49.9) == "PROBLEMAS CRÍTICOS"
+
+    def test_score_0(self):
+        assert get_score_label(0) == "PROBLEMAS CRÍTICOS"
+
+
+# =========================================================================
+# Violation.to_dict() with project_path
+# =========================================================================
+
+class TestViolationToDict:
+    """Additional to_dict tests with project_path relativization."""
+
+    def test_to_dict_with_project_path(self):
+        """to_dict(project_path=...) relativizes file path."""
+        v = Violation(
+            violation_type=ViolationType.ADAPTATION_IN_DEFINITION,
+            severity=Severity.CRITICAL,
+            file_path=Path("/project/tests/test_login.py"),
+            line_number=42,
+        )
+        d = v.to_dict(project_path=Path("/project"))
+        assert d["file"] == str(Path("tests/test_login.py"))
+
+
+# =========================================================================
+# Report.to_dict() with llm_provider_info
+# =========================================================================
+
+class TestReportToDict:
+    """Additional Report.to_dict() tests."""
+
+    def test_to_dict_includes_llm_provider_info(self):
+        """to_dict() includes llm_provider in metadata when present."""
+        report = Report(
+            project_path=Path("/fake/project"),
+            violations=[],
+            files_analyzed=5,
+            score=100.0,
+            llm_provider_info={"current_provider": "MockProvider"},
+        )
+        d = report.to_dict()
+        assert "llm_provider" in d["metadata"]
+        assert d["metadata"]["llm_provider"]["current_provider"] == "MockProvider"
+
+    def test_to_dict_timestamp_is_valid_iso(self):
+        """Timestamp in to_dict() is a valid ISO-format datetime."""
+        from datetime import datetime
+        report = Report(
+            project_path=Path("/fake"),
+            violations=[],
+            files_analyzed=1,
+        )
+        d = report.to_dict()
+        ts = d["metadata"]["timestamp"]
+        # Must parse without exception
+        datetime.fromisoformat(ts)

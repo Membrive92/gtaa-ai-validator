@@ -164,6 +164,64 @@ class TestAPIClientValidTypes:
         assert result[0]["type"] == "MISSING_AAA_STRUCTURE"
 
 
+class TestRateLimitError:
+    """Tests para manejo de rate limit (HTTP 429 y quota)."""
+
+    @patch("gtaa_validator.llm.api_client.genai.Client")
+    def test_rate_limit_error_on_analyze(self, mock_genai_client):
+        """429 en analyze_file → RateLimitError."""
+        from gtaa_validator.llm.api_client import RateLimitError
+        mock_genai_client.return_value.models.generate_content.side_effect = Exception("429 Too Many Requests")
+        client = APILLMClient(api_key="test-key")
+        with pytest.raises(RateLimitError):
+            client.analyze_file("code", "test.py")
+
+    @patch("gtaa_validator.llm.api_client.genai.Client")
+    def test_rate_limit_error_on_enrich(self, mock_genai_client):
+        """429 en enrich_violation → RateLimitError."""
+        from gtaa_validator.llm.api_client import RateLimitError
+        mock_genai_client.return_value.models.generate_content.side_effect = Exception("Resource exhausted")
+        client = APILLMClient(api_key="test-key")
+        with pytest.raises(RateLimitError):
+            client.enrich_violation({"type": "X", "message": "x"}, "# code")
+
+    @patch("gtaa_validator.llm.api_client.genai.Client")
+    def test_is_rate_limit_429_pattern(self, mock_genai_client):
+        """'429' in error → is_rate_limit_error() returns True."""
+        client = APILLMClient(api_key="test-key")
+        assert client._is_rate_limit_error(Exception("Error 429")) is True
+
+    @patch("gtaa_validator.llm.api_client.genai.Client")
+    def test_is_rate_limit_quota_pattern(self, mock_genai_client):
+        """'quota' in error → is_rate_limit_error() returns True."""
+        client = APILLMClient(api_key="test-key")
+        assert client._is_rate_limit_error(Exception("Quota exceeded")) is True
+
+    @patch("gtaa_validator.llm.api_client.genai.Client")
+    def test_is_rate_limit_resource_exhausted(self, mock_genai_client):
+        """'resource exhausted' → is_rate_limit_error() returns True."""
+        client = APILLMClient(api_key="test-key")
+        assert client._is_rate_limit_error(Exception("RESOURCE EXHAUSTED")) is True
+
+    @patch("gtaa_validator.llm.api_client.genai.Client")
+    def test_is_not_rate_limit_generic_error(self, mock_genai_client):
+        """Generic API error → is_rate_limit_error() returns False."""
+        client = APILLMClient(api_key="test-key")
+        assert client._is_rate_limit_error(Exception("Connection timeout")) is False
+
+
+class TestAPIClientRepr:
+    """Tests para __repr__() — SEC-04."""
+
+    @patch("gtaa_validator.llm.api_client.genai.Client")
+    def test_repr_does_not_expose_api_key(self, mock_genai_client):
+        """repr(client) must NOT contain the API key (SEC-04)."""
+        client = APILLMClient(api_key="sk-secret-key-12345")
+        representation = repr(client)
+        assert "sk-secret-key-12345" not in representation
+        assert "APILLMClient" in representation
+
+
 class TestBackwardsCompatibility:
     """Tests de compatibilidad hacia atrás con GeminiLLMClient."""
 

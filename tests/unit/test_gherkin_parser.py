@@ -236,3 +236,32 @@ Feature: Tagged
         feature = parser.parse(content)
         assert feature.name == "Tagged"
         assert len(feature.scenarios) == 1
+
+
+# =========================================================================
+# parse_file() — file-based parsing
+# =========================================================================
+
+class TestParseFile:
+    """Tests for GherkinParser.parse_file() method."""
+
+    def test_parse_file_normal(self, parser, tmp_path):
+        """Valid .feature file returns GherkinFeature."""
+        f = tmp_path / "login.feature"
+        f.write_text("Feature: Login\n  Scenario: Valid\n    Given user exists\n", encoding="utf-8")
+        result = parser.parse_file(f)
+        assert result is not None
+        assert result.name == "Login"
+
+    def test_parse_file_empty(self, parser, tmp_path):
+        """Empty .feature file returns None."""
+        f = tmp_path / "empty.feature"
+        f.write_text("", encoding="utf-8")
+        result = parser.parse_file(f)
+        assert result is None
+
+    def test_parse_file_nonexistent(self, parser, tmp_path):
+        """Nonexistent file returns None (no crash)."""
+        f = tmp_path / "nonexistent.feature"
+        result = parser.parse_file(f)
+        assert result is None

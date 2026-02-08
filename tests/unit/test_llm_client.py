@@ -302,3 +302,133 @@ class LoginPage:
         assert len(mixed) == 0
 
 
+# =========================================================================
+# BDD step definition heuristics
+# =========================================================================
+
+class TestStepDefDirectBrowser:
+    """Tests for _check_step_def_direct_browser() heuristic."""
+
+    def test_step_def_with_browser_call_detected(self, mock_client):
+        """Step definition with page.locator() → STEP_DEF_DIRECT_BROWSER_CALL."""
+        source = '''\
+from behave import given
+
+@given("the user navigates to login")
+def step_navigate(context):
+    context.page.locator("#login").click()
+'''
+        results = mock_client.analyze_file(source, "steps/login_steps.py")
+        types = [v["type"] for v in results]
+        assert "STEP_DEF_DIRECT_BROWSER_CALL" in types
+
+    def test_step_def_clean_no_violation(self, mock_client):
+        """Step definition without browser calls → no violation."""
+        source = '''\
+from behave import given
+
+@given("the user is on the login page")
+def step_login_page(context):
+    context.login_page.navigate()
+'''
+        results = mock_client.analyze_file(source, "steps/login_steps.py")
+        types = [v["type"] for v in results]
+        assert "STEP_DEF_DIRECT_BROWSER_CALL" not in types
+
+
+class TestStepDefTooComplex:
+    """Tests for _check_step_def_too_complex() heuristic."""
+
+    def test_step_def_over_15_lines_detected(self, mock_client):
+        """Step definition >15 lines → STEP_DEF_TOO_COMPLEX."""
+        body_lines = "\n".join(f"    step_{i} = {i}" for i in range(20))
+        source = f'''\
+from behave import when
+
+@when("the user fills the long form")
+def step_fill_form(context):
+{body_lines}
+'''
+        results = mock_client.analyze_file(source, "steps/form_steps.py")
+        types = [v["type"] for v in results]
+        assert "STEP_DEF_TOO_COMPLEX" in types
+
+    def test_step_def_short_no_violation(self, mock_client):
+        """Step definition ≤15 lines → no violation."""
+        source = '''\
+from behave import then
+
+@then("the user sees the dashboard")
+def step_dashboard(context):
+    assert context.page_title == "Dashboard"
+'''
+        results = mock_client.analyze_file(source, "steps/nav_steps.py")
+        types = [v["type"] for v in results]
+        assert "STEP_DEF_TOO_COMPLEX" not in types
+
+
+# =========================================================================
+# Boundary tests for thresholds
+# =========================================================================
+
+class TestBoundaryThresholds:
+    """Boundary tests for MockLLMClient heuristic thresholds."""
+
+    def test_page_object_10_methods_no_violation(self, mock_client):
+        """POM with exactly 10 public methods → no violation."""
+        methods = "\n".join(f"    def method_{i}(self): pass" for i in range(10))
+        code = f"class LoginPage:\n{methods}\n"
+        results = mock_client.analyze_file(code, "pages/login_page.py")
+        types = [v["type"] for v in results]
+        assert "PAGE_OBJECT_DOES_TOO_MUCH" not in types
+
+    def test_page_object_11_methods_violation(self, mock_client):
+        """POM with 11 public methods → PAGE_OBJECT_DOES_TOO_MUCH."""
+        methods = "\n".join(f"    def method_{i}(self): pass" for i in range(11))
+        code = f"class LoginPage:\n{methods}\n"
+        results = mock_client.analyze_file(code, "pages/login_page.py")
+        types = [v["type"] for v in results]
+        assert "PAGE_OBJECT_DOES_TOO_MUCH" in types
+
+    def test_unclear_purpose_name_20_chars_no_violation(self, mock_client):
+        """Test with name exactly 20 chars → no UNCLEAR_TEST_PURPOSE."""
+        # "test_exactly_20chars" = 20 chars (name < 20 is the threshold)
+        code = '''\
+def test_exactly_20chars1():
+    x = 1
+'''
+        results = mock_client.analyze_file(code, "tests/test_x.py")
+        unclear = [v for v in results if v["type"] == "UNCLEAR_TEST_PURPOSE"]
+        assert len(unclear) == 0
+
+    def test_unclear_purpose_name_19_chars_violation(self, mock_client):
+        """Test with name < 20 chars and no docstring → UNCLEAR_TEST_PURPOSE."""
+        code = '''\
+def test_short_name():
+    x = 1
+'''
+        results = mock_client.analyze_file(code, "tests/test_x.py")
+        unclear = [v for v in results if v["type"] == "UNCLEAR_TEST_PURPOSE"]
+        assert len(unclear) == 1
+
+
+class TestUsageTracking:
+    """Tests for token usage tracking after analysis."""
+
+    def test_usage_increments_after_analyze(self, mock_client):
+        """usage.total_calls increments after analyze_file()."""
+        assert mock_client.usage.total_calls == 0
+        mock_client.analyze_file("def test_x(): pass", "test.py")
+        assert mock_client.usage.total_calls == 1
+
+    def test_file_type_api_skips_wait_strategy(self, mock_client):
+        """file_type='api' skips MISSING_WAIT_STRATEGY checks."""
+        code = '''\
+class ApiClient:
+    def send_request(self):
+        self.button.click()
+'''
+        results = mock_client.analyze_file(code, "pages/api_client.py", file_type="api", has_auto_wait=True)
+        waits = [v for v in results if v["type"] == "MISSING_WAIT_STRATEGY"]
+        assert len(waits) == 0
+
