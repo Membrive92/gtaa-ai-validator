@@ -2,12 +2,13 @@
 
 ## Resumen General
 
-La Fase 10 se divide en cuatro sub-fases:
+La Fase 10 se divide en cinco sub-fases documentadas:
 
 - **Fase 10.1**: Optimización de la capa LLM (fallback, factory, tracking)
 - **Fase 10.2**: Sistema de logging profesional + métricas de rendimiento en reportes
 - **Fase 10.3**: Optimizaciones de proyecto (packaging, dead code, tests, LSP, PEP 8)
 - **Fase 10.4**: Despliegue (Docker, GitHub Actions CI, reusable action)
+- **Fase 10.8**: Refactor SOLID/DRY del codebase completo
 
 ### Fase 10.1
 
@@ -45,7 +46,7 @@ La Fase 10.1 se centra en optimizar la capa LLM para manejar las limitaciones de
 +------------------------------------------------------------------+
 |                      SemanticAnalyzer                             |
 |                                                                    |
-|  - llm_client: Union[MockLLMClient, APILLMClient]                 |
+|  - llm_client: LLMClientProtocol                                  |
 |  - max_llm_calls: Optional[int]                                   |
 |  - _initial_provider: str                                         |
 |  - _current_provider: str                                         |
@@ -57,24 +58,30 @@ La Fase 10.1 se centra en optimizar la capa LLM para manejar las limitaciones de
 ### 1.2 Jerarquía de Clases de Cliente LLM
 
 ```
-                    +-------------------+
-                    |   Protocolo LLM   |  (Duck typing)
-                    |                   |
-                    | + analyze_file()  |
-                    | + enrich_violation() |
-                    +-------------------+
-                            ^
-                            |
-           +----------------+----------------+
-           |                                 |
-+-------------------+            +-------------------+
-|  MockLLMClient    |            |  APILLMClient     |
-|                   |            |                   |
-| Basado en         |            | Basado en API     |
-| heurísticas       |            | Gemini            |
-| Sin llamadas API  |            | Requiere API key  |
-| Siempre disponible|            | Con rate limit    |
-+-------------------+            +-------------------+
+                    +---------------------------+
+                    |   LLMClientProtocol        |  (typing.Protocol, PEP 544)
+                    |   @runtime_checkable       |
+                    |                            |
+                    | + usage: TokenUsage        |
+                    | + analyze_file()           |
+                    | + enrich_violation()       |
+                    | + get_usage_summary()      |
+                    | + get_usage_dict()         |
+                    +---------------------------+
+                              ^
+                              | (duck typing estructural)
+                              |
+              +───────────────┴───────────────+
+              |                               |
+    +─────────────────+            +─────────────────+
+    |  MockLLMClient  |            |  APILLMClient    |
+    |                 |            |                  |
+    | TokenUsage()    |            | TokenUsage(      |
+    | (coste = 0)     |            |   input=0.075,   |
+    | Heurísticas     |            |   output=0.30)   |
+    | Siempre         |            | Gemini API       |
+    | disponible      |            | Con rate limit   |
+    +─────────────────+            +─────────────────+
 ```
 
 ---
@@ -121,7 +128,7 @@ La Fase 10.1 se centra en optimizar la capa LLM para manejar las limitaciones de
 ```python
 # gtaa_validator/llm/factory.py
 
-def create_llm_client(provider: str = None) -> Union[MockLLMClient, APILLMClient]:
+def create_llm_client(provider: str = None) -> LLMClientProtocol:
     """
     Crea cliente LLM según configuración.
 
@@ -451,10 +458,12 @@ Usuario       CLI           Factory      SemanticAnalyzer    APILLMClient    Moc
 gtaa_validator/
 ├── llm/
 │   ├── __init__.py          # Exports: MockLLMClient, APILLMClient,
-│   │                        #          RateLimitError, create_llm_client
+│   │                        #          RateLimitError, LLMClientProtocol,
+│   │                        #          TokenUsage, create_llm_client
+│   ├── protocol.py          # LLMClientProtocol + TokenUsage unificado (Fase 10.8)
 │   ├── client.py            # MockLLMClient (heurísticas)
 │   ├── api_client.py        # APILLMClient + RateLimitError
-│   ├── factory.py           # create_llm_client(), get_available_providers()
+│   ├── factory.py           # create_llm_client() → LLMClientProtocol
 │   └── prompts.py           # Prompts optimizados para Fase 10
 │
 ├── analyzers/
@@ -1062,4 +1071,469 @@ La Fase 10.4 añade tres vectores de distribución al proyecto, permitiendo su u
 
 ---
 
-*Última actualización: 6 de febrero de 2026 (Fase 10.4)*
+## 29. Fase 10.8 — Refactor SOLID/DRY
+
+### Contexto
+
+Auditoría completa del codebase como arquitecto Python identificó duplicaciones críticas, violaciones SOLID y código muerto. La Fase 10.8 corrige estos problemas en 6 commits independientes (5 de código + 1 de documentación).
+
+---
+
+## 30. Utilidades Compartidas (DRY)
+
+### 30.1 Antes: Duplicación en 3 Conceptos
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  DUPLICACIÓN 1: get_score_label()                         │
+├──────────────────────────────────────────────────────────┤
+│  __main__.py      →  if/elif inline (~8 líneas)          │
+│  html_reporter.py →  _get_score_label() privado (~8 lín) │
+└──────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────┐
+│  DUPLICACIÓN 2: safe_relative_path()                      │
+├──────────────────────────────────────────────────────────┤
+│  models.py:Violation.to_dict()  →  try/except inline     │
+│  __main__.py:_display_results() →  try/except inline     │
+└──────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────┐
+│  DUPLICACIÓN 3: EXCLUDED_DIRS                             │
+├──────────────────────────────────────────────────────────┤
+│  static_analyzer.py   →  11 entradas (parcial)           │
+│  semantic_analyzer.py →   9 entradas (parcial)           │
+│  Superset real:       →  14 entradas                     │
+└──────────────────────────────────────────────────────────┘
+```
+
+### 30.2 Después: Single Source of Truth
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                  UBICACIÓN CENTRALIZADA                       │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  models.py                                                   │
+│  └── get_score_label(score) → str                           │
+│      ├── Importado en __main__.py                           │
+│      └── Importado en html_reporter.py                      │
+│                                                             │
+│  file_utils.py                                               │
+│  └── safe_relative_path(file_path, base_path) → Path        │
+│      ├── Importado en models.py:Violation.to_dict()         │
+│      └── Importado en __main__.py:_display_results()        │
+│                                                             │
+│  config.py                                                   │
+│  └── EXCLUDED_DIRS: Set[str]  (14 entradas, superset)       │
+│      ├── Importado en static_analyzer.py                    │
+│      └── Importado en semantic_analyzer.py                  │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 31. Código Muerto Eliminado (Fase 10.8)
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  ARTEFACTOS ELIMINADOS                                        │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  file_classifier.py                                           │
+│  └── _analyze_imports()          ~24 líneas (legacy Fase 9)  │
+│                                                              │
+│  definition_checker.py                                        │
+│  └── self.violations             campo no usado              │
+│  └── self.current_file           campo no usado              │
+│                                                              │
+│  treesitter_base.py                                           │
+│  └── ParsedFunction.body_node    campo no usado              │
+│  └── import Set                  import no usado             │
+│                                                              │
+│  java_parser.py / js_parser.py / csharp_parser.py            │
+│  └── body_node=...              asignaciones al campo muerto │
+│                                                              │
+│  test_classifier.py                                           │
+│  └── TestLegacyAnalyzeImports   3 tests de método eliminado  │
+│                                                              │
+├──────────────────────────────────────────────────────────────┤
+│  Resultado: 672 tests → 669 tests (3 legacy eliminados)      │
+└──────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 32. Métodos Compartidos en BaseChecker
+
+### 32.1 Antes: Duplicación en Checkers
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  DefinitionChecker                                           │
+│  ├── _is_test_file()          ~25 líneas                    │
+│  ├── _is_test_function()      ~15 líneas                    │
+│  ├── _get_browser_methods()   if/elif (4 ramas)             │
+│  └── _get_browser_objects()   if/elif (4 ramas)             │
+├─────────────────────────────────────────────────────────────┤
+│  QualityChecker                                              │
+│  ├── _is_test_file()          ~25 líneas (DUPLICADO)        │
+│  ├── _is_test_function()      ~15 líneas (DUPLICADO)        │
+│  └── _get_generic_name_pattern() if/elif (4 ramas)          │
+├─────────────────────────────────────────────────────────────┤
+│  AdaptationChecker                                           │
+│  ├── _get_forbidden_modules()  if/elif (4 ramas)            │
+│  └── _get_assertion_methods()  if/elif (4 ramas)            │
+├─────────────────────────────────────────────────────────────┤
+│  TOTAL duplicación: ~100 líneas redundantes                  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 32.2 Después: Herencia con Template Method
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  BaseChecker (clase base)                                    │
+│  ├── _JS_EXTENSIONS = frozenset({".js", ".ts", ...})        │
+│  ├── _SUPPORTED_EXTENSIONS = frozenset({".py", ".java", ..})│
+│  ├── _is_test_file(file_path) → bool                        │
+│  ├── _is_test_function(func, extension) → bool              │
+│  └── _get_config_for_extension(ext, config_map) → value     │
+├─────────────────────────────────────────────────────────────┤
+│  DefinitionChecker(BaseChecker)                              │
+│  ├── can_check() → self._is_test_file()   (delega)         │
+│  ├── _get_browser_methods() → _get_config_for_extension()   │
+│  └── _get_browser_objects() → _get_config_for_extension()   │
+├─────────────────────────────────────────────────────────────┤
+│  QualityChecker(BaseChecker)                                 │
+│  ├── can_check() → self._is_test_file()   (delega)         │
+│  └── _get_generic_name_pattern() → _get_config_for_extension│
+├─────────────────────────────────────────────────────────────┤
+│  AdaptationChecker(BaseChecker)                              │
+│  ├── can_check()  (lógica propia — Page Objects)            │
+│  ├── _get_forbidden_modules() → _get_config_for_extension() │
+│  └── _get_assertion_methods() → _get_config_for_extension() │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 32.3 Patrón _get_config_for_extension
+
+```
+_get_config_for_extension(".ts", config_map)
+                    │
+                    ▼
+        ┌──────────────────────┐
+        │ ext = "ts"           │
+        │ → normalizar a "js"  │
+        └──────────┬───────────┘
+                   │
+                   ▼
+        ┌──────────────────────┐
+        │ config_map = {       │
+        │   "py":   PYTHON_SET │
+        │   "java": JAVA_SET   │
+        │   "js":   JS_SET     │
+        │   "cs":   CSHARP_SET │
+        │ }                    │
+        └──────────┬───────────┘
+                   │
+                   ▼
+            return JS_SET
+```
+
+---
+
+## 33. LLMClientProtocol y TokenUsage Unificado
+
+### 33.1 Antes: Duplicación en Capa LLM
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  client.py (MockLLMClient)                                   │
+│  └── class MockTokenUsage:                                   │
+│      ├── input_tokens, output_tokens                        │
+│      ├── total_calls                                         │
+│      ├── estimated_cost_usd = 0.0  (hardcoded)              │
+│      └── to_dict(), __str__()                                │
+├─────────────────────────────────────────────────────────────┤
+│  api_client.py (APILLMClient)                                │
+│  └── class TokenUsage:                                       │
+│      ├── input_tokens, output_tokens                        │
+│      ├── total_calls                                         │
+│      ├── estimated_cost_usd  (calculado con precios)        │
+│      └── to_dict(), __str__()                                │
+├─────────────────────────────────────────────────────────────┤
+│  factory.py                                                  │
+│  └── return type: Union[MockLLMClient, APILLMClient]        │
+├─────────────────────────────────────────────────────────────┤
+│  semantic_analyzer.py                                        │
+│  ├── try: llm_client.analyze_file(...)                      │
+│  │   except RateLimitError: _fallback_to_mock()             │
+│  │   → llm_client.analyze_file(...)        (DUPLICADO)      │
+│  └── try: llm_client.enrich_violation(...)                  │
+│      except RateLimitError: _fallback_to_mock()             │
+│      → llm_client.enrich_violation(...)    (DUPLICADO)      │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 33.2 Después: Protocol + TokenUsage Unificado
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  protocol.py (NUEVO)                                         │
+│  ├── @dataclass TokenUsage:                                  │
+│  │   ├── input_tokens, output_tokens, total_calls           │
+│  │   ├── cost_per_million_input: float = 0.0                │
+│  │   ├── cost_per_million_output: float = 0.0               │
+│  │   └── to_dict(), __str__(), add(), properties            │
+│  │                                                           │
+│  └── @runtime_checkable                                      │
+│      class LLMClientProtocol(Protocol):                      │
+│          usage: TokenUsage                                    │
+│          def analyze_file(...) → List[dict]                  │
+│          def enrich_violation(...) → str                     │
+│          def get_usage_summary() → str                       │
+│          def get_usage_dict() → dict                         │
+├─────────────────────────────────────────────────────────────┤
+│  client.py                                                   │
+│  └── MockLLMClient:                                          │
+│      └── self.usage = TokenUsage()  (coste 0 por defecto)   │
+├─────────────────────────────────────────────────────────────┤
+│  api_client.py                                               │
+│  └── APILLMClient:                                           │
+│      └── self.usage = TokenUsage(                            │
+│              cost_per_million_input=0.075,                   │
+│              cost_per_million_output=0.30)                   │
+├─────────────────────────────────────────────────────────────┤
+│  factory.py                                                  │
+│  └── return type: LLMClientProtocol  (no Union)             │
+├─────────────────────────────────────────────────────────────┤
+│  semantic_analyzer.py                                        │
+│  └── _call_with_fallback(method_name, *args, **kwargs):     │
+│      try: getattr(llm_client, method_name)(*args, **kwargs) │
+│      except RateLimitError: _fallback_to_mock(); retry      │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 33.3 Jerarquía de Clases Actualizada
+
+```
+                    ┌─────────────────────────┐
+                    │  LLMClientProtocol       │  (typing.Protocol)
+                    │  @runtime_checkable      │
+                    │                          │
+                    │  + usage: TokenUsage     │
+                    │  + analyze_file()        │
+                    │  + enrich_violation()    │
+                    │  + get_usage_summary()   │
+                    │  + get_usage_dict()      │
+                    └─────────────────────────┘
+                              ▲
+                              │ (duck typing estructural)
+                              │
+              ┌───────────────┴───────────────┐
+              │                               │
+    ┌─────────────────┐            ┌─────────────────┐
+    │  MockLLMClient  │            │  APILLMClient    │
+    │                 │            │                  │
+    │  TokenUsage()   │            │  TokenUsage(     │
+    │  (coste = 0)    │            │    input=0.075,  │
+    │                 │            │    output=0.30)  │
+    └─────────────────┘            └─────────────────┘
+```
+
+---
+
+## 34. Descomposición del CLI
+
+### 34.1 Antes: main() Monolítico (~200 líneas)
+
+```
+def main(project_path, verbose, json_path, html_path, ai, provider, ...):
+    ┌────────────────────────────────┐
+    │  Setup (logging, config)       │  ~15 líneas
+    ├────────────────────────────────┤
+    │  Análisis estático             │  ~10 líneas
+    ├────────────────────────────────┤
+    │  Análisis semántico AI         │  ~20 líneas
+    ├────────────────────────────────┤
+    │  Display de resultados         │  ~40 líneas
+    ├────────────────────────────────┤
+    │  Cálculo de métricas           │  ~20 líneas
+    ├────────────────────────────────┤
+    │  Generación de reportes        │  ~30 líneas
+    ├────────────────────────────────┤
+    │  Display de resumen LLM        │  ~20 líneas
+    ├────────────────────────────────┤
+    │  Resumen final + exit code     │  ~10 líneas
+    └────────────────────────────────┘
+    TOTAL: ~200 líneas, 6 responsabilidades mezcladas
+```
+
+### 34.2 Después: main() como Orquestador (~50 líneas)
+
+```
+__main__.py:
+
+┌──────────────────────────────────────────────────────────────┐
+│  _run_static_analysis(project_path, verbose, config)         │
+│  → (report, elapsed_seconds)                                 │
+├──────────────────────────────────────────────────────────────┤
+│  _run_semantic_analysis(project_path, report, provider,      │
+│                         verbose, max_llm_calls)              │
+│  → (report, semantic, elapsed_seconds)                       │
+├──────────────────────────────────────────────────────────────┤
+│  _display_results(report, project_path, verbose)             │
+│  → severity_counts                                           │
+├──────────────────────────────────────────────────────────────┤
+│  _build_metrics(report, semantic, static_secs,               │
+│                 semantic_secs, total_start)                   │
+│  → AnalysisMetrics                                           │
+├──────────────────────────────────────────────────────────────┤
+│  _generate_reports(report, metrics, json_path, html_path,    │
+│                    output_dir, no_report, project_path)       │
+│  → (json_path, html_path)                                    │
+├──────────────────────────────────────────────────────────────┤
+│  _display_llm_summary(report, semantic)                      │
+│  → None                                                      │
+└──────────────────────────────────────────────────────────────┘
+
+main() orquestador (~50 líneas):
+    setup → _run_static_analysis → _run_semantic_analysis (si --ai)
+         → _display_results → _build_metrics → _generate_reports
+         → _display_llm_summary → exit code
+```
+
+### 34.3 Flujo E2E con Funciones Extraídas
+
+```
+python -m gtaa_validator ./proyecto --ai --verbose
+                    │
+                    ▼
+            main() [orquestador]
+                    │
+        ┌───────────┴───────────┐
+        │ setup_logging()       │
+        │ load_config()         │
+        └───────────┬───────────┘
+                    │
+                    ▼
+    ┌──────────────────────────────┐
+    │ _run_static_analysis()       │
+    │  └── StaticAnalyzer.analyze()│
+    │  → (report, 0.45s)          │
+    └──────────────┬───────────────┘
+                   │
+                   ▼
+    ┌──────────────────────────────┐
+    │ _run_semantic_analysis()     │
+    │  ├── create_llm_client()    │
+    │  └── SemanticAnalyzer       │
+    │      .analyze(report)       │
+    │  → (report, semantic, 2.1s) │
+    └──────────────┬───────────────┘
+                   │
+                   ▼
+    ┌──────────────────────────────┐
+    │ _display_results()           │
+    │  └── Mostrar violaciones     │
+    │  → severity_counts           │
+    └──────────────┬───────────────┘
+                   │
+                   ▼
+    ┌──────────────────────────────┐
+    │ _build_metrics()             │
+    │  └── AnalysisMetrics(...)    │
+    │  → metrics                   │
+    └──────────────┬───────────────┘
+                   │
+                   ▼
+    ┌──────────────────────────────┐
+    │ _generate_reports()          │
+    │  ├── JsonReporter.generate() │
+    │  └── HtmlReporter.generate() │
+    └──────────────┬───────────────┘
+                   │
+                   ▼
+    ┌──────────────────────────────┐
+    │ _display_llm_summary()       │
+    │  └── Tokens, costo, provider │
+    └──────────────┬───────────────┘
+                   │
+                   ▼
+            exit code (0 o 1)
+```
+
+---
+
+## 35. Estructura de Archivos Después de Fase 10.8
+
+```
+gtaa_validator/
+├── __main__.py                # MODIFICADO: 6 funciones extraídas de main()
+├── models.py                  # MODIFICADO: +get_score_label(), usa safe_relative_path
+├── file_utils.py              # MODIFICADO: +safe_relative_path()
+├── config.py                  # MODIFICADO: +EXCLUDED_DIRS centralizado
+│
+├── analyzers/
+│   ├── static_analyzer.py     # MODIFICADO: importa EXCLUDED_DIRS de config
+│   └── semantic_analyzer.py   # MODIFICADO: +_call_with_fallback(), importa EXCLUDED_DIRS,
+│                              #             tipo LLMClientProtocol
+│
+├── checkers/
+│   ├── base.py                # MODIFICADO: +_is_test_file(), +_is_test_function(),
+│   │                          #             +_get_config_for_extension()
+│   ├── definition_checker.py  # MODIFICADO: usa BaseChecker methods, -self.violations
+│   ├── quality_checker.py     # MODIFICADO: usa BaseChecker methods
+│   └── adaptation_checker.py  # MODIFICADO: usa _get_config_for_extension()
+│
+├── llm/
+│   ├── __init__.py            # MODIFICADO: exporta LLMClientProtocol, TokenUsage
+│   ├── protocol.py            # NUEVO: TokenUsage unificado, LLMClientProtocol
+│   ├── client.py              # MODIFICADO: usa TokenUsage de protocol
+│   ├── api_client.py          # MODIFICADO: usa TokenUsage de protocol
+│   └── factory.py             # MODIFICADO: retorna LLMClientProtocol
+│
+├── parsers/
+│   ├── treesitter_base.py     # MODIFICADO: -body_node, -import Set
+│   ├── java_parser.py         # MODIFICADO: -body_node assignments
+│   ├── js_parser.py           # MODIFICADO: -body_node assignments
+│   └── csharp_parser.py       # MODIFICADO: -body_node assignments
+│
+└── reporters/
+    └── html_reporter.py       # MODIFICADO: importa get_score_label
+```
+
+---
+
+## 36. Resumen de Principios Aplicados en Fase 10.8
+
+| Principio | Aplicación | Resultado |
+|-----------|-----------|-----------|
+| **DRY** | Extraer utilidades compartidas, unificar TokenUsage | Eliminar duplicación en 6+ módulos |
+| **SRP** | Descomponer main() en 6 funciones | Cada función, una responsabilidad |
+| **DIP** | LLMClientProtocol (Protocol) | Factory retorna abstracción, no tipos concretos |
+| **OCP** | _get_config_for_extension con dict | Añadir lenguaje sin modificar método |
+| **Template Method** | Métodos concretos en BaseChecker | Subclases delegan detección de tests a la base |
+| **Extract Method** | 6 funciones de main(), _call_with_fallback | Código más legible y testeable |
+| **Dead Code Elimination** | 65 líneas + 3 tests eliminados | Codebase más limpio y mantenible |
+
+---
+
+## 37. Commits en Fase 10.8
+
+| Commit | Tipo | Descripción |
+|--------|------|-------------|
+| `fe51635` | refactor | Extraer utilidades compartidas (score label, relative path, excluded dirs) |
+| `b8ed7b5` | refactor | Eliminar código muerto e imports no usados |
+| `1de91be` | refactor | Extraer métodos compartidos a BaseChecker |
+| `0799bbe` | refactor | Añadir Protocol, unificar TokenUsage, extraer fallback helper |
+| `24a9720` | refactor | Descomponer main() en funciones auxiliares |
+| `ec834fb` | docs | Actualizar README con Fase 10.8 |
+
+Tests totales: 672 → 669 (3 legacy eliminados, todos pasan).
+
+---
+
+*Última actualización: 7 de febrero de 2026 (Fase 10.8 — Refactor SOLID/DRY)*

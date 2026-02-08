@@ -65,6 +65,11 @@ El formato sigue la estructura de un ADR (Architecture Decision Record) adaptado
 53. [GitHub Action composite frente a Docker-based](#53-github-action-composite-frente-a-docker-based)
 54. [build-backend setuptools.build_meta frente a _legacy](#54-build-backend-setuptoolsbuild_meta-frente-a-_legacy)
 55. [Auditoría de seguridad como documentación formal](#55-auditoría-de-seguridad-como-documentación-formal)
+56. [Extracción de utilidades compartidas (DRY)](#56-extracción-de-utilidades-compartidas-dry)
+57. [Eliminación de código muerto (Fase 10.8)](#57-eliminación-de-código-muerto-fase-108)
+58. [Métodos compartidos en BaseChecker (Template Method)](#58-métodos-compartidos-en-basechecker-template-method)
+59. [LLMClientProtocol y TokenUsage unificado (DIP)](#59-llmclientprotocol-y-tokenusage-unificado-dip)
+60. [Descomposición del CLI en funciones auxiliares (SRP)](#60-descomposición-del-cli-en-funciones-auxiliares-srp)
 
 ---
 
@@ -3265,6 +3270,389 @@ ENTRYPOINT ["gtaa-validator"]
 
 ---
 
+## 56. Extracción de utilidades compartidas (DRY)
+
+### Problema
+
+Tres piezas de lógica estaban duplicadas en el codebase:
+
+1. **`get_score_label()`** — duplicado en `__main__.py` (cadena if/elif inline, ~8 líneas) y en `html_reporter.py` (método privado `_get_score_label()`, ~8 líneas)
+2. **`safe_relative_path()`** — duplicado en `models.py:Violation.to_dict()` (try/except ValueError inline) y en `__main__.py` (mismo patrón)
+3. **`EXCLUDED_DIRS`** — cada analizador definía su propio set: `StaticAnalyzer` con 11 entradas y `SemanticAnalyzer` con 9 entradas (subconjunto parcial)
+
+### Alternativa evaluada: Mantener código duplicado
+
+```python
+# __main__.py — inline
+if score >= 90: label = "EXCELENTE"
+elif score >= 75: label = "BUENO"
+...
+
+# html_reporter.py — método privado
+def _get_score_label(self, score):
+    if score >= 90: return "EXCELENTE"
+    ...
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| Violación DRY | Misma lógica en 2+ lugares, riesgo de inconsistencia |
+| Inconsistencia real | `EXCLUDED_DIRS` tenía 14 entradas combinadas pero cada analyzer usaba un subconjunto diferente |
+| Mantenimiento duplicado | Cambiar un umbral de score requería modificar 2 ficheros |
+
+### Solución elegida: Extraer a módulos compartidos
+
+- `get_score_label()` → `models.py` (junto a `Severity` y `Report`, que son los modelos que consume)
+- `safe_relative_path()` → `file_utils.py` (junto a `read_file_safe()`, utilidades de ficheros)
+- `EXCLUDED_DIRS` → `config.py` (constante compartida, superset de 14 entradas)
+
+```python
+# models.py
+def get_score_label(score: float) -> str:
+    if score >= 90: return "EXCELENTE"
+    elif score >= 75: return "BUENO"
+    elif score >= 50: return "NECESITA MEJORAS"
+    else: return "PROBLEMAS CRÍTICOS"
+
+# file_utils.py
+def safe_relative_path(file_path: Path, base_path: Path) -> Path:
+    try:
+        return file_path.relative_to(base_path)
+    except ValueError:
+        return file_path
+
+# config.py
+EXCLUDED_DIRS = {
+    "venv", "env", "ENV", ".venv", ".git", ".hg", ".svn",
+    "__pycache__", "node_modules", ".pytest_cache", ".tox",
+    "build", "dist", "*.egg-info", "bin", "obj", "target",
+}
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| DRY cumplido | Cada lógica en un solo lugar |
+| Consistencia | `EXCLUDED_DIRS` unificado, mismos directorios excluidos siempre |
+| Ubicación natural | `get_score_label` junto a `Severity`, `safe_relative_path` junto a `read_file_safe` |
+| Principio aplicado | Single Source of Truth para cada concepto |
+
+---
+
+## 57. Eliminación de código muerto (Fase 10.8)
+
+### Problema
+
+Segunda pasada de eliminación de código muerto (la primera fue ADR 47 en Fase 10.3). Se identificaron artefactos huérfanos dejados por la migración a `ParseResult` en Fase 9:
+
+| Artefacto | Fichero | Descripción |
+|-----------|---------|-------------|
+| `_analyze_imports()` | `file_classifier.py` | ~24 líneas, método legacy no invocado |
+| `self.violations`, `self.current_file` | `definition_checker.py` | Campos de instancia no usados en `__init__` |
+| `ParsedFunction.body_node` | `treesitter_base.py` | Campo no usado por ningún checker |
+| `body_node=...` | `java_parser.py`, `js_parser.py`, `csharp_parser.py` | Asignaciones al campo muerto |
+| `import Set` | `treesitter_base.py` | Import no utilizado |
+| `TestLegacyAnalyzeImports` | `test_classifier.py` | 3 tests del método eliminado |
+
+### Alternativa evaluada: Mantener con comentarios "legacy"
+
+**Motivos de descarte:** Igual que ADR 47. El código muerto confunde a evaluadores, sugiere deuda técnica no resuelta y añade ruido al codebase.
+
+### Solución elegida: Eliminación completa
+
+Todos los artefactos eliminados sin reemplazo. Tests: 672 → 669 (3 legacy eliminados). Los 669 tests restantes pasan.
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| Código limpio | Sin artefactos huérfanos de refactors previos |
+| Menor superficie | Menos código = menos mantenimiento |
+| Tests precisos | Solo se testean funcionalidades existentes |
+
+---
+
+## 58. Métodos compartidos en BaseChecker (Template Method)
+
+### Problema
+
+Tres checkers (`DefinitionChecker`, `QualityChecker`, `AdaptationChecker`) tenían lógica duplicada:
+
+- `_is_test_file()` — duplicado en `DefinitionChecker` (~25 líneas) y `QualityChecker` (~25 líneas) con lógica idéntica
+- `_is_test_function()` — duplicado en `DefinitionChecker` y `QualityChecker` (~15 líneas cada uno) con lógica idéntica
+- Patrón de dispatch extensión→configuración (cadena if/elif mapeando `.py`→PYTHON, `.java`→JAVA, `.js/.ts`→JS, `.cs`→CSHARP) — duplicado **5 veces** en 3 checkers: `_get_browser_methods()`, `_get_browser_objects()`, `_get_forbidden_modules()`, `_get_assertion_methods()`, `_get_generic_name_pattern()`
+
+### Alternativa evaluada: Mantener métodos duplicados en cada checker
+
+```python
+# DefinitionChecker — 25 líneas
+def _is_test_file(self, file_path):
+    extension = file_path.suffix.lower()
+    if extension == ".py":
+        return filename.startswith("test_") or ...
+    elif extension == ".java":
+        return "test" in filename or ...
+    ...
+
+# QualityChecker — 25 líneas DUPLICADAS
+def _is_test_file(self, file_path):
+    extension = file_path.suffix.lower()
+    if extension == ".py":
+        return filename.startswith("test_") or ...
+    ...
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| ~100 líneas duplicadas | Misma lógica en 2+ checkers |
+| Inconsistencia potencial | Un bug fix en un checker podría olvidarse en el otro |
+| Viola DRY | Definición repetida del mismo concepto |
+| Viola Template Method | `BaseChecker` ya define el esqueleto; los métodos compartidos pertenecen allí |
+
+### Solución elegida: Elevar 3 métodos a BaseChecker
+
+```python
+class BaseChecker(ABC):
+    _JS_EXTENSIONS = frozenset({".js", ".ts", ".jsx", ".tsx", ".mjs", ".cjs"})
+    _SUPPORTED_EXTENSIONS = frozenset({".py", ".java", ".cs"} | _JS_EXTENSIONS)
+
+    def _is_test_file(self, file_path: Path) -> bool:
+        """Multilenguaje: detecta test files por naming/path."""
+        ...
+
+    def _is_test_function(self, func: ParsedFunction, extension: str) -> bool:
+        """Multilenguaje: detecta test functions por decoradores/naming."""
+        ...
+
+    @staticmethod
+    def _get_config_for_extension(extension: str, config_map: dict):
+        """Dispatch genérico: extensión → configuración por lenguaje."""
+        ext = extension.lstrip(".")
+        if ext in ("js", "ts", "jsx", "tsx", "mjs", "cjs"):
+            ext = "js"
+        return config_map.get(ext, config_map.get("default", set()))
+```
+
+Los 5 métodos de dispatch en los checkers ahora usan `_get_config_for_extension()` con un dict en lugar de if/elif:
+
+```python
+# Antes (en cada checker, 5 veces):
+def _get_browser_methods(self, extension):
+    if extension == ".py": return self.BROWSER_METHODS_PYTHON
+    elif extension == ".java": return self.BROWSER_METHODS_JAVA
+    elif extension in {".js", ".ts", ...}: return self.BROWSER_METHODS_JS
+    elif extension == ".cs": return self.BROWSER_METHODS_CSHARP
+    return set()
+
+# Después:
+def _get_browser_methods(self, extension):
+    return self._get_config_for_extension(extension, {
+        "py": self.BROWSER_METHODS_PYTHON,
+        "java": self.BROWSER_METHODS_JAVA,
+        "js": self.BROWSER_METHODS_JS,
+        "cs": self.BROWSER_METHODS_CSHARP,
+    })
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| ~100 líneas eliminadas | De 276 a 176 en los 3 checkers combinados |
+| Template Method completo | `BaseChecker` ofrece métodos concretos compartidos; subclases implementan `check()` |
+| Open/Closed | Añadir lenguaje = añadir entrada al `config_map`, sin modificar el método de dispatch |
+| DRY cumplido | Lógica de detección de tests y dispatch de configuración en un solo lugar |
+
+**Principio aplicado — Template Method Pattern (GoF):** La clase base proporciona métodos auxiliares concretos que las subclases pueden usar, manteniendo `check()` como el método abstracto que cada subclase implementa.
+
+---
+
+## 59. LLMClientProtocol y TokenUsage unificado (DIP)
+
+### Problema
+
+Múltiples problemas en la capa LLM:
+
+1. `MockLLMClient` tenía su propia clase `MockTokenUsage` y `APILLMClient` tenía su propia clase `TokenUsage` — casi idénticas pero con parámetros de pricing diferentes
+2. El tipo de retorno de la factory era `Union[MockLLMClient, APILLMClient]` — añadir un nuevo cliente requeriría actualizar el Union en todos los sitios
+3. `SemanticAnalyzer` tenía dos bloques try/except `RateLimitError` idénticos (~8 líneas duplicadas) para `analyze_file()` y `enrich_violation()`
+4. El ADR 14 eligió duck typing sobre ABC, pero el codebase no tenía definición formal del protocolo
+
+### Alternativa evaluada: Clase base abstracta (ABC)
+
+```python
+class BaseLLMClient(ABC):
+    @abstractmethod
+    def analyze_file(self, ...): ...
+
+class MockLLMClient(BaseLLMClient): ...
+class APILLMClient(BaseLLMClient): ...
+```
+
+**Motivos de descarte** (consistente con ADR 14):
+
+| Problema | Descripción |
+|----------|-------------|
+| Herencia retroactiva | Mock y API ya existen, forzar herencia es invasivo |
+| Solo 2 implementaciones | ABC es overengineering para 2 clases |
+| Acopla a jerarquía | Futuras implementaciones deben heredar de la ABC |
+
+### Solución elegida: Tres cambios coordinados
+
+**1. `TokenUsage` unificado** en `protocol.py`:
+
+```python
+@dataclass
+class TokenUsage:
+    input_tokens: int = 0
+    output_tokens: int = 0
+    total_calls: int = 0
+    cost_per_million_input: float = 0.0   # 0.0 para mock (sin coste)
+    cost_per_million_output: float = 0.0  # 0.0 para mock (sin coste)
+```
+
+`MockLLMClient` usa `TokenUsage()` (coste 0 por defecto). `APILLMClient` usa `TokenUsage(cost_per_million_input=0.075, cost_per_million_output=0.30)`.
+
+**2. `LLMClientProtocol`** usando `typing.Protocol` (PEP 544):
+
+```python
+@runtime_checkable
+class LLMClientProtocol(Protocol):
+    usage: TokenUsage
+
+    def analyze_file(self, file_content: str, file_path: str,
+                     file_type: str = "unknown", has_auto_wait: bool = False
+    ) -> List[dict]: ...
+
+    def enrich_violation(self, violation: dict, file_content: str) -> str: ...
+    def get_usage_summary(self) -> str: ...
+    def get_usage_dict(self) -> dict: ...
+```
+
+El tipo de retorno de la factory cambia a `LLMClientProtocol` en lugar de `Union[Mock, API]`.
+
+**3. `_call_with_fallback()`** en `SemanticAnalyzer`:
+
+```python
+def _call_with_fallback(self, method_name: str, *args, **kwargs):
+    """Llama a un método del LLM client con fallback automático por rate limit."""
+    try:
+        return getattr(self.llm_client, method_name)(*args, **kwargs)
+    except RateLimitError as e:
+        self._fallback_to_mock(str(e))
+        return getattr(self.llm_client, method_name)(*args, **kwargs)
+```
+
+Reemplaza los 2 bloques try/except duplicados.
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| DIP cumplido | La factory retorna `LLMClientProtocol`, no tipos concretos |
+| `TokenUsage` unificado | Una sola clase parametrizable; elimina `MockTokenUsage` |
+| Protocol > ABC | Duck typing estructural: cumple contrato sin herencia (PEP 544) |
+| `runtime_checkable` | `isinstance(client, LLMClientProtocol)` funciona si se necesita |
+| Fallback DRY | Un solo método para el patrón try/except `RateLimitError` |
+
+**Principios aplicados:**
+- **DIP (SOLID)**: Los módulos de alto nivel dependen de la abstracción `LLMClientProtocol`, no de implementaciones concretas
+- **DRY**: `TokenUsage` y fallback unificados
+- **Protocol (PEP 544)**: Duck typing estructural con verificación estática
+
+---
+
+## 60. Descomposición del CLI en funciones auxiliares (SRP)
+
+### Problema
+
+La función `main()` en `__main__.py` tenía ~200 líneas realizando 6 tareas distintas: análisis estático, análisis semántico, visualización de resultados, cálculo de métricas, generación de reportes y resumen LLM. Violación del Principio de Responsabilidad Única.
+
+### Alternativa evaluada: Mantener como función única
+
+```python
+def main(project_path, verbose, json_path, html_path, ai, ...):
+    # ~200 líneas mezclando:
+    # - Setup de logging y config
+    # - Instanciación y ejecución de StaticAnalyzer
+    # - Instanciación y ejecución de SemanticAnalyzer
+    # - Mostrar resultados con click.echo
+    # - Calcular AnalysisMetrics
+    # - Generar reportes JSON/HTML
+    # - Mostrar resumen de tokens LLM
+```
+
+**Motivos de descarte:**
+
+| Problema | Descripción |
+|----------|-------------|
+| 200 líneas | Función excesivamente larga para un orquestador |
+| 6 responsabilidades | Setup, análisis estático, análisis semántico, display, métricas, reportes |
+| Difícil de testear | No se pueden testear fases individuales en aislamiento |
+| Difícil de leer | Mezcla lógica de negocio con presentación |
+
+### Solución elegida: Extraer 6 funciones auxiliares a nivel de módulo
+
+```python
+def _run_static_analysis(project_path, verbose, config) -> tuple:
+    """Ejecuta análisis estático. Retorna (report, elapsed_seconds)."""
+
+def _run_semantic_analysis(project_path, report, provider, verbose, max_llm_calls) -> tuple:
+    """Ejecuta análisis semántico AI. Retorna (report, semantic, elapsed_seconds)."""
+
+def _display_results(report, project_path, verbose) -> dict:
+    """Muestra resultados del análisis. Retorna severity_counts."""
+
+def _build_metrics(report, semantic, static_secs, semantic_secs, total_start) -> AnalysisMetrics:
+    """Construye métricas de rendimiento del análisis."""
+
+def _generate_reports(report, metrics, json_path, html_path, output_dir, no_report, project_path) -> tuple:
+    """Genera reportes JSON/HTML. Retorna (json_path, html_path)."""
+
+def _display_llm_summary(report, semantic) -> None:
+    """Muestra resumen de uso del proveedor LLM y tokens."""
+```
+
+La función `main()` queda como orquestador puro (~50 líneas):
+
+```python
+def main(...):
+    # Setup
+    setup_logging(...)
+    config = load_config(...)
+
+    # Pipeline secuencial
+    report, static_secs = _run_static_analysis(...)
+    if ai:
+        report, semantic, semantic_secs = _run_semantic_analysis(...)
+    severity_counts = _display_results(...)
+    metrics = _build_metrics(...)
+    _generate_reports(...)
+    _display_llm_summary(...)
+
+    return 1 if severity_counts['CRITICAL'] > 0 else 0
+```
+
+**Justificación:**
+
+| Ventaja | Descripción |
+|---------|-------------|
+| SRP cumplido | Cada función tiene una responsabilidad clara |
+| Legibilidad | `main()` se lee como un pipeline secuencial |
+| Testabilidad | Cada función puede testearse en aislamiento |
+| Mantenibilidad | Modificar lógica de reportes no requiere navegar 200 líneas |
+
+**Principios aplicados:**
+- **Single Responsibility Principle (SOLID)**: Una función, una responsabilidad
+- **Extract Method (Fowler)**: Refactoring canónico para funciones largas
+
+---
+
 ## Resumen de decisiones
 
 | Decisión | Solución elegida | Alternativa descartada | Justificación principal |
@@ -3321,7 +3709,12 @@ ENTRYPOINT ["gtaa-validator"]
 | GitHub Action | Composite action | Docker-based action | Rápido, versión Python flexible, sin overhead Docker |
 | build-backend | `setuptools.build_meta` | `_legacy` (privado) | API pública, PEP 517, estable |
 | Auditoría de seguridad | Documento formal OWASP | Sin auditoría / comentarios | Trazable, clasificado, accionable, demuestra madurez profesional |
+| Utilidades compartidas | Extraer a `models.py`, `file_utils.py`, `config.py` | Mantener duplicado | DRY, Single Source of Truth, consistencia |
+| Código muerto (Fase 10.8) | Eliminación completa (65 líneas + 3 tests) | Mantener con "legacy" | Código limpio, menor superficie, tests precisos |
+| Métodos compartidos BaseChecker | Template Method con `_get_config_for_extension` | Mantener duplicados en cada checker | DRY, ~100 líneas eliminadas, Open/Closed |
+| LLMClientProtocol | `typing.Protocol` + `TokenUsage` unificado | ABC / mantener `Union` | DIP, duck typing estructural (PEP 544), fallback DRY |
+| Descomposición CLI | 6 funciones auxiliares de `main()` | Mantener función monolítica | SRP, legibilidad, testabilidad, Extract Method |
 
 ---
 
-*Última actualización: 6 de febrero de 2026 (Fase 10.4 — Auditoría de seguridad)*
+*Última actualización: 7 de febrero de 2026 (Fase 10.8 — Refactor SOLID/DRY)*
