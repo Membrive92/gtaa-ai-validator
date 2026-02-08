@@ -32,7 +32,159 @@ from gtaa_validator.analyzers.semantic_analyzer import SemanticAnalyzer
 from gtaa_validator.llm.factory import create_llm_client
 from gtaa_validator.config import load_config
 from gtaa_validator.logging_config import setup_logging
-from gtaa_validator.models import AnalysisMetrics
+from gtaa_validator.models import AnalysisMetrics, get_score_label
+from gtaa_validator.file_utils import safe_relative_path
+
+
+def _run_static_analysis(project_path: Path, verbose: bool, config) -> tuple:
+    """Ejecuta análisis estático y retorna (report, elapsed_seconds)."""
+    analyzer = StaticAnalyzer(project_path, verbose=verbose, config=config)
+    if not verbose:
+        click.echo("Ejecutando análisis estático...")
+    t0 = time.time()
+    report = analyzer.analyze()
+    return report, time.time() - t0
+
+
+def _run_semantic_analysis(
+    project_path: Path, report, provider: str, verbose: bool, max_llm_calls: int
+) -> tuple:
+    """Ejecuta análisis semántico AI y retorna (report, semantic_analyzer, elapsed_seconds)."""
+    llm_client = create_llm_client(provider=provider)
+    provider_name = type(llm_client).__name__
+    click.echo(f"Iniciando análisis semántico con {provider_name}...")
+
+    semantic = SemanticAnalyzer(
+        project_path, llm_client, verbose=verbose, max_llm_calls=max_llm_calls
+    )
+    t0 = time.time()
+    report = semantic.analyze(report)
+    elapsed = time.time() - t0
+
+    # Mostrar info del proveedor usado
+    if report.llm_provider_info:
+        info = report.llm_provider_info
+        if info.get("fallback_occurred"):
+            click.echo(f"[!] Fallback activado: {info['initial_provider']} -> {info['current_provider']}")
+        else:
+            click.echo(f"Análisis completado con: {info['current_provider']}")
+
+    return report, semantic, elapsed
+
+
+def _display_results(report, project_path: Path, verbose: bool) -> dict:
+    """Muestra resultados del análisis y retorna severity_counts."""
+    if not verbose:
+        click.echo()
+
+    click.echo("=" * 60)
+    click.echo("RESULTADOS DEL ANÁLISIS")
+    click.echo("=" * 60)
+
+    click.echo(f"\nArchivos analizados: {report.files_analyzed}")
+    click.echo(f"Violaciones totales: {len(report.violations)}")
+
+    severity_counts = report.get_violation_count_by_severity()
+    click.echo("\nViolaciones por severidad:")
+    click.echo(f"  CRÍTICA: {severity_counts['CRITICAL']}")
+    click.echo(f"  ALTA:    {severity_counts['HIGH']}")
+    click.echo(f"  MEDIA:   {severity_counts['MEDIUM']}")
+    click.echo(f"  BAJA:    {severity_counts['LOW']}")
+
+    click.echo(f"\nPuntuación de cumplimiento: {report.score:.1f}/100")
+    click.echo(f"Estado: {get_score_label(report.score)}")
+
+    if verbose and report.violations:
+        click.echo("\n" + "=" * 60)
+        click.echo("VIOLACIONES DETALLADAS")
+        click.echo("=" * 60)
+
+        for i, violation in enumerate(report.violations, 1):
+            click.echo(f"\n[{i}] {violation.severity.value} - {violation.violation_type.name}")
+            relative_path = safe_relative_path(violation.file_path, project_path)
+            location = f"{relative_path}"
+            if violation.line_number:
+                location += f":{violation.line_number}"
+            click.echo(f"    Ubicación: {location}")
+            click.echo(f"    Mensaje: {violation.message}")
+            if violation.code_snippet:
+                click.echo(f"    Código: {violation.code_snippet}")
+            if violation.ai_suggestion:
+                click.echo(f"    [AI] {violation.ai_suggestion}")
+
+    return severity_counts
+
+
+def _build_metrics(report, semantic, static_secs: float, semantic_secs: float, total_start: float) -> AnalysisMetrics:
+    """Construye métricas de rendimiento del análisis."""
+    metrics = AnalysisMetrics(
+        static_analysis_seconds=static_secs,
+        semantic_analysis_seconds=semantic_secs,
+        total_seconds=time.time() - total_start,
+        files_per_second=report.files_analyzed / static_secs if static_secs > 0 else 0.0,
+    )
+
+    if semantic:
+        token_usage = semantic.get_token_usage()
+        if token_usage:
+            metrics.llm_api_calls = token_usage.get('total_calls', 0)
+            metrics.llm_input_tokens = token_usage.get('input_tokens', 0)
+            metrics.llm_output_tokens = token_usage.get('output_tokens', 0)
+            metrics.llm_total_tokens = token_usage.get('total_tokens', 0)
+            metrics.llm_estimated_cost_usd = token_usage.get('estimated_cost_usd', 0.0)
+
+    return metrics
+
+
+def _generate_reports(
+    report, metrics: AnalysisMetrics,
+    json_path: str, html_path: str, output_dir: str, no_report: bool, project_path: Path,
+) -> tuple:
+    """Genera reportes JSON/HTML. Retorna (json_path, html_path) usados."""
+    # Auto-generación de reportes con fecha y nombre de proyecto
+    if not json_path and not html_path and not no_report:
+        date_stamp = datetime.now().strftime("%Y-%m-%d")
+        project_name = project_path.name
+        out_dir = Path(output_dir)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        json_path = str(out_dir / f"gtaa_report_{project_name}_{date_stamp}.json")
+        html_path = str(out_dir / f"gtaa_report_{project_name}_{date_stamp}.html")
+
+    report.metrics = metrics
+
+    if json_path:
+        json_out = Path(json_path)
+        json_out.parent.mkdir(parents=True, exist_ok=True)
+        JsonReporter().generate(report, json_out)
+        click.echo(f"\nReporte JSON exportado: {json_path}")
+
+    if html_path:
+        html_out = Path(html_path)
+        html_out.parent.mkdir(parents=True, exist_ok=True)
+        HtmlReporter().generate(report, html_out)
+        click.echo(f"Reporte HTML exportado: {html_path}")
+
+    return json_path, html_path
+
+
+def _display_llm_summary(report, semantic) -> None:
+    """Muestra resumen de uso del proveedor LLM y tokens."""
+    if report.llm_provider_info:
+        info = report.llm_provider_info
+        click.echo("\n[Análisis Semántico AI]")
+        click.echo(f"  Proveedor: {info['current_provider']}")
+        if info.get("fallback_occurred"):
+            click.echo(f"  Fallback: Si ({info['initial_provider']} -> {info['current_provider']})")
+
+    if semantic and hasattr(semantic, 'get_token_usage'):
+        token_usage = semantic.get_token_usage()
+        if token_usage.get('total_tokens', 0) > 0:
+            click.echo("\n[LLM API - Consumo de Tokens]")
+            click.echo(f"  Tokens entrada: {token_usage['input_tokens']:,}")
+            click.echo(f"  Tokens salida:  {token_usage['output_tokens']:,}")
+            click.echo(f"  Total tokens:   {token_usage['total_tokens']:,}")
+            click.echo(f"  Llamadas API:   {token_usage['total_calls']}")
+            click.echo(f"  Costo estimado: ${token_usage['estimated_cost_usd']:.4f} USD")
 
 
 @click.command()
@@ -63,206 +215,57 @@ def main(project_path: str, verbose: bool, json_path: str, html_path: str, ai: b
         python -m gtaa_validator ./mi-proyecto-selenium
         python -m gtaa_validator ./mi-proyecto-selenium --verbose
     """
-    # Con --verbose y sin --log-file explícito, escribir a logs/gtaa_debug.log
+    # Setup
     if verbose and not log_file:
         log_file = "logs/gtaa_debug.log"
-
-    # Configurar sistema de logging
     setup_logging(verbose=verbose, log_file=log_file)
 
-    # Mostrar cabecera
     click.echo("=== gTAA AI Validator ===")
     click.echo(f"Analizando proyecto: {project_path}\n")
 
-    # Convertir a objeto Path y resolver a ruta absoluta
     project_path = Path(project_path).resolve()
-
-    # Validar que la ruta es un directorio
     if not project_path.is_dir():
         click.echo(f"ERROR: {project_path} no es un directorio", err=True)
         sys.exit(1)
 
-    # Cargar configuración del proyecto
-    config = None
-    if config_path:
-        config = load_config(Path(config_path).parent)
+    config = load_config(Path(config_path).parent) if config_path else None
+    total_start = time.time()
 
-    # Crear analizador y ejecutar análisis
-    analyzer = StaticAnalyzer(project_path, verbose=verbose, config=config)
-
-    if not verbose:
-        click.echo("Ejecutando análisis estático...")
-
-    t0 = time.time()
-    report = analyzer.analyze()
-    t1 = time.time()
+    # Análisis estático
+    report, static_secs = _run_static_analysis(project_path, verbose, config)
 
     # Análisis semántico AI (opcional)
     semantic = None
+    semantic_secs = 0.0
     if ai:
-        llm_client = create_llm_client(provider=provider)
-        provider_name = type(llm_client).__name__
-        click.echo(f"Iniciando análisis semántico con {provider_name}...")
-        semantic = SemanticAnalyzer(
-            project_path, llm_client, verbose=verbose, max_llm_calls=max_llm_calls
+        report, semantic, semantic_secs = _run_semantic_analysis(
+            project_path, report, provider, verbose, max_llm_calls
         )
-        report = semantic.analyze(report)
 
-        # Mostrar info del proveedor usado
-        if report.llm_provider_info:
-            info = report.llm_provider_info
-            if info.get("fallback_occurred"):
-                click.echo(f"[!] Fallback activado: {info['initial_provider']} -> {info['current_provider']}")
-            else:
-                click.echo(f"Análisis completado con: {info['current_provider']}")
+    # Resultados
+    severity_counts = _display_results(report, project_path, verbose)
 
-    t2 = time.time()
+    # Métricas
+    metrics = _build_metrics(report, semantic, static_secs, semantic_secs, total_start)
 
-    # Mostrar resultados
-    if not verbose:
-        click.echo()
+    # Reportes
+    _generate_reports(report, metrics, json_path, html_path, output_dir, no_report, project_path)
 
-    click.echo("="*60)
-    click.echo("RESULTADOS DEL ANÁLISIS")
-    click.echo("="*60)
-
-    # Estadísticas de archivos
-    click.echo(f"\nArchivos analizados: {report.files_analyzed}")
-    click.echo(f"Violaciones totales: {len(report.violations)}")
-
-    # Violaciones por severidad
-    severity_counts = report.get_violation_count_by_severity()
-    click.echo("\nViolaciones por severidad:")
-    click.echo(f"  CRÍTICA: {severity_counts['CRITICAL']}")
-    click.echo(f"  ALTA:    {severity_counts['HIGH']}")
-    click.echo(f"  MEDIA:   {severity_counts['MEDIUM']}")
-    click.echo(f"  BAJA:    {severity_counts['LOW']}")
-
-    # Puntuación de cumplimiento
-    click.echo(f"\nPuntuación de cumplimiento: {report.score:.1f}/100")
-
-    # Interpretación del score
-    if report.score >= 90:
-        score_label = "EXCELENTE"
-    elif report.score >= 75:
-        score_label = "BUENO"
-    elif report.score >= 50:
-        score_label = "NECESITA MEJORAS"
-    else:
-        score_label = "PROBLEMAS CRÍTICOS"
-
-    click.echo(f"Estado: {score_label}")
-
-    # En modo verbose, mostrar información detallada de violaciones
-    if verbose and report.violations:
-        click.echo("\n" + "="*60)
-        click.echo("VIOLACIONES DETALLADAS")
-        click.echo("="*60)
-
-        for i, violation in enumerate(report.violations, 1):
-            click.echo(f"\n[{i}] {violation.severity.value} - {violation.violation_type.name}")
-
-            # Mostrar archivo y número de línea
-            try:
-                relative_path = violation.file_path.relative_to(project_path)
-            except ValueError:
-                relative_path = violation.file_path
-
-            location = f"{relative_path}"
-            if violation.line_number:
-                location += f":{violation.line_number}"
-            click.echo(f"    Ubicación: {location}")
-
-            # Mostrar mensaje
-            click.echo(f"    Mensaje: {violation.message}")
-
-            # Mostrar fragmento de código si está disponible
-            if violation.code_snippet:
-                click.echo(f"    Código: {violation.code_snippet}")
-
-            # Mostrar sugerencia AI si existe
-            if violation.ai_suggestion:
-                click.echo(f"    [AI] {violation.ai_suggestion}")
-
-    # Construir métricas de rendimiento
-    static_secs = t1 - t0
-    semantic_secs = t2 - t1 if ai else 0.0
-
-    metrics = AnalysisMetrics(
-        static_analysis_seconds=static_secs,
-        semantic_analysis_seconds=semantic_secs,
-        total_seconds=t2 - t0,
-        files_per_second=report.files_analyzed / static_secs if static_secs > 0 else 0.0,
-    )
-
-    # Poblar métricas LLM si se usó análisis semántico
-    if semantic:
-        token_usage = semantic.get_token_usage()
-        if token_usage:
-            metrics.llm_api_calls = token_usage.get('total_calls', 0)
-            metrics.llm_input_tokens = token_usage.get('input_tokens', 0)
-            metrics.llm_output_tokens = token_usage.get('output_tokens', 0)
-            metrics.llm_total_tokens = token_usage.get('total_tokens', 0)
-            metrics.llm_estimated_cost_usd = token_usage.get('estimated_cost_usd', 0.0)
-
-    # Auto-generación de reportes con fecha y nombre de proyecto
-    if not json_path and not html_path and not no_report:
-        date_stamp = datetime.now().strftime("%Y-%m-%d")
-        project_name = project_path.name
-        out_dir = Path(output_dir)
-        out_dir.mkdir(parents=True, exist_ok=True)
-        json_path = str(out_dir / f"gtaa_report_{project_name}_{date_stamp}.json")
-        html_path = str(out_dir / f"gtaa_report_{project_name}_{date_stamp}.html")
-
-    # Exportar reportes
-    if json_path:
-        report.metrics = metrics
-        json_out = Path(json_path)
-        json_out.parent.mkdir(parents=True, exist_ok=True)
-        JsonReporter().generate(report, json_out)
-        click.echo(f"\nReporte JSON exportado: {json_path}")
-
-    if html_path:
-        report.metrics = metrics
-        html_out = Path(html_path)
-        html_out.parent.mkdir(parents=True, exist_ok=True)
-        HtmlReporter().generate(report, html_out)
-        click.echo(f"Reporte HTML exportado: {html_path}")
-
-    t3 = time.time()
-    metrics.report_generation_seconds = t3 - t2
-    metrics.total_seconds = t3 - t0
+    # Actualizar métricas con tiempo de generación de reportes
+    metrics.report_generation_seconds = time.time() - total_start - static_secs - semantic_secs
+    metrics.total_seconds = time.time() - total_start
     report.metrics = metrics
 
-    # Mostrar info del proveedor LLM si se usó --ai
-    if report.llm_provider_info:
-        info = report.llm_provider_info
-        click.echo("\n[Análisis Semántico AI]")
-        click.echo(f"  Proveedor: {info['current_provider']}")
-        if info.get("fallback_occurred"):
-            click.echo(f"  Fallback: Si ({info['initial_provider']} -> {info['current_provider']})")
-
-    # Mostrar consumo de tokens si se usó LLM API
-    if semantic and hasattr(semantic, 'get_token_usage'):
-        token_usage = semantic.get_token_usage()
-        if token_usage.get('total_tokens', 0) > 0:
-            click.echo("\n[LLM API - Consumo de Tokens]")
-            click.echo(f"  Tokens entrada: {token_usage['input_tokens']:,}")
-            click.echo(f"  Tokens salida:  {token_usage['output_tokens']:,}")
-            click.echo(f"  Total tokens:   {token_usage['total_tokens']:,}")
-            click.echo(f"  Llamadas API:   {token_usage['total_calls']}")
-            click.echo(f"  Costo estimado: ${token_usage['estimated_cost_usd']:.4f} USD")
+    # Resumen LLM
+    _display_llm_summary(report, semantic)
 
     # Resumen final
-    click.echo("\n" + "="*60)
+    click.echo("\n" + "=" * 60)
     click.echo(f"Análisis completado en {metrics.total_seconds:.2f}s")
-    click.echo("="*60)
+    click.echo("=" * 60)
 
     # Código de salida 1 si hay violaciones críticas
-    if severity_counts['CRITICAL'] > 0:
-        return 1
-    else:
-        return 0
+    return 1 if severity_counts['CRITICAL'] > 0 else 0
 
 
 if __name__ == "__main__":
