@@ -37,7 +37,7 @@ from gtaa_validator.checkers.adaptation_checker import AdaptationChecker
 from gtaa_validator.checkers.quality_checker import QualityChecker
 from gtaa_validator.checkers.bdd_checker import BDDChecker
 from gtaa_validator.file_classifier import FileClassifier
-from gtaa_validator.config import ProjectConfig, load_config
+from gtaa_validator.config import ProjectConfig, load_config, EXCLUDED_DIRS
 from gtaa_validator.parsers.treesitter_base import ParseResult, get_parser_for_file
 from gtaa_validator.file_utils import read_file_safe
 
@@ -176,17 +176,7 @@ class StaticAnalyzer:
         Returns:
             Lista de objetos Path para todos los archivos encontrados
         """
-        # Directorios a excluir del análisis
-        exclude_dirs = {
-            "venv", "env", "ENV", ".venv",  # Entornos virtuales
-            ".git", ".hg", ".svn",           # Control de versiones
-            "__pycache__",                    # Caché de Python
-            "node_modules",                   # Dependencias de JavaScript
-            ".pytest_cache", ".tox",         # Artefactos de testing
-            "build", "dist", "*.egg-info",   # Artefactos de build
-            "bin", "obj",                     # Artefactos de C#
-            "target",                         # Artefactos de Java/Maven
-        }
+        # Directorios a excluir del análisis (definidos en config.EXCLUDED_DIRS)
 
         # Extensiones a buscar (Fase 9: multi-lang)
         extensions = (
@@ -205,7 +195,7 @@ class StaticAnalyzer:
                 # Verificar si el archivo está en un directorio excluido
                 should_exclude = any(
                     excluded in file_path.parts
-                    for excluded in exclude_dirs
+                    for excluded in EXCLUDED_DIRS
                 )
 
                 if not should_exclude:

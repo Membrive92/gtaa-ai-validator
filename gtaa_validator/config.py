@@ -15,6 +15,18 @@ from typing import List
 
 logger = logging.getLogger(__name__)
 
+# Directorios excluidos del análisis (compartido por StaticAnalyzer y SemanticAnalyzer)
+EXCLUDED_DIRS = {
+    "venv", "env", "ENV", ".venv",   # Entornos virtuales
+    ".git", ".hg", ".svn",            # Control de versiones
+    "__pycache__",                     # Caché de Python
+    "node_modules",                    # Dependencias de JavaScript
+    ".pytest_cache", ".tox",          # Artefactos de testing
+    "build", "dist", "*.egg-info",    # Artefactos de build
+    "bin", "obj",                      # Artefactos de C#
+    "target",                          # Artefactos de Java/Maven
+}
+
 
 @dataclass
 class ProjectConfig:

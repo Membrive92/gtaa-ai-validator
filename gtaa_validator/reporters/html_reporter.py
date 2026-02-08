@@ -11,7 +11,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List
 
-from gtaa_validator.models import Report, Severity, Violation, ViolationType
+from gtaa_validator.models import Report, Severity, Violation, ViolationType, get_score_label
 
 
 class HtmlReporter:
@@ -353,14 +353,7 @@ class HtmlReporter:
 
     def _get_score_label(self, score: float) -> str:
         """Etiqueta textual del score."""
-        if score >= 90:
-            return "EXCELENTE"
-        elif score >= 75:
-            return "BUENO"
-        elif score >= 50:
-            return "NECESITA MEJORAS"
-        else:
-            return "PROBLEMAS CRÍTICOS"
+        return get_score_label(score)
 
     def _build_score_context(self, score: float) -> str:
         """Texto explicativo del cálculo del score."""

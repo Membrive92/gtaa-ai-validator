@@ -17,6 +17,26 @@ from typing import List, Optional
 from datetime import datetime
 
 from gtaa_validator import __version__
+from gtaa_validator.file_utils import safe_relative_path
+
+
+def get_score_label(score: float) -> str:
+    """Etiqueta textual del score de cumplimiento gTAA.
+
+    Args:
+        score: Puntuación de cumplimiento (0-100).
+
+    Returns:
+        Etiqueta: EXCELENTE, BUENO, NECESITA MEJORAS o PROBLEMAS CRÍTICOS.
+    """
+    if score >= 90:
+        return "EXCELENTE"
+    elif score >= 75:
+        return "BUENO"
+    elif score >= 50:
+        return "NECESITA MEJORAS"
+    else:
+        return "PROBLEMAS CRÍTICOS"
 
 
 class Severity(Enum):
@@ -345,12 +365,7 @@ class Violation:
             project_path: Si se proporciona, las rutas se relativizan
                           respecto a este directorio (SEC-03).
         """
-        file_display = self.file_path
-        if project_path:
-            try:
-                file_display = self.file_path.relative_to(project_path)
-            except ValueError:
-                file_display = self.file_path
+        file_display = safe_relative_path(self.file_path, project_path) if project_path else self.file_path
         return {
             "type": self.violation_type.name,
             "severity": self.severity.value,

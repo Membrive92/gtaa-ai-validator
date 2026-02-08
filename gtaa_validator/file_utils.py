@@ -42,3 +42,21 @@ def read_file_safe(file_path: Path, max_size: int = MAX_FILE_SIZE_BYTES) -> str:
     except OSError as e:
         logger.debug("Error leyendo archivo %s: %s", file_path, e)
         return ""
+
+
+def safe_relative_path(file_path: Path, base_path: Path) -> Path:
+    """Relativiza una ruta respecto a un directorio base de forma segura.
+
+    Si la ruta no es relativa al base (ValueError), retorna la ruta original.
+
+    Args:
+        file_path: Ruta del archivo.
+        base_path: Directorio base para relativizar.
+
+    Returns:
+        Ruta relativa si es posible, ruta original en caso contrario.
+    """
+    try:
+        return file_path.relative_to(base_path)
+    except ValueError:
+        return file_path
