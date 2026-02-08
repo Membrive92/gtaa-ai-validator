@@ -71,7 +71,7 @@ test('login test', async ({ page }) => {
 
         adaptation_violations = [v for v in violations
                                  if v.violation_type == ViolationType.ADAPTATION_IN_DEFINITION]
-        assert len(adaptation_violations) > 0
+        assert len(adaptation_violations) >= 1
 
     def test_detects_page_goto_in_test(self, tmp_path):
         """Detects page.goto() in test function."""
@@ -88,7 +88,7 @@ test('navigation test', async ({ page }) => {
 
         adaptation_violations = [v for v in violations
                                  if v.violation_type == ViolationType.ADAPTATION_IN_DEFINITION]
-        assert len(adaptation_violations) > 0
+        assert len(adaptation_violations) >= 1
 
     def test_detects_cy_get_in_it(self, tmp_path):
         """Detects cy.get() in it() block."""
@@ -105,7 +105,7 @@ describe('Login', () => {
 
         adaptation_violations = [v for v in violations
                                  if v.violation_type == ViolationType.ADAPTATION_IN_DEFINITION]
-        assert len(adaptation_violations) > 0
+        assert len(adaptation_violations) >= 1
 
 
 class TestQualityCheckerJS:
@@ -133,7 +133,7 @@ test('login test', async ({ page }) => {
 
         hardcoded_violations = [v for v in violations
                                if v.violation_type == ViolationType.HARDCODED_TEST_DATA]
-        assert len(hardcoded_violations) > 0
+        assert len(hardcoded_violations) >= 1
 
     def test_detects_hardcoded_url(self, tmp_path):
         """Detects hardcoded URL in test."""
@@ -150,7 +150,7 @@ test('navigation', async ({ page }) => {
 
         hardcoded_violations = [v for v in violations
                                if v.violation_type == ViolationType.HARDCODED_TEST_DATA]
-        assert len(hardcoded_violations) > 0
+        assert len(hardcoded_violations) >= 1
 
     def test_detects_test_1_name(self, tmp_path):
         """Detects generic 'test 1' name."""
@@ -167,7 +167,7 @@ test('test 1', async ({ page }) => {
 
         naming_violations = [v for v in violations
                            if v.violation_type == ViolationType.POOR_TEST_NAMING]
-        assert len(naming_violations) > 0
+        assert len(naming_violations) >= 1
 
     def test_detects_generic_describe_name(self, tmp_path):
         """Detects generic describe('test', ...) name."""
@@ -184,7 +184,7 @@ describe('test', () => {
 
         naming_violations = [v for v in violations
                            if v.violation_type == ViolationType.POOR_TEST_NAMING]
-        assert len(naming_violations) > 0
+        assert len(naming_violations) >= 1
 
     def test_good_name_no_violation(self, tmp_path):
         """Descriptive name does not trigger violation."""

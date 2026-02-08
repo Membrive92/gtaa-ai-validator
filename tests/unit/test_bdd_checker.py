@@ -18,7 +18,7 @@ from pathlib import Path
 from unittest.mock import patch, mock_open
 
 from gtaa_validator.checkers.bdd_checker import BDDChecker
-from gtaa_validator.models import ViolationType
+from gtaa_validator.models import ViolationType, Severity
 
 
 @pytest.fixture
@@ -104,8 +104,9 @@ class TestFeatureFileChecks:
     Then I see the dashboard
 """
         violations = self._check_feature(checker, content)
-        types = [v.violation_type for v in violations]
-        assert ViolationType.GHERKIN_IMPLEMENTATION_DETAIL in types
+        impl = [v for v in violations if v.violation_type == ViolationType.GHERKIN_IMPLEMENTATION_DETAIL]
+        assert len(impl) >= 1
+        assert impl[0].severity == Severity.HIGH
 
     def test_detect_url_in_feature(self, checker):
         content = """Feature: Login
@@ -114,8 +115,9 @@ class TestFeatureFileChecks:
     Then I see the page
 """
         violations = self._check_feature(checker, content)
-        types = [v.violation_type for v in violations]
-        assert ViolationType.GHERKIN_IMPLEMENTATION_DETAIL in types
+        impl = [v for v in violations if v.violation_type == ViolationType.GHERKIN_IMPLEMENTATION_DETAIL]
+        assert len(impl) >= 1
+        assert impl[0].severity == Severity.HIGH
 
     def test_detect_sql_in_feature(self, checker):
         content = """Feature: Admin
@@ -124,8 +126,9 @@ class TestFeatureFileChecks:
     Then I see results
 """
         violations = self._check_feature(checker, content)
-        types = [v.violation_type for v in violations]
-        assert ViolationType.GHERKIN_IMPLEMENTATION_DETAIL in types
+        impl = [v for v in violations if v.violation_type == ViolationType.GHERKIN_IMPLEMENTATION_DETAIL]
+        assert len(impl) >= 1
+        assert impl[0].severity == Severity.HIGH
 
     def test_clean_feature_no_violations(self, checker):
         content = """Feature: Login
@@ -145,8 +148,9 @@ class TestFeatureFileChecks:
     And I click submit
 """
         violations = self._check_feature(checker, content)
-        types = [v.violation_type for v in violations]
-        assert ViolationType.MISSING_THEN_STEP in types
+        missing = [v for v in violations if v.violation_type == ViolationType.MISSING_THEN_STEP]
+        assert len(missing) == 1
+        assert missing[0].severity == Severity.MEDIUM
 
     def test_scenario_with_then_no_missing_then(self, checker):
         content = """Feature: Login
@@ -180,8 +184,9 @@ def step_login(context):
     context.driver.find_element("id", "username")
 '''
         violations = self._check_step_file(checker, content)
-        types = [v.violation_type for v in violations]
-        assert ViolationType.STEP_DEF_DIRECT_BROWSER_CALL in types
+        browser = [v for v in violations if v.violation_type == ViolationType.STEP_DEF_DIRECT_BROWSER_CALL]
+        assert len(browser) >= 1
+        assert browser[0].severity == Severity.CRITICAL
 
     def test_detect_browser_call_playwright(self, checker):
         content = '''from behave import when
@@ -190,8 +195,9 @@ def step_click(context):
     context.page.locator("#submit").click()
 '''
         violations = self._check_step_file(checker, content)
-        types = [v.violation_type for v in violations]
-        assert ViolationType.STEP_DEF_DIRECT_BROWSER_CALL in types
+        browser = [v for v in violations if v.violation_type == ViolationType.STEP_DEF_DIRECT_BROWSER_CALL]
+        assert len(browser) >= 1
+        assert browser[0].severity == Severity.CRITICAL
 
     def test_clean_step_no_browser_call(self, checker):
         content = '''from behave import given
@@ -213,8 +219,9 @@ def step_verify(context):
 {body}
 '''
         violations = self._check_step_file(checker, content)
-        types = [v.violation_type for v in violations]
-        assert ViolationType.STEP_DEF_TOO_COMPLEX in types
+        complex_v = [v for v in violations if v.violation_type == ViolationType.STEP_DEF_TOO_COMPLEX]
+        assert len(complex_v) >= 1
+        assert complex_v[0].severity == Severity.MEDIUM
 
     def test_short_step_not_too_complex(self, checker):
         content = '''from behave import given

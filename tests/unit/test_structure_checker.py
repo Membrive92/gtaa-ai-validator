@@ -75,12 +75,16 @@ class TestCheckProject:
         (tmp_path / "tests").mkdir()
         violations = checker.check_project(tmp_path)
         assert len(violations) == 1
+        assert violations[0].violation_type == ViolationType.MISSING_LAYER_STRUCTURE
+        assert violations[0].severity == Severity.CRITICAL
         assert "page" in violations[0].message.lower()
 
     def test_missing_both(self, checker, tmp_path):
         """Empty project → 1 violation mentioning both layers."""
         violations = checker.check_project(tmp_path)
         assert len(violations) == 1
+        assert violations[0].violation_type == ViolationType.MISSING_LAYER_STRUCTURE
+        assert violations[0].severity == Severity.CRITICAL
         msg = violations[0].message.lower()
         assert "test" in msg
         assert "page" in msg

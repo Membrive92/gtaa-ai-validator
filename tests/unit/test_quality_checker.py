@@ -56,7 +56,7 @@ def test_login():
 ''')
         violations = checker.check(path)
         hc = [v for v in violations if v.violation_type == ViolationType.HARDCODED_TEST_DATA]
-        assert len(hc) >= 1
+        assert len(hc) == 1
         assert hc[0].severity == Severity.HIGH
 
     def test_no_email_no_violation(self, checker, write_py_file):
@@ -81,7 +81,7 @@ def test_api():
 ''')
         violations = checker.check(path)
         hc = [v for v in violations if v.violation_type == ViolationType.HARDCODED_TEST_DATA]
-        assert len(hc) >= 1
+        assert len(hc) == 1
 
 
 # =========================================================================
@@ -97,7 +97,7 @@ def test_contact():
 ''')
         violations = checker.check(path)
         hc = [v for v in violations if v.violation_type == ViolationType.HARDCODED_TEST_DATA]
-        assert len(hc) >= 1
+        assert len(hc) == 1
 
 
 # =========================================================================
@@ -113,7 +113,7 @@ def test_login():
 ''')
         violations = checker.check(path)
         hc = [v for v in violations if v.violation_type == ViolationType.HARDCODED_TEST_DATA]
-        assert len(hc) >= 1
+        assert len(hc) == 1
 
     def test_short_strings_ignored(self, checker, write_py_file):
         """Strings shorter than 5 chars are not checked."""
@@ -269,7 +269,7 @@ def test_api():
 ''')
         violations = checker.check(path)
         hc = [v for v in violations if v.violation_type == ViolationType.HARDCODED_CONFIGURATION]
-        assert len(hc) >= 1
+        assert len(hc) == 1
         assert hc[0].severity == Severity.HIGH
 
     def test_sleep_detected(self, checker, write_py_file):
@@ -280,7 +280,7 @@ def test_wait():
 ''')
         violations = checker.check(path)
         hc = [v for v in violations if v.violation_type == ViolationType.HARDCODED_CONFIGURATION]
-        assert len(hc) >= 1
+        assert len(hc) == 1
 
     def test_absolute_path_detected(self, checker, write_py_file):
         path = write_py_file("test_example.py", '''\
@@ -289,7 +289,7 @@ def test_file():
 ''')
         violations = checker.check(path)
         hc = [v for v in violations if v.violation_type == ViolationType.HARDCODED_CONFIGURATION]
-        assert len(hc) >= 1
+        assert len(hc) == 1
 
     def test_comment_ignored(self, checker, write_py_file):
         path = write_py_file("test_example.py", '''\
@@ -328,7 +328,7 @@ def test_two():
 ''')
         violations = checker.check(path)
         sm = [v for v in violations if v.violation_type == ViolationType.SHARED_MUTABLE_STATE]
-        assert len(sm) >= 1
+        assert len(sm) == 1
         assert sm[0].severity == Severity.HIGH
 
     def test_module_level_dict_detected(self, checker, write_py_file):
@@ -340,7 +340,7 @@ def test_cached():
 ''')
         violations = checker.check(path)
         sm = [v for v in violations if v.violation_type == ViolationType.SHARED_MUTABLE_STATE]
-        assert len(sm) >= 1
+        assert len(sm) == 1
 
     def test_uppercase_constant_ok(self, checker, write_py_file):
         path = write_py_file("test_example.py", '''\

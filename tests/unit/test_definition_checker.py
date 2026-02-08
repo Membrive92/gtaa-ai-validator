@@ -86,6 +86,7 @@ def test_list_items():
 """)
         violations = checker.check(path)
         assert len(violations) == 1
+        assert violations[0].violation_type == ViolationType.ADAPTATION_IN_DEFINITION
 
     def test_detects_legacy_find_methods(self, checker, write_py_file):
         """Old-style find_element_by_* methods are detected."""
@@ -134,6 +135,7 @@ def test_click():
 """)
         violations = checker.check(path)
         assert len(violations) == 1
+        assert violations[0].violation_type == ViolationType.ADAPTATION_IN_DEFINITION
 
     def test_detects_page_fill(self, checker, write_py_file):
         """page.fill() inside test function is a violation."""
@@ -143,6 +145,7 @@ def test_fill():
 """)
         violations = checker.check(path)
         assert len(violations) == 1
+        assert violations[0].violation_type == ViolationType.ADAPTATION_IN_DEFINITION
 
     def test_detects_wait_for_selector(self, checker, write_py_file):
         """page.wait_for_selector() is a violation."""
@@ -152,6 +155,7 @@ def test_wait():
 """)
         violations = checker.check(path)
         assert len(violations) == 1
+        assert violations[0].violation_type == ViolationType.ADAPTATION_IN_DEFINITION
 
 
 # =========================================================================

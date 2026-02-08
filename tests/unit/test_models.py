@@ -111,7 +111,7 @@ class TestViolation:
             severity=Severity.LOW,
             file_path=Path("test.py"),
         )
-        assert len(v.message) > 0
+        assert v.message == ViolationType.POOR_TEST_NAMING.get_description()
 
     def test_auto_populates_recommendation(self):
         """If recommendation is empty, __post_init__ fills it from ViolationType."""
@@ -120,7 +120,7 @@ class TestViolation:
             severity=Severity.HIGH,
             file_path=Path("test.py"),
         )
-        assert len(v.recommendation) > 0
+        assert v.recommendation == ViolationType.HARDCODED_TEST_DATA.get_recommendation()
 
     def test_explicit_values_preserved(self):
         """Explicitly provided values are NOT overwritten by __post_init__."""
@@ -263,10 +263,11 @@ class TestReport:
 
     def test_to_dict_timestamp_is_iso(self, empty_report):
         """Timestamp in to_dict() is an ISO-format string."""
+        from datetime import datetime
         d = empty_report.to_dict()
         ts = d["metadata"]["timestamp"]
-        # ISO format includes 'T' separator
-        assert "T" in ts or "-" in ts
+        # Must parse without exception
+        datetime.fromisoformat(ts)
 
     def test_to_dict_with_metrics(self, empty_report):
         """to_dict() includes metrics in metadata when present."""

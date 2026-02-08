@@ -69,7 +69,7 @@ public class LoginTests
 
         adaptation_violations = [v for v in violations
                                  if v.violation_type == ViolationType.ADAPTATION_IN_DEFINITION]
-        assert len(adaptation_violations) > 0
+        assert len(adaptation_violations) >= 1
 
     def test_detects_Navigate_in_test(self, tmp_path):
         """Detects driver.Navigate() in [Test] method."""
@@ -94,7 +94,7 @@ public class LoginTests
 
         adaptation_violations = [v for v in violations
                                  if v.violation_type == ViolationType.ADAPTATION_IN_DEFINITION]
-        assert len(adaptation_violations) > 0
+        assert len(adaptation_violations) >= 1
 
 
 class TestAdaptationCheckerCSharp:
@@ -129,7 +129,7 @@ public class LoginPage
 
         assertion_violations = [v for v in violations
                                if v.violation_type == ViolationType.ASSERTION_IN_POM]
-        assert len(assertion_violations) > 0
+        assert len(assertion_violations) >= 1
 
     def test_detects_NUnit_using_in_page(self, tmp_path):
         """Detects NUnit using in Page Object."""
@@ -153,7 +153,7 @@ public class LoginPage
 
         forbidden_violations = [v for v in violations
                                if v.violation_type == ViolationType.FORBIDDEN_IMPORT]
-        assert len(forbidden_violations) > 0
+        assert len(forbidden_violations) >= 1
 
 
 class TestQualityCheckerCSharp:
@@ -186,7 +186,7 @@ public class LoginTests
 
         hardcoded_violations = [v for v in violations
                                if v.violation_type == ViolationType.HARDCODED_TEST_DATA]
-        assert len(hardcoded_violations) > 0
+        assert len(hardcoded_violations) >= 1
 
     def test_detects_hardcoded_url(self, tmp_path):
         """Detects hardcoded URL in test."""
@@ -208,7 +208,7 @@ public class LoginTests
 
         hardcoded_violations = [v for v in violations
                                if v.violation_type == ViolationType.HARDCODED_TEST_DATA]
-        assert len(hardcoded_violations) > 0
+        assert len(hardcoded_violations) >= 1
 
     def test_detects_Test1_name(self, tmp_path):
         """Detects generic Test1 name."""
@@ -230,7 +230,7 @@ public class LoginTests
 
         naming_violations = [v for v in violations
                            if v.violation_type == ViolationType.POOR_TEST_NAMING]
-        assert len(naming_violations) > 0
+        assert len(naming_violations) >= 1
 
     def test_good_name_no_violation(self, tmp_path):
         """Descriptive name does not trigger violation."""

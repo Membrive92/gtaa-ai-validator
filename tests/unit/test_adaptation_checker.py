@@ -173,7 +173,7 @@ class LoginPage:
 """)
         violations = checker.check(path)
         biz = [v for v in violations if v.violation_type == ViolationType.BUSINESS_LOGIC_IN_POM]
-        assert len(biz) >= 1
+        assert len(biz) == 1
 
     def test_detects_for_in_method(self, checker, write_page_file):
         path = write_page_file("login_page.py", """\
@@ -184,7 +184,7 @@ class LoginPage:
 """)
         violations = checker.check(path)
         biz = [v for v in violations if v.violation_type == ViolationType.BUSINESS_LOGIC_IN_POM]
-        assert len(biz) >= 1
+        assert len(biz) == 1
 
     def test_detects_while_in_method(self, checker, write_page_file):
         path = write_page_file("login_page.py", """\
@@ -195,7 +195,7 @@ class LoginPage:
 """)
         violations = checker.check(path)
         biz = [v for v in violations if v.violation_type == ViolationType.BUSINESS_LOGIC_IN_POM]
-        assert len(biz) >= 1
+        assert len(biz) == 1
 
     def test_no_logic_outside_class(self, checker, write_page_file):
         """Logic outside a class is not flagged."""
@@ -252,7 +252,7 @@ class PageA:
 """))
         violations = checker.check(path_b)
         dups = [v for v in violations if v.violation_type == ViolationType.DUPLICATE_LOCATOR]
-        assert len(dups) >= 1
+        assert len(dups) == 1
 
     def test_no_duplicate_single_file(self, checker, write_page_file):
         """Same locator in one file is not a cross-file duplicate."""
