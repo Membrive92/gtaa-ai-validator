@@ -123,3 +123,4 @@ jobs:
             gtaa_report.json
             gtaa_report.html
           retention-days: 30
+          overwrite: true
