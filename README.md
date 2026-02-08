@@ -5,10 +5,10 @@
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Estado](https://img.shields.io/badge/estado-en%20desarrollo-yellow)](https://github.com/Membrive92/gtaa-ai-validator)
-[![Fase](https://img.shields.io/badge/fase-10.7%2F10-blue)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Fase](https://img.shields.io/badge/fase-10.8%2F10-blue)](https://github.com/Membrive92/gtaa-ai-validator)
 [![Progreso](https://img.shields.io/badge/progreso-99%25-green)](https://github.com/Membrive92/gtaa-ai-validator)
 [![Coverage](https://img.shields.io/badge/coverage-93%25-brightgreen)](https://github.com/Membrive92/gtaa-ai-validator)
-[![Tests](https://img.shields.io/badge/tests-672-brightgreen)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Tests](https://img.shields.io/badge/tests-669-brightgreen)](https://github.com/Membrive92/gtaa-ai-validator)
 [![CI](https://github.com/Membrive92/gtaa-ai-validator/actions/workflows/ci.yml/badge.svg)](https://github.com/Membrive92/gtaa-ai-validator/actions/workflows/ci.yml)
 [![Docker](https://img.shields.io/badge/docker-ready-blue)](https://github.com/Membrive92/gtaa-ai-validator/blob/main/Dockerfile)
 
@@ -16,7 +16,7 @@
 >
 > Autor: Jose Antonio Membrive Guillen
 > Año: 2025-2026
-> **Estado:** Fase 10.7/10 Completa | Última actualización: 7 Febrero 2026
+> **Estado:** Fase 10.8/10 Completa | Última actualización: 7 Febrero 2026
 
 ---
 
@@ -47,6 +47,7 @@
 | ↳ **✅ 10.5** | Cobertura de código: 84% a 93% (633 tests) | **COMPLETO** | **06/02/2026** |
 | ↳ **✅ 10.6** | Tests de regresión de seguridad (34 tests, SEC-01 a SEC-09) | **COMPLETO** | **06/02/2026** |
 | ↳ **✅ 10.7** | Refactor quality_checker + Reportes Allure-style + HTML redesign | **COMPLETO** | **07/02/2026** |
+| ↳ **✅ 10.8** | Refactor SOLID/DRY: shared utils, BaseChecker, LLM Protocol, CLI decomp | **COMPLETO** | **07/02/2026** |
 
 ### 📊 Funcionalidades Implementadas vs Planeadas
 
@@ -59,7 +60,7 @@
 | ✅ Detección de 23 tipos de violaciones gTAA | Implementado | Fase 2-8 — 5 checkers + LLM |
 | ✅ Sistema de scoring (0-100) | Implementado | Penalización por severidad |
 | ✅ Proyectos de ejemplo (bueno/malo) | Implementado | En directorio examples/ |
-| ✅ Tests unitarios + integración + seguridad (672 tests, 93% coverage) | Implementado | pytest + pytest-cov con unit/ e integration/ |
+| ✅ Tests unitarios + integración + seguridad (669 tests, 93% coverage) | Implementado | pytest + pytest-cov con unit/ e integration/ |
 | ✅ Documentación técnica con diagramas | Implementado | docs/ con flujos Fase 1-10, 55 ADRs |
 | ✅ Reportes HTML dashboard | Implementado | Fase 4+10.7 — SVG inline, autocontenido, rediseño visual |
 | ✅ Reportes JSON para CI/CD | Implementado | Fase 4 — `--json` / `--html` |
@@ -299,7 +300,7 @@ jobs:
 
 ---
 
-### ✅ Funcionalidad ACTUAL (Fase 10.7)
+### ✅ Funcionalidad ACTUAL (Fase 10.8)
 
 **Funcionalidad disponible en la versión actual:**
 
@@ -339,7 +340,7 @@ python -m gtaa_validator examples/js_project --verbose
 python -m gtaa_validator examples/csharp_project --verbose
 
 # Ejecutar tests
-pytest tests/                                        # Todos (672 tests)
+pytest tests/                                        # Todos (669 tests)
 pytest tests/unit/                                   # Solo unitarios
 pytest tests/integration/                            # Solo integración
 pytest tests/ --cov=gtaa_validator --cov-report=term  # Con cobertura
@@ -371,7 +372,7 @@ pytest tests/ --cov=gtaa_validator --cov-report=term  # Con cobertura
 - ✅ Soporte BDD: analiza archivos .feature y step definitions (Behave, pytest-bdd)
 - ✅ GherkinParser regex-based sin dependencias externas
 - ✅ 5 violaciones BDD: detalles técnicos en Gherkin, browser calls en steps, complejidad, falta de Then, duplicados
-- ✅ 672 tests automatizados (93% cobertura de código)
+- ✅ 669 tests automatizados (93% cobertura de código)
 
 **Ejemplo de salida (con --ai):**
 ```
@@ -659,7 +660,8 @@ gtaa-ai-validator/
 │   │   ├── static_analyzer.py          # Orquestador estático (Facade Pattern)
 │   │   └── semantic_analyzer.py        # Orquestador semántico AI (Fase 5)
 │   │
-│   ├── llm/                            # 🧠 Clientes LLM (Fase 5 + 10.1)
+│   ├── llm/                            # 🧠 Clientes LLM (Fase 5 + 10.1 + 10.8)
+│   │   ├── protocol.py                # LLMClientProtocol + TokenUsage unificado (Fase 10.8)
 │   │   ├── client.py                   # MockLLMClient (heurísticas deterministas)
 │   │   ├── api_client.py              # APILLMClient + RateLimitError (Fase 10.1)
 │   │   ├── factory.py                 # create_llm_client() factory (Fase 10.1)
@@ -670,14 +672,14 @@ gtaa-ai-validator/
 │   │   └── html_reporter.py            # Dashboard HTML autocontenido (SVG)
 │   │
 │   └── checkers/                       # ✅ Detectores de violaciones
-│       ├── base.py                     # Clase base abstracta (Strategy Pattern)
+│       ├── base.py                     # Clase base abstracta + métodos compartidos (Fase 10.8)
 │       ├── definition_checker.py       # Test Definition Layer (AST Visitor)
 │       ├── structure_checker.py        # Estructura del proyecto (Filesystem)
 │       ├── adaptation_checker.py       # Test Adaptation Layer (AST + Regex)
 │       ├── quality_checker.py          # Calidad de tests (AST + Regex)
 │       └── bdd_checker.py              # BDD/Gherkin (Fase 8)
 │
-├── tests/                              # 🧪 Tests automatizados (672 tests, 93% coverage)
+├── tests/                              # 🧪 Tests automatizados (669 tests, 93% coverage)
 │   ├── conftest.py                     # Fixtures compartidas
 │   ├── unit/                           # Tests unitarios
 │   │   ├── test_models.py             # Modelos de datos
@@ -854,6 +856,7 @@ Puntuación = max(0, 100 - suma de penalizaciones)
   - ✅ 10.5: Cobertura de código 84% a 93% (633 tests)
   - ✅ 10.6: Tests de regresión de seguridad (34 tests para SEC-01 a SEC-09)
   - ✅ 10.7: Refactor quality_checker + reportes Allure-style + HTML redesign
+  - ✅ 10.8: Refactor SOLID/DRY codebase completo (5 commits independientes)
 
 ---
 
@@ -1175,6 +1178,19 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 
 ---
 
+### Versión 0.10.8 - Fase 10.8 (7 Febrero 2026) ✅
+
+**Implementado:**
+- ✅ Refactor SOLID/DRY completo del codebase en 5 commits independientes
+- ✅ Utilidades compartidas: `get_score_label()`, `safe_relative_path()`, `EXCLUDED_DIRS` centralizados
+- ✅ Eliminación de código muerto: `_analyze_imports()`, `body_node`, `self.violations`, imports no usados
+- ✅ BaseChecker: métodos compartidos `_is_test_file()`, `_is_test_function()`, `_get_config_for_extension()`
+- ✅ LLM Protocol: `LLMClientProtocol` (typing.Protocol), `TokenUsage` unificado, `_call_with_fallback()`
+- ✅ Decomposición CLI: `main()` de 200 líneas a 40 líneas (6 funciones helper)
+- ✅ 3 tests legacy eliminados (672 → 669 tests, 93% cobertura mantenida)
+
+---
+
 ### Versión 1.0.0 - Fase 10 Final (Pendiente) ⏳
 
 **Planificado:**
@@ -1184,6 +1200,6 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 
 <div align="center">
 
-**Estado del proyecto:** Fase 10.7/10 | 23 violaciones | 4 lenguajes (Python, Java, JS/TS, C#) | 672 tests | 93% cobertura
+**Estado del proyecto:** Fase 10.8/10 | 23 violaciones | 4 lenguajes (Python, Java, JS/TS, C#) | 669 tests | 93% cobertura
 
 </div>
