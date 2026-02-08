@@ -42,6 +42,7 @@ jobs:
           verbose: "true"
           ai: ${{ matrix.ai }}
           provider: ${{ matrix.provider }}
+          upload_reports: "false"
 
       # --- Verificar que la action genera outputs ---
       - name: Verify outputs exist
