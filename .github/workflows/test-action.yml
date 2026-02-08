@@ -1,0 +1,125 @@
+name: UAT - Test GitHub Action
+
+on:
+  workflow_dispatch:  # Solo ejecución manual desde GitHub UI
+
+permissions:
+  contents: read
+
+jobs:
+  test-action:
+    name: "Action → ${{ matrix.project }}"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+          - bad_project
+          - good_project
+          - python_live_project
+          - java_project
+          - js_project
+          - csharp_project
+        include:
+          # bad_project: violaciones esperadas, probar AI con mock
+          - project: bad_project
+            ai: "true"
+            provider: "mock"
+            expect_violations: true
+          # good_project: score alto, sin violaciones críticas
+          - project: good_project
+            ai: "false"
+            provider: ""
+            expect_violations: false
+          # python_live_project: proyecto Python real, puede tener violaciones
+          - project: python_live_project
+            ai: "false"
+            provider: ""
+            expect_violations: true
+          # java_project: multi-lang Java
+          - project: java_project
+            ai: "false"
+            provider: ""
+            expect_violations: true
+          # js_project: multi-lang JavaScript/TypeScript
+          - project: js_project
+            ai: "false"
+            provider: ""
+            expect_violations: true
+          # csharp_project: multi-lang C#
+          - project: csharp_project
+            ai: "false"
+            provider: ""
+            expect_violations: true
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Run gTAA Validator Action
+        id: gtaa
+        uses: ./
+        continue-on-error: true  # Proyectos con CRITICAL violations → exit 1
+        with:
+          project_path: "examples/${{ matrix.project }}"
+          verbose: "true"
+          ai: ${{ matrix.ai }}
+          provider: ${{ matrix.provider }}
+
+      - name: Verify outputs
+        run: |
+          echo "=== Results for ${{ matrix.project }} ==="
+          echo "Score: ${{ steps.gtaa.outputs.score }}"
+          echo "Violations: ${{ steps.gtaa.outputs.violations }}"
+          echo "Report JSON: ${{ steps.gtaa.outputs.report_json }}"
+
+          # Verificar que se generaron outputs
+          if [ -z "${{ steps.gtaa.outputs.score }}" ]; then
+            echo "ERROR: score output is empty"
+            exit 1
+          fi
+          if [ -z "${{ steps.gtaa.outputs.violations }}" ]; then
+            echo "ERROR: violations output is empty"
+            exit 1
+          fi
+
+          SCORE="${{ steps.gtaa.outputs.score }}"
+          VIOLATIONS="${{ steps.gtaa.outputs.violations }}"
+
+          # Verificación condicional según el proyecto
+          if [ "${{ matrix.expect_violations }}" = "true" ]; then
+            if [ "$VIOLATIONS" -eq 0 ]; then
+              echo "ERROR: ${{ matrix.project }} should have violations but got 0"
+              exit 1
+            fi
+            echo "OK: ${{ matrix.project }} has $VIOLATIONS violations (expected), score $SCORE"
+          else
+            if [ "$(echo "$SCORE < 50" | bc)" -eq 1 ]; then
+              echo "ERROR: ${{ matrix.project }} score too low: $SCORE"
+              exit 1
+            fi
+            echo "OK: ${{ matrix.project }} score is $SCORE (high, as expected)"
+          fi
+
+      - name: Verify report files exist
+        run: |
+          if [ ! -f "gtaa_report.json" ]; then
+            echo "ERROR: gtaa_report.json not found"
+            exit 1
+          fi
+          if [ ! -f "gtaa_report.html" ]; then
+            echo "ERROR: gtaa_report.html not found"
+            exit 1
+          fi
+          echo "OK: Both JSON and HTML reports generated for ${{ matrix.project }}"
+          echo "JSON size: $(wc -c < gtaa_report.json) bytes"
+          echo "HTML size: $(wc -c < gtaa_report.html) bytes"
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: gtaa-report-${{ matrix.project }}
+          path: |
+            gtaa_report.json
+            gtaa_report.html
+          retention-days: 30

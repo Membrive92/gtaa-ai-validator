@@ -1,0 +1,145 @@
+name: UAT - Acceptance Tests
+
+on:
+  workflow_dispatch:  # Solo ejecución manual desde GitHub UI
+
+permissions:
+  contents: read
+
+jobs:
+  uat:
+    name: "UAT → ${{ matrix.project }} (${{ matrix.description }})"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: bad_project
+            description: "expect violations"
+            ai: "true"
+            provider: "mock"
+            min_violations: 1
+            max_score: 99
+          - project: good_project
+            description: "expect clean"
+            ai: "false"
+            provider: ""
+            min_violations: 0
+            max_score: 100
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Run gTAA Validator Action
+        id: gtaa
+        uses: ./
+        continue-on-error: true
+        with:
+          project_path: "examples/${{ matrix.project }}"
+          verbose: "true"
+          ai: ${{ matrix.ai }}
+          provider: ${{ matrix.provider }}
+
+      # --- Verificar que la action genera outputs ---
+      - name: Verify outputs exist
+        run: |
+          echo "=== UAT: ${{ matrix.project }} ==="
+          echo "Score:      ${{ steps.gtaa.outputs.score }}"
+          echo "Violations: ${{ steps.gtaa.outputs.violations }}"
+          echo "Report:     ${{ steps.gtaa.outputs.report_json }}"
+
+          if [ -z "${{ steps.gtaa.outputs.score }}" ]; then
+            echo "FAIL: score output is empty"
+            exit 1
+          fi
+          if [ -z "${{ steps.gtaa.outputs.violations }}" ]; then
+            echo "FAIL: violations output is empty"
+            exit 1
+          fi
+          echo "PASS: outputs generated correctly"
+
+      # --- Verificar reportes JSON y HTML ---
+      - name: Verify report files
+        run: |
+          for FILE in gtaa_report.json gtaa_report.html; do
+            if [ ! -f "$FILE" ]; then
+              echo "FAIL: $FILE not found"
+              exit 1
+            fi
+            SIZE=$(wc -c < "$FILE")
+            if [ "$SIZE" -lt 100 ]; then
+              echo "FAIL: $FILE too small ($SIZE bytes)"
+              exit 1
+            fi
+            echo "PASS: $FILE exists ($SIZE bytes)"
+          done
+
+      # --- Validar contenido del reporte JSON ---
+      - name: Validate report JSON structure
+        run: |
+          python3 -c "
+          import json, sys
+
+          with open('gtaa_report.json') as f:
+              data = json.load(f)
+
+          # Claves obligatorias en el reporte
+          required = ['summary', 'files', 'violations']
+          missing = [k for k in required if k not in data]
+          if missing:
+              print(f'FAIL: missing keys in report: {missing}')
+              sys.exit(1)
+
+          # Claves obligatorias en summary
+          summary = data['summary']
+          for key in ['score', 'total_violations', 'total_files']:
+              if key not in summary:
+                  print(f'FAIL: missing summary.{key}')
+                  sys.exit(1)
+
+          print(f'PASS: report structure valid (score={summary[\"score\"]}, violations={summary[\"total_violations\"]}, files={summary[\"total_files\"]})')
+          "
+
+      # --- Verificar criterios de aceptación por proyecto ---
+      - name: Verify acceptance criteria
+        run: |
+          SCORE="${{ steps.gtaa.outputs.score }}"
+          VIOLATIONS="${{ steps.gtaa.outputs.violations }}"
+
+          echo "--- Acceptance criteria for ${{ matrix.project }} ---"
+
+          # bad_project: debe tener violaciones
+          if [ "${{ matrix.min_violations }}" -gt 0 ]; then
+            if [ "$VIOLATIONS" -eq 0 ]; then
+              echo "FAIL: expected violations > 0 but got 0"
+              exit 1
+            fi
+            echo "PASS: violations=$VIOLATIONS (expected > 0)"
+
+            if [ "$(echo "$SCORE >= 100" | bc)" -eq 1 ]; then
+              echo "FAIL: score should be < 100 with violations, got $SCORE"
+              exit 1
+            fi
+            echo "PASS: score=$SCORE (expected < 100)"
+          fi
+
+          # good_project: score alto, sin violaciones críticas
+          if [ "${{ matrix.min_violations }}" -eq 0 ]; then
+            if [ "$(echo "$SCORE < 50" | bc)" -eq 1 ]; then
+              echo "FAIL: score too low: $SCORE (expected >= 50)"
+              exit 1
+            fi
+            echo "PASS: score=$SCORE (expected >= 50)"
+          fi
+
+          echo "=== UAT ${{ matrix.project }}: ALL CHECKS PASSED ==="
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: uat-report-${{ matrix.project }}
+          path: |
+            gtaa_report.json
+            gtaa_report.html
+          retention-days: 30
