@@ -158,9 +158,6 @@ class CSharpParser(TreeSitterBaseParser):
         # Obtener parámetros
         parameters = self._extract_parameters(method_node, source)
 
-        # Obtener body
-        body_node = self.find_child_by_type(method_node, "block")
-
         return ParsedFunction(
             name=method_name,
             line_start=self.get_node_line(method_node),
@@ -168,7 +165,6 @@ class CSharpParser(TreeSitterBaseParser):
             decorators=decorators,
             parameters=parameters,
             is_async=is_async,
-            body_node=body_node,
         )
 
     def _extract_attributes(self, node: Node, source: str) -> List[str]:

@@ -9,7 +9,7 @@ Fase 9: Soporte multilenguaje.
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional, Set, Dict, Any
+from typing import List, Optional, Dict, Any
 from abc import ABC, abstractmethod
 
 from gtaa_validator.file_utils import read_file_safe
@@ -35,7 +35,6 @@ class ParsedFunction:
     decorators: List[str] = field(default_factory=list)  # @Test, @given, etc.
     parameters: List[str] = field(default_factory=list)
     is_async: bool = False
-    body_node: Optional[Node] = None  # Nodo AST del cuerpo para análisis profundo
 
 
 @dataclass

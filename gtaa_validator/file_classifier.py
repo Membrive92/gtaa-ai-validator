@@ -448,27 +448,3 @@ class FileClassifier:
             return self.TEST_IMPORTS_CSHARP
         return set()
 
-    # --- Legacy method for backwards compatibility ---
-
-    def _analyze_imports(self, tree: ast.Module):
-        """
-        Extrae imports del AST Python y los clasifica (legacy).
-
-        Returns:
-            Tupla (api_imports_encontrados, ui_imports_encontrados, bdd_imports_encontrados)
-        """
-        imports = self._ast_to_parsed_imports(tree)
-        api_found = set()
-        ui_found = set()
-        bdd_found = set()
-
-        for imp in imports:
-            root_module = imp.module.split(".")[0]
-            if root_module in self.API_IMPORTS_PYTHON:
-                api_found.add(root_module)
-            if root_module in self.UI_IMPORTS_PYTHON:
-                ui_found.add(root_module)
-            if root_module in self.BDD_IMPORTS_PYTHON:
-                bdd_found.add(root_module)
-
-        return api_found, ui_found, bdd_found

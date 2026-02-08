@@ -168,16 +168,12 @@ class JavaParser(TreeSitterBaseParser):
                 if param_name:
                     parameters.append(self.get_node_text(param_name, source))
 
-        # Obtener body para análisis posterior
-        body_node = self.find_child_by_type(method_node, "block")
-
         return ParsedFunction(
             name=method_name,
             line_start=self.get_node_line(method_node),
             line_end=method_node.end_point[0] + 1,
             decorators=decorators,
             parameters=parameters,
-            body_node=body_node,
         )
 
     def extract_top_level_functions(self, root: Node, source: str) -> List[ParsedFunction]:

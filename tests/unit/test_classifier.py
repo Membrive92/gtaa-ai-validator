@@ -503,31 +503,3 @@ class TestClassifyWithParseResult:
         assert "cypress" in classification.frameworks
 
 
-# =========================================================================
-# Legacy _analyze_imports (lines 460-474)
-# =========================================================================
-
-class TestLegacyAnalyzeImports:
-    """_analyze_imports() legacy method returns classified import sets."""
-
-    def test_api_imports(self, classifier):
-        source = "import requests\nimport httpx\n"
-        tree = _parse(source)
-        api, ui, bdd = classifier._analyze_imports(tree)
-        assert "requests" in api
-        assert "httpx" in api
-        assert len(ui) == 0
-        assert len(bdd) == 0
-
-    def test_ui_imports(self, classifier):
-        source = "from selenium import webdriver\n"
-        tree = _parse(source)
-        api, ui, bdd = classifier._analyze_imports(tree)
-        assert "selenium" in ui
-        assert len(api) == 0
-
-    def test_bdd_imports(self, classifier):
-        source = "import behave\n"
-        tree = _parse(source)
-        api, ui, bdd = classifier._analyze_imports(tree)
-        assert "behave" in bdd

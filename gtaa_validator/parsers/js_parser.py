@@ -168,7 +168,6 @@ class JSParser(TreeSitterBaseParser):
             decorators=[],  # JS no tiene decoradores nativos (pero TS sí)
             parameters=parameters,
             is_async=is_async,
-            body_node=self.find_child_by_type(method_node, "statement_block"),
         )
 
     def extract_top_level_functions(self, root: Node, source: str) -> List[ParsedFunction]:
@@ -210,7 +209,6 @@ class JSParser(TreeSitterBaseParser):
             decorators=[],
             parameters=parameters,
             is_async=is_async,
-            body_node=self.find_child_by_type(func_node, "statement_block"),
         )
 
     def _parse_arrow_function(self, arrow_node: Node, source: str, name: str) -> Optional[ParsedFunction]:
@@ -225,7 +223,6 @@ class JSParser(TreeSitterBaseParser):
             decorators=[],
             parameters=parameters,
             is_async=is_async,
-            body_node=self.find_child_by_type(arrow_node, "statement_block"),
         )
 
     def _extract_parameters(self, node: Node, source: str) -> List[str]:
