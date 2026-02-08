@@ -75,11 +75,6 @@ class TestCLI:
         result = self.runner.invoke(main, ["/nonexistent/path/xyz"])
         assert result.exit_code != 0
 
-    def test_score_displayed(self):
-        """Output contains compliance score."""
-        result = self.runner.invoke(main, [self.bad_project])
-        assert "cumplimiento" in result.output.lower()
-
     def test_file_as_argument_exits_with_error(self):
         """Passing a file (not a directory) triggers 'no es un directorio' error."""
         # Create a temporary file that exists

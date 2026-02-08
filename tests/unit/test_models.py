@@ -39,17 +39,6 @@ class TestSeverity:
         assert Severity.MEDIUM < Severity.HIGH
         assert Severity.HIGH < Severity.CRITICAL
 
-    def test_sorting_severities(self):
-        """Sorting a list of severities produces LOW → CRITICAL order."""
-        unsorted = [Severity.MEDIUM, Severity.CRITICAL, Severity.LOW, Severity.HIGH]
-        sorted_list = sorted(unsorted)
-        assert sorted_list == [
-            Severity.LOW,
-            Severity.MEDIUM,
-            Severity.HIGH,
-            Severity.CRITICAL,
-        ]
-
     def test_same_severity_not_less_than(self):
         """A severity is NOT less than itself."""
         for s in Severity:

@@ -20,15 +20,6 @@ def checker():
     return QualityChecker()
 
 
-@pytest.fixture
-def write_test_file(tmp_path):
-    """Write a test file and return its path."""
-    def _write(filename: str, content: str) -> Path:
-        fp = tmp_path / filename
-        fp.write_text(content, encoding="utf-8")
-        return fp
-    return _write
-
 
 # =========================================================================
 # can_check
@@ -58,8 +49,8 @@ class TestCanCheck:
 
 class TestHardcodedEmail:
 
-    def test_detects_email(self, checker, write_test_file):
-        path = write_test_file("test_example.py", '''\
+    def test_detects_email(self, checker, write_py_file):
+        path = write_py_file("test_example.py", '''\
 def test_login():
     email = "user@example.com"
 ''')
@@ -68,8 +59,8 @@ def test_login():
         assert len(hc) >= 1
         assert hc[0].severity == Severity.HIGH
 
-    def test_no_email_no_violation(self, checker, write_test_file):
-        path = write_test_file("test_example.py", '''\
+    def test_no_email_no_violation(self, checker, write_py_file):
+        path = write_py_file("test_example.py", '''\
 def test_math():
     assert 2 + 2 == 4
 ''')
@@ -83,8 +74,8 @@ def test_math():
 
 class TestHardcodedURL:
 
-    def test_detects_url(self, checker, write_test_file):
-        path = write_test_file("test_example.py", '''\
+    def test_detects_url(self, checker, write_py_file):
+        path = write_py_file("test_example.py", '''\
 def test_api():
     url = "https://api.example.com/v1"
 ''')
@@ -99,8 +90,8 @@ def test_api():
 
 class TestHardcodedPhone:
 
-    def test_detects_phone(self, checker, write_test_file):
-        path = write_test_file("test_example.py", '''\
+    def test_detects_phone(self, checker, write_py_file):
+        path = write_py_file("test_example.py", '''\
 def test_contact():
     phone = "555-123-4567"
 ''')
@@ -115,8 +106,8 @@ def test_contact():
 
 class TestHardcodedPassword:
 
-    def test_detects_password_keyword(self, checker, write_test_file):
-        path = write_test_file("test_example.py", '''\
+    def test_detects_password_keyword(self, checker, write_py_file):
+        path = write_py_file("test_example.py", '''\
 def test_login():
     pwd = "MyPassword123"
 ''')
@@ -124,18 +115,18 @@ def test_login():
         hc = [v for v in violations if v.violation_type == ViolationType.HARDCODED_TEST_DATA]
         assert len(hc) >= 1
 
-    def test_short_strings_ignored(self, checker, write_test_file):
+    def test_short_strings_ignored(self, checker, write_py_file):
         """Strings shorter than 5 chars are not checked."""
-        path = write_test_file("test_example.py", '''\
+        path = write_py_file("test_example.py", '''\
 def test_short():
     x = "ab"
 ''')
         violations = checker.check(path)
         assert not any(v.violation_type == ViolationType.HARDCODED_TEST_DATA for v in violations)
 
-    def test_data_outside_test_not_flagged(self, checker, write_test_file):
+    def test_data_outside_test_not_flagged(self, checker, write_py_file):
         """Hardcoded data outside test functions is not flagged."""
-        path = write_test_file("test_example.py", '''\
+        path = write_py_file("test_example.py", '''\
 BASE_URL = "https://example.com/api"
 
 def test_something():
@@ -151,32 +142,32 @@ def test_something():
 
 class TestLongFunctions:
 
-    def test_detects_long_function(self, checker, write_test_file):
+    def test_detects_long_function(self, checker, write_py_file):
         # Generate a function with 60 lines
         lines = ["def test_long():"]
         for i in range(60):
             lines.append(f"    step_{i} = {i}")
-        path = write_test_file("test_example.py", "\n".join(lines))
+        path = write_py_file("test_example.py", "\n".join(lines))
 
         violations = checker.check(path)
         long = [v for v in violations if v.violation_type == ViolationType.LONG_TEST_FUNCTION]
         assert len(long) == 1
         assert long[0].severity == Severity.MEDIUM
 
-    def test_short_function_ok(self, checker, write_test_file):
-        path = write_test_file("test_example.py", '''\
+    def test_short_function_ok(self, checker, write_py_file):
+        path = write_py_file("test_example.py", '''\
 def test_short():
     assert True
 ''')
         violations = checker.check(path)
         assert not any(v.violation_type == ViolationType.LONG_TEST_FUNCTION for v in violations)
 
-    def test_non_test_long_function_ignored(self, checker, write_test_file):
+    def test_non_test_long_function_ignored(self, checker, write_py_file):
         """Long helper functions are not flagged."""
         lines = ["def helper():"]
         for i in range(60):
             lines.append(f"    step_{i} = {i}")
-        path = write_test_file("test_example.py", "\n".join(lines))
+        path = write_py_file("test_example.py", "\n".join(lines))
         violations = checker.check(path)
         assert not any(v.violation_type == ViolationType.LONG_TEST_FUNCTION for v in violations)
 
@@ -190,8 +181,8 @@ class TestPoorNaming:
     @pytest.mark.parametrize("name", [
         "test_1", "test_2", "test_a", "test_case1", "test_case",
     ])
-    def test_detects_generic_names(self, checker, write_test_file, name):
-        path = write_test_file("test_example.py", f"""\
+    def test_detects_generic_names(self, checker, write_py_file, name):
+        path = write_py_file("test_example.py", f"""\
 def {name}():
     pass
 """)
@@ -200,8 +191,8 @@ def {name}():
         assert len(poor) == 1
         assert poor[0].severity == Severity.LOW
 
-    def test_descriptive_name_ok(self, checker, write_test_file):
-        path = write_test_file("test_example.py", '''\
+    def test_descriptive_name_ok(self, checker, write_py_file):
+        path = write_py_file("test_example.py", '''\
 def test_user_can_login_with_valid_credentials():
     pass
 ''')
@@ -215,8 +206,8 @@ def test_user_can_login_with_valid_credentials():
 
 class TestBroadExceptionHandling:
 
-    def test_bare_except_detected(self, checker, write_test_file):
-        path = write_test_file("test_example.py", '''\
+    def test_bare_except_detected(self, checker, write_py_file):
+        path = write_py_file("test_example.py", '''\
 def test_something():
     try:
         do_stuff()
@@ -229,8 +220,8 @@ def test_something():
         assert broad[0].severity == Severity.MEDIUM
         assert "except:" in broad[0].code_snippet
 
-    def test_except_exception_detected(self, checker, write_test_file):
-        path = write_test_file("test_example.py", '''\
+    def test_except_exception_detected(self, checker, write_py_file):
+        path = write_py_file("test_example.py", '''\
 def test_something():
     try:
         do_stuff()
@@ -242,8 +233,8 @@ def test_something():
         assert len(broad) == 1
         assert "except Exception:" in broad[0].code_snippet
 
-    def test_specific_except_ok(self, checker, write_test_file):
-        path = write_test_file("test_example.py", '''\
+    def test_specific_except_ok(self, checker, write_py_file):
+        path = write_py_file("test_example.py", '''\
 def test_something():
     try:
         do_stuff()
@@ -253,8 +244,8 @@ def test_something():
         violations = checker.check(path)
         assert not any(v.violation_type == ViolationType.BROAD_EXCEPTION_HANDLING for v in violations)
 
-    def test_multiple_specific_except_ok(self, checker, write_test_file):
-        path = write_test_file("test_example.py", '''\
+    def test_multiple_specific_except_ok(self, checker, write_py_file):
+        path = write_py_file("test_example.py", '''\
 def test_something():
     try:
         do_stuff()
@@ -271,8 +262,8 @@ def test_something():
 
 class TestHardcodedConfiguration:
 
-    def test_localhost_url_detected(self, checker, write_test_file):
-        path = write_test_file("test_example.py", '''\
+    def test_localhost_url_detected(self, checker, write_py_file):
+        path = write_py_file("test_example.py", '''\
 def test_api():
     url = "http://localhost:8080/api"
 ''')
@@ -281,8 +272,8 @@ def test_api():
         assert len(hc) >= 1
         assert hc[0].severity == Severity.HIGH
 
-    def test_sleep_detected(self, checker, write_test_file):
-        path = write_test_file("test_example.py", '''\
+    def test_sleep_detected(self, checker, write_py_file):
+        path = write_py_file("test_example.py", '''\
 import time
 def test_wait():
     time.sleep(5)
@@ -291,8 +282,8 @@ def test_wait():
         hc = [v for v in violations if v.violation_type == ViolationType.HARDCODED_CONFIGURATION]
         assert len(hc) >= 1
 
-    def test_absolute_path_detected(self, checker, write_test_file):
-        path = write_test_file("test_example.py", '''\
+    def test_absolute_path_detected(self, checker, write_py_file):
+        path = write_py_file("test_example.py", '''\
 def test_file():
     path = "/home/user/data/test.csv"
 ''')
@@ -300,8 +291,8 @@ def test_file():
         hc = [v for v in violations if v.violation_type == ViolationType.HARDCODED_CONFIGURATION]
         assert len(hc) >= 1
 
-    def test_comment_ignored(self, checker, write_test_file):
-        path = write_test_file("test_example.py", '''\
+    def test_comment_ignored(self, checker, write_py_file):
+        path = write_py_file("test_example.py", '''\
 def test_ok():
     # http://localhost:8080 is the base URL
     assert True
@@ -310,8 +301,8 @@ def test_ok():
         hc = [v for v in violations if v.violation_type == ViolationType.HARDCODED_CONFIGURATION]
         assert len(hc) == 0
 
-    def test_no_config_no_violation(self, checker, write_test_file):
-        path = write_test_file("test_example.py", '''\
+    def test_no_config_no_violation(self, checker, write_py_file):
+        path = write_py_file("test_example.py", '''\
 def test_math():
     assert 2 + 2 == 4
 ''')
@@ -325,8 +316,8 @@ def test_math():
 
 class TestSharedMutableState:
 
-    def test_module_level_list_detected(self, checker, write_test_file):
-        path = write_test_file("test_example.py", '''\
+    def test_module_level_list_detected(self, checker, write_py_file):
+        path = write_py_file("test_example.py", '''\
 shared_data = []
 
 def test_one():
@@ -340,8 +331,8 @@ def test_two():
         assert len(sm) >= 1
         assert sm[0].severity == Severity.HIGH
 
-    def test_module_level_dict_detected(self, checker, write_test_file):
-        path = write_test_file("test_example.py", '''\
+    def test_module_level_dict_detected(self, checker, write_py_file):
+        path = write_py_file("test_example.py", '''\
 cache = {}
 
 def test_cached():
@@ -351,8 +342,8 @@ def test_cached():
         sm = [v for v in violations if v.violation_type == ViolationType.SHARED_MUTABLE_STATE]
         assert len(sm) >= 1
 
-    def test_uppercase_constant_ok(self, checker, write_test_file):
-        path = write_test_file("test_example.py", '''\
+    def test_uppercase_constant_ok(self, checker, write_py_file):
+        path = write_py_file("test_example.py", '''\
 DEFAULTS = []
 
 def test_ok():
@@ -361,8 +352,8 @@ def test_ok():
         violations = checker.check(path)
         assert not any(v.violation_type == ViolationType.SHARED_MUTABLE_STATE for v in violations)
 
-    def test_private_var_ok(self, checker, write_test_file):
-        path = write_test_file("test_example.py", '''\
+    def test_private_var_ok(self, checker, write_py_file):
+        path = write_py_file("test_example.py", '''\
 _internal = {}
 
 def test_ok():
@@ -371,8 +362,8 @@ def test_ok():
         violations = checker.check(path)
         assert not any(v.violation_type == ViolationType.SHARED_MUTABLE_STATE for v in violations)
 
-    def test_global_keyword_in_test_detected(self, checker, write_test_file):
-        path = write_test_file("test_example.py", '''\
+    def test_global_keyword_in_test_detected(self, checker, write_py_file):
+        path = write_py_file("test_example.py", '''\
 counter = 0
 
 def test_increment():
@@ -384,9 +375,9 @@ def test_increment():
         # Should detect both: module-level mutable AND global keyword
         assert len(sm) >= 1
 
-    def test_string_assignment_ok(self, checker, write_test_file):
+    def test_string_assignment_ok(self, checker, write_py_file):
         """Non-mutable module-level assignments should not be flagged."""
-        path = write_test_file("test_example.py", '''\
+        path = write_py_file("test_example.py", '''\
 base_url = "https://example.com"
 
 def test_ok():
@@ -402,10 +393,10 @@ def test_ok():
 
 class TestEdgeCases:
 
-    def test_syntax_error_handled(self, checker, write_test_file):
-        path = write_test_file("test_broken.py", "def test_x(\n")
+    def test_syntax_error_handled(self, checker, write_py_file):
+        path = write_py_file("test_broken.py", "def test_x(\n")
         assert checker.check(path) == []
 
-    def test_empty_file(self, checker, write_test_file):
-        path = write_test_file("test_empty.py", "")
+    def test_empty_file(self, checker, write_py_file):
+        path = write_py_file("test_empty.py", "")
         assert checker.check(path) == []

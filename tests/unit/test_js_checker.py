@@ -214,30 +214,6 @@ class TestAdaptationCheckerJS:
         """AdaptationChecker can check .ts files."""
         assert self.checker.can_check(Path("LoginPage.ts")) is True
 
-    @pytest.mark.skip(reason="ASSERTION_IN_POM detection for JS Page Objects needs enhancement")
-    def test_detects_expect_in_page(self, tmp_path):
-        """Detects expect() in Page class."""
-        code = '''
-import { Page, expect } from '@playwright/test';
-
-export class LoginPage {
-    constructor(page) {
-        this.page = page;
-    }
-
-    async verifyLogin() {
-        await expect(this.page).toHaveURL(/dashboard/);
-    }
-}
-'''
-        test_file = tmp_path / "LoginPage.ts"
-        test_file.write_text(code, encoding="utf-8")
-        violations = parse_and_check(self.checker, test_file)
-
-        assertion_violations = [v for v in violations
-                               if v.violation_type == ViolationType.ASSERTION_IN_POM]
-        assert len(assertion_violations) > 0
-
 
 # =====================================================================
 # JSParser direct tests (coverage for uncovered parser lines)

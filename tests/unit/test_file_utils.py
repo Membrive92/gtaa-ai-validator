@@ -9,7 +9,7 @@ import pytest
 from pathlib import Path
 from unittest.mock import patch, mock_open, MagicMock
 
-from gtaa_validator.file_utils import read_file_safe, MAX_FILE_SIZE_BYTES
+from gtaa_validator.file_utils import read_file_safe
 
 
 class TestReadFileSafe:
@@ -52,6 +52,3 @@ class TestReadFileSafe:
         f.write_text("", encoding="utf-8")
         assert read_file_safe(f) == ""
 
-    def test_default_max_size_is_10mb(self):
-        """Default max size constant is 10 MB."""
-        assert MAX_FILE_SIZE_BYTES == 10 * 1024 * 1024

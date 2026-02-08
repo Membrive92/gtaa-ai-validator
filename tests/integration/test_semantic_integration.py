@@ -6,7 +6,6 @@ reportes con violaciones estáticas enriquecidas y violaciones semánticas.
 """
 
 import json
-from pathlib import Path
 
 import pytest
 
@@ -15,18 +14,6 @@ from gtaa_validator.analyzers.semantic_analyzer import SemanticAnalyzer
 from gtaa_validator.llm.client import MockLLMClient
 from gtaa_validator.reporters.json_reporter import JsonReporter
 from gtaa_validator.reporters.html_reporter import HtmlReporter
-
-
-@pytest.fixture
-def bad_project_path():
-    """Ruta al proyecto de ejemplo con violaciones."""
-    return Path(__file__).parent.parent.parent / "examples" / "bad_project"
-
-
-@pytest.fixture
-def good_project_path():
-    """Ruta al proyecto de ejemplo sin violaciones."""
-    return Path(__file__).parent.parent.parent / "examples" / "good_project"
 
 
 @pytest.fixture

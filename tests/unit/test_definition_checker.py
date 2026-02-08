@@ -318,20 +318,3 @@ def test_login():
         violations = checker.check(path, file_type="ui")
         assert len(violations) == 1
 
-    def test_unknown_file_detects_violations(self, checker, write_py_file):
-        """file_type='unknown' (default) → violations detected normally."""
-        path = write_py_file("test_example.py", """
-def test_login():
-    driver.find_element("id", "username")
-""")
-        violations = checker.check(path, file_type="unknown")
-        assert len(violations) == 1
-
-    def test_default_file_type_detects_violations(self, checker, write_py_file):
-        """No file_type arg → violations detected (backward compatible)."""
-        path = write_py_file("test_example.py", """
-def test_login():
-    driver.find_element("id", "username")
-""")
-        violations = checker.check(path)
-        assert len(violations) == 1

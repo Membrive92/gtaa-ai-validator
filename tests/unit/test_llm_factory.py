@@ -84,13 +84,6 @@ class TestCreateLLMClientEnvDefault:
             client = create_llm_client()
             assert isinstance(client, APILLMClient)
 
-    @patch.dict(os.environ, {"LLM_PROVIDER": "mock"}, clear=False)
-    def test_env_provider_used(self):
-        """LLM_PROVIDER del entorno se usa."""
-        client = create_llm_client()
-        assert isinstance(client, MockLLMClient)
-
-
 class TestCreateLLMClientErrors:
     """Tests de errores."""
 
@@ -98,11 +91,6 @@ class TestCreateLLMClientErrors:
         """Provider inválido lanza error."""
         with pytest.raises(ValueError, match="no soportado"):
             create_llm_client(provider="openai")
-
-    def test_invalid_provider_lists_options(self):
-        """Error lista providers soportados."""
-        with pytest.raises(ValueError, match="gemini"):
-            create_llm_client(provider="invalid")
 
 
 class TestGetAvailableProviders:

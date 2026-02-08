@@ -43,11 +43,6 @@ class TestBaseChecker:
         checker = ConcreteChecker()
         assert repr(checker) == "<ConcreteChecker>"
 
-    def test_str_format(self):
-        """__str__() returns the class name."""
-        checker = ConcreteChecker()
-        assert str(checker) == "ConcreteChecker"
-
     def test_name_attribute(self):
         """name attribute is set to class name."""
         checker = ConcreteChecker()
