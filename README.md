@@ -5,10 +5,10 @@
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Estado](https://img.shields.io/badge/estado-en%20desarrollo-yellow)](https://github.com/Membrive92/gtaa-ai-validator)
-[![Fase](https://img.shields.io/badge/fase-10.8%2F10-blue)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Fase](https://img.shields.io/badge/fase-10.9%2F10-blue)](https://github.com/Membrive92/gtaa-ai-validator)
 [![Progreso](https://img.shields.io/badge/progreso-99%25-green)](https://github.com/Membrive92/gtaa-ai-validator)
 [![Coverage](https://img.shields.io/badge/coverage-93%25-brightgreen)](https://github.com/Membrive92/gtaa-ai-validator)
-[![Tests](https://img.shields.io/badge/tests-669-brightgreen)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Tests](https://img.shields.io/badge/tests-761-brightgreen)](https://github.com/Membrive92/gtaa-ai-validator)
 [![CI](https://github.com/Membrive92/gtaa-ai-validator/actions/workflows/ci.yml/badge.svg)](https://github.com/Membrive92/gtaa-ai-validator/actions/workflows/ci.yml)
 [![Docker](https://img.shields.io/badge/docker-ready-blue)](https://github.com/Membrive92/gtaa-ai-validator/blob/main/Dockerfile)
 
@@ -16,7 +16,7 @@
 >
 > Autor: Jose Antonio Membrive Guillen
 > Año: 2025-2026
-> **Estado:** Fase 10.8/10 Completa | Última actualización: 7 Febrero 2026
+> **Estado:** Fase 10.9/10 Completa | Última actualización: 8 Febrero 2026
 
 ---
 
@@ -44,10 +44,11 @@
 | ↳ **✅ 10.2** | Sistema de logging profesional + métricas de rendimiento | **COMPLETO** | **06/02/2026** |
 | ↳ **✅ 10.3** | Optimizaciones de proyecto (packaging, dead code, tests, LSP) | **COMPLETO** | **06/02/2026** |
 | ↳ **✅ 10.4** | Despliegue: Docker + GitHub Actions CI + reusable action | **COMPLETO** | **06/02/2026** |
-| ↳ **✅ 10.5** | Cobertura de código: 84% a 93% (633 tests) | **COMPLETO** | **06/02/2026** |
+| ↳ **✅ 10.5** | Cobertura de código: 84% a 93% (667 tests) | **COMPLETO** | **06/02/2026** |
 | ↳ **✅ 10.6** | Tests de regresión de seguridad (34 tests, SEC-01 a SEC-09) | **COMPLETO** | **06/02/2026** |
 | ↳ **✅ 10.7** | Refactor quality_checker + Reportes Allure-style + HTML redesign | **COMPLETO** | **07/02/2026** |
 | ↳ **✅ 10.8** | Refactor SOLID/DRY: shared utils, BaseChecker, LLM Protocol, CLI decomp | **COMPLETO** | **07/02/2026** |
+| ↳ **✅ 10.9** | Auditoría QA: +92 tests, -11 redundantes, aserciones reforzadas, zero-coverage cubierto | **COMPLETO** | **08/02/2026** |
 
 ### 📊 Funcionalidades Implementadas vs Planeadas
 
@@ -60,8 +61,8 @@
 | ✅ Detección de 23 tipos de violaciones gTAA | Implementado | Fase 2-8 — 5 checkers + LLM |
 | ✅ Sistema de scoring (0-100) | Implementado | Penalización por severidad |
 | ✅ Proyectos de ejemplo (bueno/malo) | Implementado | En directorio examples/ |
-| ✅ Tests unitarios + integración + seguridad (669 tests, 93% coverage) | Implementado | pytest + pytest-cov con unit/ e integration/ |
-| ✅ Documentación técnica con diagramas | Implementado | docs/ con flujos Fase 1-10, 55 ADRs |
+| ✅ Tests unitarios + integración + seguridad (761 tests, 93% coverage) | Implementado | pytest + pytest-cov con unit/ e integration/ |
+| ✅ Documentación técnica con diagramas | Implementado | docs/ con flujos Fase 1-10, 60 ADRs |
 | ✅ Reportes HTML dashboard | Implementado | Fase 4+10.7 — SVG inline, autocontenido, rediseño visual |
 | ✅ Reportes JSON para CI/CD | Implementado | Fase 4 — `--json` / `--html` |
 | ✅ Auto-generación de reportes (Allure-style) | Implementado | Fase 10.7 — `--output-dir`, `--no-report`, timestamps |
@@ -165,7 +166,7 @@ La gTAA organiza el framework de automatización en capas con responsabilidades 
 
 ### ✨ Solución propuesta
 
-Sistema híbrido que combina **3 técnicas de IA** para detectar automáticamente violaciones arquitectónicas:
+Sistema híbrido que combina **2 técnicas complementarias** para detectar automáticamente violaciones arquitectónicas:
 
 1. **🔍 Análisis Estático**: Pattern matching con AST y regex (17 violaciones)
 2. **🧠 Análisis Semántico (LLM)**: Gemini Flash para detección profunda (6 violaciones)
@@ -210,7 +211,7 @@ pytest>=7.0                       # Framework de testing
 ┌──────────────┐    ┌──────────────────┐
 │   ESTÁTICO   │    │   SEMÁNTICO      │
 │  AST + Regex │    │  LLM (Gemini)    │
-│  4 Checkers  │    │  ✅ Fase 5       │
+│  5 Checkers  │    │  ✅ Fase 5       │
 └──────┬───────┘    └────────┬─────────┘
        └──────────┬───────────┘
                   ↓
@@ -300,7 +301,7 @@ jobs:
 
 ---
 
-### ✅ Funcionalidad ACTUAL (Fase 10.8)
+### ✅ Funcionalidad ACTUAL (Fase 10.9)
 
 **Funcionalidad disponible en la versión actual:**
 
@@ -340,7 +341,7 @@ python -m gtaa_validator examples/js_project --verbose
 python -m gtaa_validator examples/csharp_project --verbose
 
 # Ejecutar tests
-pytest tests/                                        # Todos (669 tests)
+pytest tests/                                        # Todos (761 tests)
 pytest tests/unit/                                   # Solo unitarios
 pytest tests/integration/                            # Solo integración
 pytest tests/ --cov=gtaa_validator --cov-report=term  # Con cobertura
@@ -372,11 +373,11 @@ pytest tests/ --cov=gtaa_validator --cov-report=term  # Con cobertura
 - ✅ Soporte BDD: analiza archivos .feature y step definitions (Behave, pytest-bdd)
 - ✅ GherkinParser regex-based sin dependencias externas
 - ✅ 5 violaciones BDD: detalles técnicos en Gherkin, browser calls en steps, complejidad, falta de Then, duplicados
-- ✅ 669 tests automatizados (93% cobertura de código)
+- ✅ 761 tests automatizados (93% cobertura de código)
 
 **Ejemplo de salida (con --ai):**
 ```
-=== gTAA AI Validator - Fase 5 ===
+=== gTAA AI Validator ===
 Analizando proyecto: examples/bad_project
 
 Ejecutando análisis estático...
@@ -414,7 +415,7 @@ El proyecto incluye ejemplos completamente documentados en el directorio [exampl
 ```
 examples/
 ├── README.md                  # Documentación detallada de cada ejemplo
-├── bad_project/               # Proyecto con ~45 violaciones (todos los tipos)
+├── bad_project/               # Proyecto Python con ~45 violaciones (todos los tipos)
 │   ├── test_login.py          # 8 violaciones (Selenium directo)
 │   ├── test_search.py         # 7 violaciones (Playwright directo)
 │   ├── test_data_issues.py    # Datos hardcoded, nombres genéricos, función larga
@@ -619,7 +620,6 @@ python -m gtaa_validator ./proyecto --ai
 ### ⏳ Funcionalidad FUTURA — Fase 10 (pendiente)
 
 ```
-# ⏳ Integración CI/CD (--min-score)
 # ⏳ Documentación TFM final
 ```
 
@@ -679,7 +679,7 @@ gtaa-ai-validator/
 │       ├── quality_checker.py          # Calidad de tests (AST + Regex)
 │       └── bdd_checker.py              # BDD/Gherkin (Fase 8)
 │
-├── tests/                              # 🧪 Tests automatizados (669 tests, 93% coverage)
+├── tests/                              # 🧪 Tests automatizados (761 tests, 93% coverage)
 │   ├── conftest.py                     # Fixtures compartidas
 │   ├── unit/                           # Tests unitarios
 │   │   ├── test_models.py             # Modelos de datos
@@ -711,7 +711,7 @@ gtaa-ai-validator/
 │
 ├── examples/                           # 📝 Proyectos de ejemplo
 │   ├── README.md                       # Documentación de violaciones
-│   ├── bad_project/                    # Proyecto Python con ~35 violaciones
+│   ├── bad_project/                    # Proyecto Python con ~45 violaciones
 │   ├── good_project/                   # Proyecto Python gTAA correcto (score 100)
 │   ├── python_live_project/            # Proyecto realista Playwright (78 violaciones)
 │   ├── java_project/                   # Proyecto Java con violaciones (Fase 9)
@@ -722,7 +722,7 @@ gtaa-ai-validator/
 │
 └── docs/                               # 📚 Documentación técnica
     ├── README.md                       # Índice de documentación
-    ├── ARCHITECTURE_DECISIONS.md       # Decisiones arquitectónicas (55 ADR)
+    ├── ARCHITECTURE_DECISIONS.md       # Decisiones arquitectónicas (60 ADR)
     ├── PHASE1_FLOW_DIAGRAMS.md         # Diagramas Fase 1 (CLI y fundación)
     ├── PHASE2_FLOW_DIAGRAMS.md         # Diagramas Fase 2 (análisis estático)
     ├── PHASE3_FLOW_DIAGRAMS.md         # Diagramas Fase 3 (9 violaciones)
@@ -733,7 +733,9 @@ gtaa-ai-validator/
     ├── PHASE8_FLOW_DIAGRAMS.md         # Diagramas Fase 8 (BDD/Gherkin)
     ├── PHASE9_FLOW_DIAGRAMS.md         # Diagramas Fase 9 (multilenguaje + refactor)
     ├── PHASE10_FLOW_DIAGRAMS.md        # Diagramas Fase 10 (optimización LLM)
-    └── PHASE10_SECURITY_AUDIT.md       # Auditoría de seguridad (9 hallazgos)
+    ├── SECURITY_AUDIT_REPORT.md        # Auditoría de seguridad (9 hallazgos, SEC-01 a SEC-09)
+    ├── TEST_AUDIT_REPORT.md            # Auditoría QA de tests (670→761 tests)
+    └── DOC_AUDIT_REPORT.md             # Auditoría de documentación (28 hallazgos)
 ```
 
 > **Nota sobre `docs/`**: La documentación técnica se distribuye en múltiples documentos independientes, uno por cada fase del proyecto y uno para las decisiones arquitectónicas. Esta separación responde a un criterio de **transparencia y trazabilidad**: cada documento refleja el estado del proyecto en el momento de su elaboración, permitiendo seguir la evolución del diseño y las decisiones técnicas a lo largo del desarrollo. El índice general se encuentra en [`docs/README.md`](docs/README.md).
@@ -828,7 +830,7 @@ Puntuación = max(0, 100 - suma de penalizaciones)
 ## 🎓 Contexto Académico (TFM)
 
 ### Objetivos del TFM
-1. ✅ Desarrollar sistema de IA para validación arquitectónica (Fase 8/10 completa)
+1. ✅ Desarrollar sistema de IA para validación arquitectónica (Fase 10.9/10 completa)
 2. ✅ Integrar LLM real para análisis semántico (Gemini Flash - Fase 5)
 3. ✅ Ampliar cobertura a 23 tipos de violación basados en catálogo CT-TAE (Fase 6-8)
 4. ✅ Crear dataset etiquetado para la comunidad (ejemplos con ground truth)
@@ -853,10 +855,14 @@ Puntuación = max(0, 100 - suma de penalizaciones)
 - ✅ Fase 9: Soporte Multilenguaje (Java + JS/TS + C#) - **COMPLETA**
 - 🔄 Fase 10: Optimización y documentación final - **EN PROGRESO**
   - ✅ 10.1: Optimización capa LLM (factory, fallback, rate limit, --max-llm-calls)
-  - ✅ 10.5: Cobertura de código 84% a 93% (633 tests)
+  - ✅ 10.2: Sistema de logging profesional + métricas de rendimiento
+  - ✅ 10.3: Optimizaciones de proyecto (packaging, dead code, tests, LSP)
+  - ✅ 10.4: Despliegue: Docker + GitHub Actions CI + reusable action
+  - ✅ 10.5: Cobertura de código 84% a 93% (667 tests)
   - ✅ 10.6: Tests de regresión de seguridad (34 tests para SEC-01 a SEC-09)
   - ✅ 10.7: Refactor quality_checker + reportes Allure-style + HTML redesign
   - ✅ 10.8: Refactor SOLID/DRY codebase completo (5 commits independientes)
+  - ✅ 10.9: Auditoría QA de tests (+92 tests nuevos, -11 redundantes, 761 total)
 
 ---
 
@@ -879,7 +885,7 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 - [ISTQB CT-TAE Syllabus v2016](https://www.istqb.org/)
 
 ### Documentación Técnica del Proyecto
-- **[Decisiones Arquitectónicas (ADR)](docs/ARCHITECTURE_DECISIONS.md)** ✅ — 55 ADRs: patrones de diseño, paradigmas, justificaciones técnicas
+- **[Decisiones Arquitectónicas (ADR)](docs/ARCHITECTURE_DECISIONS.md)** ✅ — 60 ADRs: patrones de diseño, paradigmas, justificaciones técnicas
 - **[Diagramas de Flujo - Fase 1](docs/PHASE1_FLOW_DIAGRAMS.md)** ✅ — Fundación del proyecto, CLI con Click, descubrimiento de archivos
 - **[Diagramas de Flujo - Fase 2](docs/PHASE2_FLOW_DIAGRAMS.md)** ✅ — Motor de análisis estático, BrowserAPICallVisitor, scoring
 - **[Diagramas de Flujo - Fase 3](docs/PHASE3_FLOW_DIAGRAMS.md)** ✅ — 4 checkers, 9 violaciones, AST visitors, cross-file state
@@ -890,7 +896,9 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 - **[Diagramas de Flujo - Fase 8](docs/PHASE8_FLOW_DIAGRAMS.md)** ✅ — Soporte BDD/Gherkin, GherkinParser, BDDChecker, 5 violaciones BDD
 - **[Diagramas de Flujo - Fase 9](docs/PHASE9_FLOW_DIAGRAMS.md)** ✅ — Multilenguaje, ParseResult, checkers language-agnostic, refactor DRY
 - **[Diagramas de Flujo - Fase 10](docs/PHASE10_FLOW_DIAGRAMS.md)** ✅ — Optimización LLM, factory, fallback, rate limit, tracking
-- **[Auditoría de Seguridad](docs/PHASE10_SECURITY_AUDIT.md)** ✅ — 9 hallazgos (OWASP), buenas prácticas, matriz de riesgo
+- **[Auditoría de Seguridad](docs/SECURITY_AUDIT_REPORT.md)** ✅ — 9 hallazgos (OWASP), buenas prácticas, matriz de riesgo
+- **[Auditoría QA de Tests](docs/TEST_AUDIT_REPORT.md)** ✅ — Auditoría white-box, 670→761 tests, zero-coverage cubierto
+- **[Auditoría de Documentación](docs/DOC_AUDIT_REPORT.md)** ✅ — 28 hallazgos corregidos (6 críticos, 12 altos, 10 medios)
 - **[Índice de documentación](docs/README.md)** ✅
 
 ---
@@ -1143,7 +1151,7 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 
 **Implementado:**
 - ✅ Cobertura de código: 84% a 93% global (objetivo 90%+ superado)
-- ✅ 251 tests nuevos (416 a 667 tests totales)
+- ✅ 251 tests nuevos (416 → 667 tests totales)
 - ✅ `pytest-cov` como dependencia de desarrollo
 - ✅ Nuevos test files: test_file_utils.py, test_base_checker.py, test_python_parser.py
 - ✅ Tests CLI extendidos: score labels, --config, --ai, exit codes, verbose
@@ -1158,7 +1166,7 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 **Implementado:**
 - ✅ 34 tests de regresión de seguridad (SEC-01 a SEC-09)
 - ✅ Cobertura de todas las remediaciones de la auditoría de seguridad
-- ✅ Documentación: PHASE10_SECURITY_AUDIT.md
+- ✅ Documentación: SECURITY_AUDIT_REPORT.md
 
 ---
 
@@ -1191,6 +1199,21 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 
 ---
 
+### Versión 0.10.9 - Fase 10.9 (8 Febrero 2026) ✅
+
+**Implementado:**
+- ✅ Auditoría QA white-box completa de la suite de tests
+- ✅ 11 tests redundantes/muertos eliminados (669 → 658)
+- ✅ 43 tests CRITICAL: zero-coverage cubierto (BaseChecker, file_utils, TokenUsage, LLMProtocol)
+- ✅ 30 tests HIGH: boundary testing, rate limit, BDD heuristics, XSS regression
+- ✅ 40+ aserciones débiles reforzadas (`>= 1` → `== N` con verificación de tipo)
+- ✅ 11 tests MEDIUM + helpers compartidos extraídos a conftest
+- ✅ Fixtures duplicadas consolidadas, `parse_and_check()` centralizado
+- ✅ Total: 761 tests (93% cobertura mantenida), 0 fallos
+- ✅ Documentación: TEST_AUDIT_REPORT.md
+
+---
+
 ### Versión 1.0.0 - Fase 10 Final (Pendiente) ⏳
 
 **Planificado:**
@@ -1200,6 +1223,6 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 
 <div align="center">
 
-**Estado del proyecto:** Fase 10.8/10 | 23 violaciones | 4 lenguajes (Python, Java, JS/TS, C#) | 669 tests | 93% cobertura
+**Estado del proyecto:** Fase 10.9/10 | 23 violaciones | 4 lenguajes (Python, Java, JS/TS, C#) | 761 tests | 93% cobertura
 
 </div>

@@ -204,6 +204,29 @@ Registro de decisiones arquitectónicas (ADR) que explica **por qué** se eligi�
 35. ParseResult como interfaz unificada frente a AST nativo
 36. Factory function frente a dispatcher manual para parsers
 37. Python AST nativo frente a tree-sitter para Python
+38. Factory pattern para creación de clientes LLM
+39. RateLimitError como excepción específica
+40. Fallback automático ante rate limit (Gemini → Mock)
+41. --max-llm-calls para limitación proactiva de llamadas API
+42. Provider tracking en reportes (inicial, actual, fallback)
+43. Sistema de logging profesional con logging stdlib
+44. --verbose auto-crea log file por defecto
+45. Version bump con single source of truth (__init__.__version__)
+46. pyproject.toml (PEP 621) con dependencias opcionales
+47. Eliminación de código muerto (159 líneas)
+48. Eliminación de ast.Str deprecado (Python 3.14 compatibility)
+49. Alineación LSP: BaseChecker.check() acepta Union[ast.Module, ParseResult]
+50. PEP 8 E402: logger después de imports
+51. Consistencia de docstrings en español
+52. Dockerfile multistage (builder + runtime)
+53. GitHub Actions CI con matrix Python 3.10/3.11/3.12
+54. GitHub Action reutilizable (action.yml) composite action
+55. Eliminación de código muerto segunda pasada (body_node, _analyze_imports)
+56. BaseChecker: métodos compartidos (_is_test_file, _is_test_function)
+57. LLMClientProtocol con typing.Protocol
+58. TokenUsage unificado entre Mock y API clients
+59. _call_with_fallback() como helper compartido
+60. Decomposición CLI: main() de 200 a 40 líneas
 
 **Para quién**:
 - Evaluadores del TFM que quieran entender las decisiones de diseño
@@ -279,7 +302,7 @@ Este diagrama muestra el flujo completo desde la invocación del CLI hasta la ge
           │   ┌───────────────────────────────────────────────────┐    │      │
           │   │ Report.calculate_score()                          │    │      │
           │   │   score = 100 - Σ(penalties)                      │    │      │
-          │   │   CRITICAL=-15, HIGH=-10, MEDIUM=-5, LOW=-2       │    │      │
+          │   │   CRITICAL=-10, HIGH=-5, MEDIUM=-2, LOW=-1         │    │      │
           │   └───────────────────────────────────────────────────┘    │      │
           │                                                            │      │
           ▼                                                            ▼      │
@@ -333,20 +356,20 @@ Este diagrama muestra el flujo completo desde la invocación del CLI hasta la ge
 │  checker.check(file_path, tree, file_type) → Violation[]                            │
 ├─────────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                     │
-│  ┌───────────────────────────────────────────────────┐  ┌─────────────────────┐ │
-│  │ Checkers LANGUAGE-AGNOSTIC                        │  │ BDD Checker         │ │
-│  │ (DefinitionChecker, AdaptationChecker, Quality)   │  │                     │ │
-│  │                                                   │  │ Valida .feature:    │ │
-│  │ Reciben ParseResult unificado de cualquier parser │  │                     │ │
-│  │                                                   │  │ - MISSING_TAGS      │ │
-│  │ Detectan por extensión:                           │  │ - EMPTY_SCENARIO    │ │
-│  │   .py    → BROWSER_METHODS_PYTHON                 │  │ - MISSING_STEPS     │ │
-│  │   .java  → BROWSER_METHODS_JAVA                   │  │                     │ │
-│  │   .js/.ts → BROWSER_METHODS_JS                    │  │                     │ │
-│  │   .cs    → BROWSER_METHODS_CSHARP                 │  │                     │ │
-│  │                                                   │  │                     │ │
-│  │ Mismas violaciones para todos los lenguajes       │  │                     │ │
-│  └───────────────────────────────────────────────────┘  └─────────────────────┘ │
+│  ┌───────────────────────────────────────────────────┐  ┌──────────────────────────┐ │
+│  │ Checkers LANGUAGE-AGNOSTIC                        │  │ BDD Checker              │ │
+│  │ (DefinitionChecker, AdaptationChecker, Quality)   │  │                          │ │
+│  │                                                   │  │ Valida .feature + steps: │ │
+│  │ Reciben ParseResult unificado de cualquier parser │  │                          │ │
+│  │                                                   │  │ - GHERKIN_IMPL_DETAIL    │ │
+│  │ Detectan por extensión:                           │  │ - STEP_BROWSER_CALL      │ │
+│  │   .py    → BROWSER_METHODS_PYTHON                 │  │ - STEP_TOO_COMPLEX       │ │
+│  │   .java  → BROWSER_METHODS_JAVA                   │  │ - MISSING_THEN_STEP      │ │
+│  │   .js/.ts → BROWSER_METHODS_JS                    │  │ - DUPLICATE_STEP_PAT     │ │
+│  │   .cs    → BROWSER_METHODS_CSHARP                 │  │                          │ │
+│  │                                                   │  │                          │ │
+│  │ Mismas violaciones para todos los lenguajes       │  │                          │ │
+│  └───────────────────────────────────────────────────┘  └──────────────────────────┘ │
 │                                                                                     │
 └──────────────────────────────────────────────────────────────────────────────│──────┘
                                                                                │
@@ -551,7 +574,7 @@ por lenguaje almacenados en diccionarios (BROWSER_METHODS_JAVA, BROWSER_METHODS_
 | Java | `tree-sitter-language-pack` | 3.10+ |
 | JavaScript/TypeScript | `tree-sitter-language-pack` | 3.10+ |
 | C# | `tree-sitter-c-sharp` | 3.10+ |
-| Gherkin | `gherkin-official` | 3.10+ |
+| Gherkin | regex propio (sin dependencias) | 3.10+ |
 
 ---
 
@@ -560,14 +583,14 @@ por lenguaje almacenados en diccionarios (BROWSER_METHODS_JAVA, BROWSER_METHODS_
 Diagramas de flujo de la Fase 8: Soporte Gherkin/BDD (Behave + pytest-bdd).
 
 **Contenido**:
-- BDDChecker — validación de archivos .feature
-- Detección de escenarios sin pasos, escenarios vacíos
-- Validación de tags y nomenclatura
+- BDDChecker — validación de archivos .feature y step definitions
+- Detección de detalles de implementación en Gherkin
+- Validación de estructura Given-When-Then
 - Integración con step definitions Python (Behave/pytest-bdd)
-- 6 tipos de violaciones BDD
+- 5 tipos de violaciones BDD
 
 **Conceptos nuevos explicados**:
-- Gherkin parser (gherkin-official)
+- Gherkin parser (regex propio, sin dependencias externas)
 - Validación de estructura Given-When-Then
 - Tags para categorización de escenarios
 
@@ -590,9 +613,9 @@ Diagramas de flujo de la Fase 9: Soporte Multilenguaje (Java + JavaScript/TypeSc
 - Patrones específicos por extensión (.py, .java, .js, .cs) en diccionarios
 - Dependency Inversion: checkers dependen de ParseResult, no de parsers concretos
 
-### [PHASE10_SECURITY_AUDIT.md](PHASE10_SECURITY_AUDIT.md)
+### [SECURITY_AUDIT_REPORT.md](SECURITY_AUDIT_REPORT.md)
 
-Auditoría de seguridad del código fuente del proyecto (Fase 10).
+Auditoría de seguridad del código fuente del proyecto (Fase 10.4).
 
 **Contenido**:
 - 9 hallazgos de seguridad clasificados por severidad (2 críticos, 4 altos, 3 medios)
@@ -610,6 +633,28 @@ Auditoría de seguridad del código fuente del proyecto (Fase 10).
 - Cross-Site Scripting (XSS) en reportes HTML
 - Seguridad de contenedores Docker
 - Supply chain en GitHub Actions
+
+### [TEST_AUDIT_REPORT.md](TEST_AUDIT_REPORT.md)
+
+Auditoría QA white-box de la suite de tests (Fase 10.9).
+
+**Contenido**:
+- Inventario completo de 670 tests pre-auditoría
+- 11 tests redundantes/muertos identificados y eliminados
+- 8 funciones con zero cobertura (críticas para el negocio)
+- Plan de corrección priorizado: ~86 tests nuevos
+- 40+ aserciones débiles documentadas para reforzar
+- Resultados post-implementación: 761 tests, 0 fallos
+
+### [DOC_AUDIT_REPORT.md](DOC_AUDIT_REPORT.md)
+
+Auditoría de documentación del proyecto (Fase 10.10).
+
+**Contenido**:
+- 28 hallazgos: 6 críticos, 12 altos, 10 medios
+- Errores factuales: fórmula de scoring, tipos BDD inexistentes, parser mal identificado
+- Datos desactualizados post Fase 10.9: test count, ADR count, badges
+- Inconsistencias menores: naming, conteos, fechas
 
 ---
 
@@ -639,9 +684,11 @@ Guía para contribuir al proyecto (estructura de código, estándares, pull requ
 8. Lee [PHASE8_FLOW_DIAGRAMS.md](PHASE8_FLOW_DIAGRAMS.md) para el soporte Gherkin/BDD
 9. Lee [PHASE9_FLOW_DIAGRAMS.md](PHASE9_FLOW_DIAGRAMS.md) para el soporte multilenguaje (Java, JS/TS, C#)
 10. Lee [PHASE10_FLOW_DIAGRAMS.md](PHASE10_FLOW_DIAGRAMS.md) para optimización LLM, logging, packaging y despliegue
-11. Lee [PHASE10_SECURITY_AUDIT.md](PHASE10_SECURITY_AUDIT.md) para la auditoría de seguridad del código
-12. Lee [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md) para las justificaciones técnicas (55 ADRs)
-13. Ejecuta el código mientras lees:
+11. Lee [SECURITY_AUDIT_REPORT.md](SECURITY_AUDIT_REPORT.md) para la auditoría de seguridad del código
+12. Lee [TEST_AUDIT_REPORT.md](TEST_AUDIT_REPORT.md) para la auditoría QA de tests
+13. Lee [DOC_AUDIT_REPORT.md](DOC_AUDIT_REPORT.md) para la auditoría de documentación
+14. Lee [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md) para las justificaciones técnicas (60 ADRs)
+15. Ejecuta el código mientras lees:
     - Python: `python -m gtaa_validator examples/bad_project --ai --verbose`
     - Java: `python -m gtaa_validator examples/java_project --verbose`
     - JS/TS: `python -m gtaa_validator examples/js_project --verbose`
@@ -688,4 +735,4 @@ Este directorio se actualizará con:
 - Guías de uso avanzadas
 - Ejemplos adicionales
 
-**Última actualización**: 6 Febrero 2026 (Fase 10.4)
+**Última actualización**: 8 Febrero 2026 (Fase 10.10)

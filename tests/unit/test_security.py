@@ -3,7 +3,7 @@ Tests de regresión de seguridad.
 
 Verifica que todas las remediaciones de la auditoría de seguridad (SEC-01 a SEC-09)
 siguen funcionando correctamente. Cada clase de test corresponde a un hallazgo
-específico del documento PHASE10_SECURITY_AUDIT.md.
+específico del documento SECURITY_AUDIT_REPORT.md.
 
 Cubre:
 - SEC-03: Rutas relativas en reportes (no absolutas)
