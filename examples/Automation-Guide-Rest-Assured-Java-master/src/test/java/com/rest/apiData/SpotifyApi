@@ -1,0 +1,25 @@
+Spotify API:
+
+Client ID = 06411ea52590448a86e5f5dab0b5b857
+Client secret = 85d0cbfa9ebf47968fc799a2e0e88e9b
+
+playlist-read-private playlist-read-collaborative playlist-modify-private
+playlist-modify-public
+
+
+
+{
+    "access_token": "BQDtYIYbuFDUqsGWyduEN6i2IhmJd2lPeXJjSbKhHK2OawbjKoN0HcvZyG4kB0cDg16lWLaIA6wKnytOwe8AoPAjEKOp9R_sEnmxbX8U9BQKhDtX_Znrj9N74xW6yXmGbLY1mkEluF9LRgcj8fW0wkDiNXYWfM9OLXgaUkJBDAm7KUY1hOwXeaFvn_ho44rwvv53Yo7DCVGi3Oz_VJ2ynD8WtCrZZTxN2i5SvKybcWl49e89bUpYbNzheEriDcW4sPhjoxZ8CS2z-X42",
+    "token_type": "Bearer",
+    "expires_in": 3600,
+    "refresh_token": "AQDMbU1ipH0cgClkxlbxCACw36kntG5_N2g4ZL7v7g5oNcS6tnFyDWBaiJf4jdLJQfPdCLNzc_3EFdD64FpqCu1KiMYtNeCpWCGvTEp_tIQ1K6eiAwt74Qs3jB_IHfEyf3c",
+    "scope": "playlist-read-private playlist-read-collaborative playlist-modify-private playlist-modify-public"
+}
+
+
+
+{ "display_name" : "JoseApiTst",
+ "external_urls" : { "spotify" : "https://open.spotify.com/user/31n4n3stwzbz5csjh7mycjbppehi" },
+  "href" : "https://api.spotify.com/v1/users/31n4n3stwzbz5csjh7mycjbppehi",
+   "id" : "31n4n3stwzbz5csjh7mycjbppehi",
+    "images" : [ ], "type" : "user", "uri" : "spotify:user:31n4n3stwzbz5csjh7mycjbppehi", "followers" : { "href" : null, "total" : 0 } }

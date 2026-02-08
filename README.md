@@ -4,9 +4,9 @@
 
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Estado](https://img.shields.io/badge/estado-en%20desarrollo-yellow)](https://github.com/Membrive92/gtaa-ai-validator)
-[![Fase](https://img.shields.io/badge/fase-10.9%2F10-blue)](https://github.com/Membrive92/gtaa-ai-validator)
-[![Progreso](https://img.shields.io/badge/progreso-99%25-green)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Estado](https://img.shields.io/badge/estado-UAT-orange)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Fase](https://img.shields.io/badge/fase-UAT-orange)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Progreso](https://img.shields.io/badge/progreso-100%25%20dev-green)](https://github.com/Membrive92/gtaa-ai-validator)
 [![Coverage](https://img.shields.io/badge/coverage-93%25-brightgreen)](https://github.com/Membrive92/gtaa-ai-validator)
 [![Tests](https://img.shields.io/badge/tests-761-brightgreen)](https://github.com/Membrive92/gtaa-ai-validator)
 [![CI](https://github.com/Membrive92/gtaa-ai-validator/actions/workflows/ci.yml/badge.svg)](https://github.com/Membrive92/gtaa-ai-validator/actions/workflows/ci.yml)
@@ -16,15 +16,14 @@
 >
 > Autor: Jose Antonio Membrive Guillen
 > Año: 2025-2026
-> **Estado:** Fase 10.9/10 Completa | Última actualización: 8 Febrero 2026
+> **Estado:** Fase 10 Completa | Pruebas UAT en curso | Última actualización: 8 Febrero 2026
 
 ---
 
 ## ⚠️ ESTADO DEL PROYECTO
 
 > **IMPORTANTE:** Este README describe la **visión completa** del proyecto TFM.
-> El desarrollo sigue una metodología incremental con 10 fases.
-> Funcionalidades marcadas con ⏳ están pendientes de implementación.
+> El desarrollo de las 10 fases está **COMPLETO**. Actualmente en fase de **pruebas UAT** con proyectos reales.
 
 ### 🚀 Estado de Implementación por Fases
 
@@ -39,7 +38,7 @@
 | **✅ Fase 7** | **Soporte para proyectos mixtos (API + UI) + auto-wait Playwright** | **COMPLETO** | **02/02/2026** |
 | **✅ Fase 8** | **Soporte Gherkin/BDD (Behave + pytest-bdd)** | **COMPLETO** | **03/02/2026** |
 | **✅ Fase 9** | **Soporte Multilenguaje (Java + JS/TS + C#) + Refactor language-agnostic** | **COMPLETO** | **04/02/2026** |
-| **🔄 Fase 10** | **Optimización y documentación final** | **EN PROGRESO** | — |
+| **✅ Fase 10** | **Optimización y documentación final** | **COMPLETO** | **08/02/2026** |
 | ↳ **✅ 10.1** | Optimización capa LLM (factory, fallback, rate limit, --max-llm-calls) | **COMPLETO** | **05/02/2026** |
 | ↳ **✅ 10.2** | Sistema de logging profesional + métricas de rendimiento | **COMPLETO** | **06/02/2026** |
 | ↳ **✅ 10.3** | Optimizaciones de proyecto (packaging, dead code, tests, LSP) | **COMPLETO** | **06/02/2026** |
@@ -49,6 +48,8 @@
 | ↳ **✅ 10.7** | Refactor quality_checker + Reportes Allure-style + HTML redesign | **COMPLETO** | **07/02/2026** |
 | ↳ **✅ 10.8** | Refactor SOLID/DRY: shared utils, BaseChecker, LLM Protocol, CLI decomp | **COMPLETO** | **07/02/2026** |
 | ↳ **✅ 10.9** | Auditoría QA: +92 tests, -11 redundantes, aserciones reforzadas, zero-coverage cubierto | **COMPLETO** | **08/02/2026** |
+| ↳ **✅ 10.10** | Auditoría de documentación: 28 hallazgos corregidos (6 críticos, 12 altos, 10 medios) | **COMPLETO** | **08/02/2026** |
+| **🔄 UAT** | **Pruebas de aceptación con proyectos reales Java** | **EN CURSO** | — |
 
 ### 📊 Funcionalidades Implementadas vs Planeadas
 
@@ -73,9 +74,10 @@
 | ✅ Optimización capa LLM | Implementado | Fase 10.1 — Factory, fallback automático, --max-llm-calls |
 | ✅ Logging profesional + métricas | Implementado | Fase 10.2 — logging stdlib, AnalysisMetrics, --log-file |
 | ✅ Optimizaciones de proyecto | Implementado | Fase 10.3 — pyproject.toml, dead code, tests CLI, LSP |
-| ⏳ Documentación TFM final | En progreso | Fase 10 — CI/CD, docs TFM |
+| ✅ Auditorías (seguridad, tests, docs) | Implementado | Fase 10.4/10.9/10.10 — 3 auditorías completas |
+| 🔄 Pruebas UAT con proyectos reales | En curso | 2 proyectos Java reales del autor |
 
-**Leyenda:** ✅ Implementado | ⏳ Pendiente
+**Leyenda:** ✅ Implementado | 🔄 En curso
 
 ---
 
@@ -301,7 +303,7 @@ jobs:
 
 ---
 
-### ✅ Funcionalidad ACTUAL (Fase 10.9)
+### ✅ Funcionalidad ACTUAL (Fase 10 Completa)
 
 **Funcionalidad disponible en la versión actual:**
 
@@ -339,6 +341,10 @@ python -m gtaa_validator examples/python_live_project --verbose
 python -m gtaa_validator examples/java_project --verbose
 python -m gtaa_validator examples/js_project --verbose
 python -m gtaa_validator examples/csharp_project --verbose
+
+# Proyectos Java reales (validación empírica)
+python -m gtaa_validator examples/Automation-Guide-Selenium-Java-main --verbose
+python -m gtaa_validator examples/Automation-Guide-Rest-Assured-Java-master --verbose
 
 # Ejecutar tests
 pytest tests/                                        # Todos (761 tests)
@@ -432,11 +438,24 @@ examples/
 │   ├── api/                   # Cliente API y schemas
 │   ├── config/                # Configuración del proyecto
 │   └── utils/                 # Helpers y reporter
-└── good_project/              # Proyecto con arquitectura gTAA correcta
-    ├── tests/
-    │   └── test_login.py      # Tests usando Page Objects
-    └── pages/
-        └── login_page.py      # Page Object que encapsula Selenium
+├── good_project/              # Proyecto con arquitectura gTAA correcta
+│   ├── tests/
+│   │   └── test_login.py      # Tests usando Page Objects
+│   └── pages/
+│       └── login_page.py      # Page Object que encapsula Selenium
+├── Automation-Guide-Selenium-Java-main/   # ✅ Proyecto REAL Java + Selenium (UI + API mixto)
+│   ├── pages/                 # Page Objects (HomePage, CartPage, CheckoutPage...)
+│   ├── tests/                 # Tests E2E (login, cart, checkout, search, navigation)
+│   ├── api/actions/           # API layer (CartApi, SingUpApi con Rest Assured)
+│   ├── factory/               # Driver factory (Abstract Factory + Interface Factory)
+│   └── utils/                 # Config, Cookies, Faker, Jackson
+└── Automation-Guide-Rest-Assured-Java-master/  # ✅ Proyecto REAL Java + Rest Assured (API puro)
+    ├── framework/spotify/oauth2/  # Framework API testing (Spotify API)
+    │   ├── api/               # RestBase, SpecBuilder, TokenManager, PlaylistApi
+    │   ├── pojo/              # Modelos de datos (Playlist, Owner, Error...)
+    │   ├── tests/             # PlaylistTests con OAuth2
+    │   └── utils/             # ConfigLoader, DataLoader, FakerUtils
+    └── learnings/             # Ejemplos progresivos (GET, POST, PUT, DELETE, Cookies, POJO)
 ```
 
 ### Uso rápido
@@ -450,7 +469,55 @@ python -m gtaa_validator examples/python_live_project --verbose
 
 # Analizar proyecto correcto (score esperado: 100/100)
 python -m gtaa_validator examples/good_project
+
+# Analizar proyectos Java reales
+python -m gtaa_validator examples/Automation-Guide-Selenium-Java-main --verbose
+python -m gtaa_validator examples/Automation-Guide-Rest-Assured-Java-master --verbose
 ```
+
+### Proyectos Reales Java (Pruebas UAT)
+
+Para las **pruebas de aceptación (UAT)** del TFM, se incluyen **2 proyectos reales** de test automation desarrollados por el autor en contextos profesionales. Estos proyectos permiten validar el sistema contra código real, no ejemplos sintéticos, evaluando la capacidad de detección del validador en escenarios del mundo real.
+
+#### Automation-Guide-Selenium-Java (UI + API mixto)
+
+| Aspecto | Detalle |
+|---------|---------|
+| **Repositorio** | [github.com/Membrive92/Automation-Guide-Selenium-Java](https://github.com/Membrive92/Automation-Guide-Selenium-Java) |
+| **Tipo** | Proyecto mixto UI + API (e-commerce) |
+| **Lenguaje** | Java |
+| **Frameworks** | Selenium 4.5, Rest Assured 5.2, TestNG 7.6 |
+| **Patrones** | Page Object Model, Abstract Factory (drivers), Data Providers |
+| **Librerías** | WebDriverManager, Jackson, Allure Report, JavaFaker, AShot |
+| **Archivos** | 38 archivos Java analizados |
+| **Resultado** | **55/100** — 8 violaciones (1 CRITICAL, 7 HIGH) |
+
+**Violaciones detectadas**: Estructura de directorios no estándar gTAA (MISSING_LAYER_STRUCTURE), URLs hardcodeadas en anotaciones @Link de Allure (HARDCODED_TEST_DATA). El proyecto implementa correctamente POM con Page Objects encapsulados — el validador no genera falsos positivos en la capa de adaptación.
+
+#### Automation-Guide-Rest-Assured-Java (API puro)
+
+| Aspecto | Detalle |
+|---------|---------|
+| **Repositorio** | [github.com/Membrive92/Automation-Guide-Rest-Assured-Java](https://github.com/Membrive92/Automation-Guide-Rest-Assured-Java) |
+| **Tipo** | Proyecto API puro (Spotify API, Postman, Gmail) |
+| **Lenguaje** | Java |
+| **Frameworks** | Rest Assured 5.3, TestNG 7.7 |
+| **Patrones** | Layered architecture (API/POJO/Utils), OAuth2 |
+| **Librerías** | Jackson, Lombok, Allure Report, JavaFaker, JSONassert |
+| **Archivos** | 68 archivos Java analizados |
+| **Resultado** | **0/100** — 49 violaciones (1 CRITICAL, 47 HIGH, 1 MEDIUM) |
+
+**Violaciones detectadas**: Estructura de directorios no estándar gTAA, 47 URLs hardcodeadas (baseUri, emails, mocks), función de test de 78 líneas. El proyecto incluye un paquete `learnings/` con código didáctico intencionalmente con malas prácticas — el validador las detecta correctamente.
+
+#### Resumen de validación con proyectos reales
+
+| Proyecto | Tipo | Archivos | Violaciones | Score | Resultado |
+|----------|------|----------|-------------|-------|-----------|
+| Selenium-Java (UI+API) | Mixto | 38 | 8 | 55/100 | POM correcto detectado, solo datos hardcoded |
+| Rest-Assured-Java (API) | API puro | 68 | 49 | 0/100 | Código didáctico con malas prácticas detectado |
+| bad_project (Python) | Sintético | 6 | ~45 | 0/100 | Todas las violaciones esperadas detectadas |
+| python_live_project | Realista | ~20 | 78 | 0/100 | Proyecto Playwright con violaciones reales |
+| good_project (Python) | Sintético | 2 | 0 | 100/100 | Arquitectura gTAA correcta verificada |
 
 ### Documentación detallada
 
@@ -617,11 +684,22 @@ python -m gtaa_validator ./proyecto --ai
 
 ---
 
-### ⏳ Funcionalidad FUTURA — Fase 10 (pendiente)
+### 🔄 Pruebas UAT — Validación con Proyectos Reales
 
-```
-# ⏳ Documentación TFM final
-```
+**Objetivo**: Validar el sistema contra proyectos reales de test automation (no sintéticos) para demostrar la eficacia del validador en escenarios del mundo real.
+
+**Proyectos bajo prueba:**
+
+| Proyecto | Tipo | Lenguaje | Frameworks | Archivos | Score |
+|----------|------|----------|------------|----------|-------|
+| [Automation-Guide-Selenium-Java](https://github.com/Membrive92/Automation-Guide-Selenium-Java) | UI + API mixto | Java | Selenium 4.5, Rest Assured 5.2, TestNG 7.6 | 38 | 55/100 |
+| [Automation-Guide-Rest-Assured-Java](https://github.com/Membrive92/Automation-Guide-Rest-Assured-Java) | API puro | Java | Rest Assured 5.3, TestNG 7.7, Jackson, Lombok | 68 | 0/100 |
+
+**Criterios de aceptación:**
+- Detección correcta de violaciones reales (sin falsos negativos en código problemático)
+- Ausencia de falsos positivos en código bien estructurado (POM, encapsulación)
+- Scoring coherente con la calidad arquitectónica real del proyecto
+- Soporte multilenguaje Java funcionando correctamente con tree-sitter
 
 ---
 
@@ -716,7 +794,9 @@ gtaa-ai-validator/
 │   ├── python_live_project/            # Proyecto realista Playwright (78 violaciones)
 │   ├── java_project/                   # Proyecto Java con violaciones (Fase 9)
 │   ├── js_project/                     # Proyecto JS/TS con violaciones (Fase 9)
-│   └── csharp_project/                 # Proyecto C# con violaciones (Fase 9)
+│   ├── csharp_project/                 # Proyecto C# con violaciones (Fase 9)
+│   ├── Automation-Guide-Selenium-Java-main/     # Proyecto REAL: Selenium + POM (55/100)
+│   └── Automation-Guide-Rest-Assured-Java-master/ # Proyecto REAL: Rest Assured API (0/100)
 │
 ├── .env.example                        # 🔑 Template para API key de Gemini
 │
@@ -830,7 +910,7 @@ Puntuación = max(0, 100 - suma de penalizaciones)
 ## 🎓 Contexto Académico (TFM)
 
 ### Objetivos del TFM
-1. ✅ Desarrollar sistema de IA para validación arquitectónica (Fase 10.9/10 completa)
+1. ✅ Desarrollar sistema de IA para validación arquitectónica (Fase 10 completa)
 2. ✅ Integrar LLM real para análisis semántico (Gemini Flash - Fase 5)
 3. ✅ Ampliar cobertura a 23 tipos de violación basados en catálogo CT-TAE (Fase 6-8)
 4. ✅ Crear dataset etiquetado para la comunidad (ejemplos con ground truth)
@@ -853,7 +933,7 @@ Puntuación = max(0, 100 - suma de penalizaciones)
 - ✅ Fase 7: Soporte para proyectos mixtos (API + UI) + auto-wait Playwright - **COMPLETA**
 - ✅ Fase 8: Soporte Gherkin/BDD (Behave + pytest-bdd) - **COMPLETA**
 - ✅ Fase 9: Soporte Multilenguaje (Java + JS/TS + C#) - **COMPLETA**
-- 🔄 Fase 10: Optimización y documentación final - **EN PROGRESO**
+- ✅ Fase 10: Optimización y documentación final - **COMPLETA**
   - ✅ 10.1: Optimización capa LLM (factory, fallback, rate limit, --max-llm-calls)
   - ✅ 10.2: Sistema de logging profesional + métricas de rendimiento
   - ✅ 10.3: Optimizaciones de proyecto (packaging, dead code, tests, LSP)
@@ -863,6 +943,8 @@ Puntuación = max(0, 100 - suma de penalizaciones)
   - ✅ 10.7: Refactor quality_checker + reportes Allure-style + HTML redesign
   - ✅ 10.8: Refactor SOLID/DRY codebase completo (5 commits independientes)
   - ✅ 10.9: Auditoría QA de tests (+92 tests nuevos, -11 redundantes, 761 total)
+  - ✅ 10.10: Auditoría de documentación (28 hallazgos corregidos)
+- 🔄 UAT: Pruebas de aceptación con proyectos reales Java - **EN CURSO**
 
 ---
 
@@ -1214,15 +1296,29 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 
 ---
 
-### Versión 1.0.0 - Fase 10 Final (Pendiente) ⏳
+### Versión 0.10.10 - Fase 10.10 (8 Febrero 2026) ✅
 
-**Planificado:**
-- ⏳ Documentación TFM final
+**Implementado:**
+- ✅ Auditoría exhaustiva de documentación: 28 hallazgos (6 críticos, 12 altos, 10 medios)
+- ✅ Corrección de errores factuales: fórmula de scoring, tipos BDD inexistentes, parser mal identificado
+- ✅ Actualización de datos post Fase 10.9: test count, ADR count, badges, fechas
+- ✅ Estandarización de informes de auditoría: `*_AUDIT_REPORT.md`
+- ✅ Documentación: DOC_AUDIT_REPORT.md
+
+---
+
+### Versión 1.0.0 - UAT (En curso) 🔄
+
+**Pruebas de aceptación con proyectos reales:**
+- 🔄 Validación con Automation-Guide-Selenium-Java (UI + API mixto, 38 archivos)
+- 🔄 Validación con Automation-Guide-Rest-Assured-Java (API puro, 68 archivos)
+- Evaluación de falsos positivos/negativos en código real
+- Documentación de resultados UAT
 
 ---
 
 <div align="center">
 
-**Estado del proyecto:** Fase 10.9/10 | 23 violaciones | 4 lenguajes (Python, Java, JS/TS, C#) | 761 tests | 93% cobertura
+**Estado del proyecto:** Fase 10 Completa | UAT en curso | 23 violaciones | 4 lenguajes (Python, Java, JS/TS, C#) | 761 tests | 93% cobertura
 
 </div>
