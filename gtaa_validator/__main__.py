@@ -188,7 +188,7 @@ def _display_llm_summary(report, semantic) -> None:
 
 
 @click.command()
-@click.argument('project_path', type=click.Path(exists=True))
+@click.argument('project_path', nargs=-1, required=True)
 @click.option('--verbose', '-v', is_flag=True, help='Activar salida detallada')
 @click.option('--json', 'json_path', type=click.Path(), default=None, help='Exportar reporte JSON al fichero indicado')
 @click.option('--html', 'html_path', type=click.Path(), default=None, help='Exportar reporte HTML al fichero indicado')
@@ -205,7 +205,7 @@ def _display_llm_summary(report, semantic) -> None:
               help='Directorio de salida para reportes (default: gtaa-reports/)')
 @click.option('--no-report', is_flag=True,
               help='Desactivar generación automática de reportes')
-def main(project_path: str, verbose: bool, json_path: str, html_path: str, ai: bool, provider: str, config_path: str, max_llm_calls: int, log_file: str, output_dir: str, no_report: bool):
+def main(project_path: tuple, verbose: bool, json_path: str, html_path: str, ai: bool, provider: str, config_path: str, max_llm_calls: int, log_file: str, output_dir: str, no_report: bool):
     """
     Valida el cumplimiento de la arquitectura gTAA en un proyecto de test automation.
 
@@ -220,12 +220,14 @@ def main(project_path: str, verbose: bool, json_path: str, html_path: str, ai: b
         log_file = "logs/gtaa_debug.log"
     setup_logging(verbose=verbose, log_file=log_file)
 
+    # Unir partes del path (soporta rutas con espacios sin comillas)
+    project_path = Path(" ".join(project_path)).resolve()
+
     click.echo("=== gTAA AI Validator ===")
     click.echo(f"Analizando proyecto: {project_path}\n")
 
-    project_path = Path(project_path).resolve()
     if not project_path.is_dir():
-        click.echo(f"ERROR: {project_path} no es un directorio", err=True)
+        click.echo(f"ERROR: {project_path} no es un directorio válido", err=True)
         sys.exit(1)
 
     config = load_config(Path(config_path).parent) if config_path else None

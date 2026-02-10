@@ -13,7 +13,7 @@ authors = [
     {name = "Jose Antonio Membrive Guillen", email = "membri_2@hotmail.com"},
 ]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Topic :: Software Development :: Testing",
     "Topic :: Software Development :: Quality Assurance",
