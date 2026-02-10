@@ -53,7 +53,7 @@ Diagramas de flujo completos que explican el funcionamiento de la Fase 2: Motor 
 Diagramas de flujo de la Fase 3: Cobertura Completa de Análisis Estático (9 tipos de violaciones).
 
 **Contenido**:
-- Visión general de la arquitectura con 4 checkers
+- Visión general de la arquitectura con 4 checkers (5 desde Fase 8)
 - Flujo principal actualizado con project-level checks
 - Check a dos niveles: proyecto vs archivo
 - StructureChecker — validación de estructura de directorios
@@ -252,12 +252,16 @@ Este diagrama muestra el flujo completo desde la invocación del CLI hasta la ge
 ├─────────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                     │
 │     @click.command()                                                                │
-│     def main(project_path, verbose, format, output, ai):                           │
-│         analyzer = StaticAnalyzer(project_path, verbose) ─────────────────────┐    │
+│     def main(project_path, verbose, json_path, html_path, ai,                     │
+│              provider, config_path, max_llm_calls, log_file, ...):                 │
+│         config = load_config(...)                                                  │
+│         analyzer = StaticAnalyzer(project_path, verbose, config) ────────────┐    │
 │         report = analyzer.analyze() ──────────────────────────────────────┐   │    │
 │                                                                           │   │    │
 │         if ai:  # --ai flag                                               │   │    │
-│             semantic = SemanticAnalyzer() ───────────────────────────┐    │   │    │
+│             llm_client = create_llm_client(provider) ───────────────┐    │   │    │
+│             semantic = SemanticAnalyzer(path, llm_client, verbose,  │    │   │    │
+│                                        max_llm_calls)              │    │   │    │
 │             report = semantic.analyze(report) ───────────────────┐   │    │   │    │
 │                                                                  │   │    │   │    │
 │         reporter.generate(report) ──────────────────────────┐    │   │    │   │    │
@@ -276,14 +280,14 @@ Este diagrama muestra el flujo completo desde la invocación del CLI hasta la ge
 │                                                                                     │
 │     def analyze(self):                                                              │
 │         │                                                                           │
-│         │  # 2a. Descubrir archivos                                                 │
-│         │  files = self._discover_python_files() ────────────────────────────┐     │
-│         │  # Busca: *.py, *.java, *.js, *.ts, *.cs, *.feature                │     │
-│         │                                                                    │     │
-│         │  # 2b. Verificaciones a nivel proyecto                             │     │
+│         │  # 2a. Verificaciones a nivel proyecto                             │     │
 │         │  for checker in self.checkers:                                     │     │
 │         │      violations += checker.check_project(path) ─────────────┐      │     │
 │         │  # StructureChecker: ¿existe /tests y /pages?               │      │     │
+│         │                                                             │      │     │
+│         │  # 2b. Descubrir archivos                                   │      │     │
+│         │  files = self._discover_python_files() ────────────────────────────┐     │
+│         │  # Busca: *.py, *.java, *.js/ts/jsx/tsx/mjs/cjs, *.cs, *.feature   │     │
 │         │                                                             │      │     │
 │         │  # 2c. Verificar cada archivo                               │      │     │
 │         │  for file in files:                                         │      │     │
@@ -320,40 +324,45 @@ Este diagrama muestra el flujo completo desde la invocación del CLI hasta la ge
 │     │  .feature → BDDChecker                                           │    │     │
 │     └──────────────────────────────────────────────────────────────────│────│─────┤
 │                                                                        │    │     │
-│     # Solo para Python: parsear AST y clasificar                       │    │     │
-│     if file.suffix == ".py":                                           │    │     │
-│         tree = ast.parse(source) ─────────────────────────────────┐    │    │     │
-│         file_type = classifier.classify_detailed(file, tree) ──┐  │    │    │     │
-│         # file_type = "ui_test" | "api_test" | "page_object"   │  │    │    │     │
-│                                                                │  │    │    │     │
-│     # Ejecutar checkers aplicables                             │  │    │    │     │
-│     for checker in applicable:                                 │  │    │    │     │
-│         violations += checker.check(file, tree, file_type) ────│──│────│────│──┐  │
-│                                                                │  │    │    │  │  │
-└────────────────────────────────────────────────────────────────│──│────│────│──│──┘
-                                                                 │  │    │    │  │
-                 ┌───────────────────────────────────────────────┘  │    │    │  │
-                 │           ┌──────────────────────────────────────┘    │    │  │
-                 │           │                                           │    │  │
-                 ▼           ▼                                           │    │  │
-┌─────────────────────────────────────────────────────────────────┐      │    │  │
-│  FileClassifier.classify_detailed() — SOLO PYTHON              │      │    │  │
-│    ┌─────────────┐  ┌─────────────┐  ┌─────────────┐          │      │    │  │
-│    │ Análisis    │  │ Análisis    │  │ Análisis    │          │      │    │  │
-│    │ de imports  │ +│ de código   │ +│ de path     │          │      │    │  │
-│    │ (AST)       │  │ (regex)     │  │ (heurístico)│          │      │    │  │
-│    └──────┬──────┘  └──────┬──────┘  └──────┬──────┘          │      │    │  │
-│           └────────────────┼────────────────┘                  │      │    │  │
-│                            ▼                                   │      │    │  │
-│           file_type = "ui_test" | "api_test" | "page_object"  │      │    │  │
-└─────────────────────────────────────────────────────────────────┘      │    │  │
+│     # Parsear con el parser apropiado al lenguaje                      │    │     │
+│     parser = get_parser_for_file(file_path) ──────────────────────┐    │    │     │
+│     parse_result = parser.parse(source) ──────────────────────┐   │    │    │     │
+│     # ParseResult unificado para todos los lenguajes          │   │    │    │     │
+│                                                               │   │    │    │     │
+│     # Clasificar archivo                                      │   │    │    │     │
+│     file_type = classifier.classify_detailed(file,            │   │    │    │     │
+│                     source, parse_result) ─────────────────┐  │   │    │    │     │
+│     # file_type = "ui" | "api" | "page_object" | "unknown"  │  │   │    │    │     │
+│                                                            │  │   │    │    │     │
+│     # Ejecutar checkers aplicables                         │  │   │    │    │     │
+│     for checker in applicable:                             │  │   │    │    │     │
+│         violations += checker.check(file, parse_result,    │  │   │    │    │     │
+│                                     file_type) ────────────│──│───│────│──┐ │     │
+│                                                            │  │   │    │  │ │     │
+└────────────────────────────────────────────────────────────│──│───│────│──│─│─────┘
+                                                             │  │   │    │  │ │
+                 ┌───────────────────────────────────────────┘  │   │    │  │ │
+                 │           ┌───────────────────────────────────┘   │    │  │ │
+                 │           │                                       │    │  │ │
+                 ▼           ▼                                       │    │  │ │
+┌─────────────────────────────────────────────────────────────────┐  │    │  │ │
+│  FileClassifier.classify_detailed()                             │  │    │  │ │
+│    ┌─────────────┐  ┌─────────────┐  ┌─────────────┐          │  │    │  │ │
+│    │ Análisis    │  │ Análisis    │  │ Análisis    │          │  │    │  │ │
+│    │ de imports  │ +│ de código   │ +│ de path     │          │  │    │  │ │
+│    │ (ParseResult│  │ (regex)     │  │ (heurístico)│          │  │    │  │ │
+│    └──────┬──────┘  └──────┬──────┘  └──────┬──────┘          │  │    │  │ │
+│           └────────────────┼────────────────┘                  │  │    │  │ │
+│                            ▼                                   │  │    │  │ │
+│           file_type = "ui" | "api" | "page_object" | "unknown" │  │    │  │ │
+└─────────────────────────────────────────────────────────────────┘  │    │  │ │
                                                                          │    │  │
                                                                          │    │  │
                  ┌───────────────────────────────────────────────────────┘    │  │
                  │                                                            │  │
                  ▼                                                            ▼  ▼
 ┌─────────────────────────────────────────────────────────────────────────────────────┐
-│  checker.check(file_path, tree, file_type) → Violation[]                            │
+│  checker.check(file_path, parse_result, file_type) → Violation[]                    │
 ├─────────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                     │
 │  ┌───────────────────────────────────────────────────┐  ┌──────────────────────────┐ │
@@ -380,33 +389,43 @@ Este diagrama muestra el flujo completo desde la invocación del CLI hasta la ge
 │ 3   SemanticAnalyzer.analyze(report) — Solo si --ai                                 │
 ├─────────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                     │
-│     for file in report.files:                                                       │
+│     # Análisis SELECTIVO (Fase 10): solo archivos con violaciones o sospechosos    │
+│     candidates = _filter_candidate_files(all_files, files_with_violations)          │
+│                                                                                     │
+│     for file in candidates:  # Solo candidatos, no todos                           │
 │         │                                                                           │
 │         │  # Fase 1: Detectar violaciones semánticas                               │
-│         │  new_violations = llm_client.analyze(code) ────────────────────────┐     │
-│         │  # POOR_SEPARATION_OF_CONCERNS, MISSING_ABSTRACTION...             │     │
-│         │                                                                    │     │
-│         │  # Fase 2: Enriquecer violaciones existentes                       │     │
-│         │  for v in file.violations:                                         │     │
-│         │      v.ai_suggestion = llm_client.enrich(v, code) ────────────┐    │     │
-│         │                                                               │    │     │
-└─────────────────────────────────────────────────────────────────────────│────│─────┘
+│         │  _check_call_limit()  # Fallback a Mock si se excede --max-llm-calls     │
+│         │  new_violations = _call_with_fallback(                                   │
+│         │      "analyze_file", content, file_str) ─────────────────────────┐      │
+│         │  # UNCLEAR_TEST_PURPOSE, MISSING_WAIT_STRATEGY...                │      │
+│         │                                                                  │      │
+│     # Fase 2: Enriquecer violaciones existentes con sugerencias AI         │      │
+│     for violation in report.violations:                                    │      │
+│         │  _check_call_limit()                                             │      │
+│         │  suggestion = _call_with_fallback(                               │      │
+│         │      "enrich_violation", v.to_dict(), content) ────────────┐     │      │
+│         │  violation.ai_suggestion = suggestion                      │     │      │
+│                                                                      │     │      │
+└──────────────────────────────────────────────────────────────────────│─────│──────┘
                                                                           │    │
                           ┌───────────────────────────────────────────────┘    │
                           │    ┌───────────────────────────────────────────────┘
                           │    │
                           ▼    ▼
 ┌─────────────────────────────────────────────────────────────────────────────────────┐
-│  LLMClient (GeminiLLMClient | MockLLMClient)                                        │
+│  LLMClient (APILLMClient | MockLLMClient) — creado por create_llm_client()         │
 ├─────────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                     │
 │  ┌─────────────────────────────────┐    ┌─────────────────────────────────────────┐│
-│  │ GeminiLLMClient                 │    │ MockLLMClient                           ││
+│  │ APILLMClient                    │    │ MockLLMClient                           ││
 │  │                                 │    │                                         ││
-│  │ API: Gemini 2.0 Flash           │    │ Heurísticas deterministas               ││
+│  │ API: Gemini 2.5 Flash Lite      │    │ Heurísticas deterministas               ││
 │  │ Prompt engineering para         │    │ (regex + AST patterns)                  ││
 │  │ detección de violaciones        │    │                                         ││
 │  │                                 │    │ Para testing sin API key               ││
+│  │ Fallback automático a Mock      │    │                                         ││
+│  │ si rate limit (429)             │    │                                         ││
 │  └─────────────────────────────────┘    └─────────────────────────────────────────┘│
 │                                                                                     │
 └──────────────────────────────────────────────────────────────────────────────│──────┘
@@ -419,16 +438,16 @@ Este diagrama muestra el flujo completo desde la invocación del CLI hasta la ge
 ├─────────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                     │
 │     ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐              │
-│     │ TextReporter    │    │ JsonReporter    │    │ HtmlReporter    │              │
-│     │ (default)       │    │ --json file.json│    │ --html file.html│              │
+│     │ CLI (stdout)    │    │ JsonReporter    │    │ HtmlReporter    │              │
+│     │ (siempre)       │    │ --json file.json│    │ --html file.html│              │
 │     │                 │    │                 │    │                 │              │
-│     │ → stdout        │    │ → file.json     │    │ → file.html     │              │
-│     │                 │    │                 │    │   (dashboard    │              │
-│     │ Score: 75/100   │    │ {               │    │    con gauge    │              │
-│     │ Violations: 12  │    │   "score": 75,  │    │    SVG)         │              │
-│     │ - ADAPTATION... │    │   "violations": │    │                 │              │
-│     │ - HARDCODED...  │    │     [...]       │    │                 │              │
-│     │                 │    │ }               │    │                 │              │
+│     │ click.echo()    │    │ → file.json     │    │ → file.html     │              │
+│     │ _display_results│    │                 │    │   (dashboard    │              │
+│     │                 │    │ {               │    │    con gauge    │              │
+│     │ Score: 75/100   │    │   "score": 75,  │    │    SVG)         │              │
+│     │ Violations: 12  │    │   "violations": │    │                 │              │
+│     │ - ADAPTATION... │    │     [...]       │    │                 │              │
+│     │ - HARDCODED...  │    │ }               │    │                 │              │
 │     └─────────────────┘    └─────────────────┘    └─────────────────┘              │
 │                                                                                     │
 └─────────────────────────────────────────────────────────────────────────────────────┘
@@ -453,23 +472,26 @@ Este diagrama muestra el flujo completo desde la invocación del CLI hasta la ge
        │                              │
        ├── .java ────────────► JavaParser (tree-sitter)
        │                              │
-       ├── .js / .ts / .tsx ─► JSParser (tree-sitter)
+       ├── .js/.ts/.tsx/.jsx/.mjs/.cjs ► JSParser (tree-sitter)
        │                              │
        ├── .cs ──────────────► CSharpParser (tree-sitter)
        │                              │
        └── .feature ─────────► GherkinParser (regex propio)
-                                      │
+                                      │   (usado directamente por BDDChecker,
+                                      │    no pasa por get_parser_for_file)
                                       │
        Todos los parsers producen:    │
                                       ▼
-                              ┌───────────────┐
-                              │  ParseResult  │ ◄── Interfaz unificada
-                              │  - imports    │
-                              │  - classes    │
-                              │  - functions  │
-                              │  - calls      │
-                              │  - strings    │
-                              └───────┬───────┘
+                              ┌────────────────┐
+                              │  ParseResult   │ ◄── Interfaz unificada
+                              │  - imports     │
+                              │  - classes     │
+                              │  - functions   │
+                              │  - calls       │
+                              │  - strings     │
+                              │  - language    │
+                              │  - parse_errors│
+                              └───────┬────────┘
                                       │
                                       ▼
                     ┌─────────────────────────────────────┐
@@ -522,7 +544,7 @@ Este diagrama muestra el flujo completo desde la invocación del CLI hasta la ge
 
   Flujo de análisis (ARQUITECTURA LANGUAGE-AGNOSTIC):
   ┌─────────────────────────────────────────────────────────────────────────┐
-  │  1. StaticAnalyzer._discover_files()                                    │
+  │  1. StaticAnalyzer._discover_python_files()                              │
   │     └── Encuentra LoginTest.java (extensión .java soportada)            │
   │                                                                         │
   │  2. StaticAnalyzer._check_file(LoginTest.java)                          │
@@ -540,21 +562,24 @@ Este diagrama muestra el flujo completo desde la invocación del CLI hasta la ge
   │     │                                                                   │
   │     └── 2d. Cada checker recibe ParseResult y extensión:                │
   │             │                                                           │
-  │             ├── DefinitionChecker.check(parse_result, ".java")          │
+  │             ├── DefinitionChecker.check(file_path, parse_result,        │
+  │             │                           file_type="unknown")           │
   │             │   └── Usa BROWSER_METHODS_JAVA = {"findElement", "get"..} │
   │             │   └── Encuentra driver.get(), driver.findElement()        │
   │             │   └── Dentro de método @Test → ADAPTATION_IN_DEFINITION   │
   │             │                                                           │
-  │             ├── QualityChecker.check(parse_result, ".java")             │
+  │             ├── QualityChecker.check(file_path, parse_result,           │
+  │             │                        file_type="unknown")              │
   │             │   └── _check_hardcoded_data() con patrones universales    │
   │             │   └── Detecta "https://..." y "admin@test.com"            │
   │             │   └── → 2× HARDCODED_TEST_DATA                            │
   │             │   │                                                       │
-  │             │   └── _check_poor_naming() con POOR_PATTERNS_JAVA         │
+  │             │   └── _check_poor_naming() con GENERIC_NAME_PATTERNS_JAVA │
   │             │   └── Método "test1" coincide con patrón genérico         │
   │             │   └── → POOR_TEST_NAMING                                  │
   │             │                                                           │
-  │             └── AdaptationChecker.check(parse_result, ".java")          │
+  │             └── AdaptationChecker.check(file_path, parse_result,        │
+  │                                         file_type="unknown")           │
   │                 └── No detecta violaciones adicionales en este archivo  │
   │                                                                         │
   │  3. Resultado: 4 violaciones detectadas                                 │
@@ -651,23 +676,14 @@ Auditoría QA white-box de la suite de tests (Fase 10.9).
 Auditoría de documentación del proyecto (Fase 10.10).
 
 **Contenido**:
-- 28 hallazgos: 6 críticos, 12 altos, 10 medios
+- 51 hallazgos: 16 críticos, 15 altos, 16 medios, 4 bajos
+- 6 pasadas de auditoría (primera a sexta) con verificación cruzada contra código fuente
 - Errores factuales: fórmula de scoring, tipos BDD inexistentes, parser mal identificado
 - Datos desactualizados post Fase 10.9: test count, ADR count, badges
 - Inconsistencias menores: naming, conteos, fechas
+- Sexta pasada: auditoría cruzada de los propios informes de auditoría/UAT
 
 ---
-
-## Documentación Futura (Planeada)
-
-### gtaa_reference.md
-Referencia completa de la arquitectura gTAA según ISTQB CT-TAE.
-
-### api_documentation.md
-Documentación de la API pública del validador para uso programático.
-
-### contributing.md
-Guía para contribuir al proyecto (estructura de código, estándares, pull requests).
 
 ---
 

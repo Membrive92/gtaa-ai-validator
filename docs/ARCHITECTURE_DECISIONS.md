@@ -3363,7 +3363,7 @@ Segunda pasada de eliminación de código muerto (la primera fue ADR 47 en Fase 
 
 ### Solución elegida: Eliminación completa
 
-Todos los artefactos eliminados sin reemplazo. Tests: 672 → 669 (3 legacy eliminados). Los 669 tests restantes pasan.
+Todos los artefactos eliminados sin reemplazo. Tests: 672 → 669 (3 legacy eliminados). Los 669 tests restantes pasan. *(Nota: tras la Fase 10.9, el total es 761 tests.)*
 
 **Justificación:**
 

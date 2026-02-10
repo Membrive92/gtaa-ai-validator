@@ -604,7 +604,7 @@ Usa el módulo `ast` de la biblioteca estándar de Python en lugar de tree-sitte
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ StaticAnalyzer._discover_files()                                            │
+│ StaticAnalyzer._discover_python_files()                                     │
 │                                                                             │
 │  SUPPORTED_EXTENSIONS = {".py", ".java", ".js", ".ts", ".tsx", ".cs",      │
 │                          ".feature", ".jsx", ".mjs", ".cjs"}               │

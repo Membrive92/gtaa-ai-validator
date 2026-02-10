@@ -12,7 +12,7 @@
 [![CI](https://github.com/Membrive92/gtaa-ai-validator/actions/workflows/ci.yml/badge.svg)](https://github.com/Membrive92/gtaa-ai-validator/actions/workflows/ci.yml)
 [![Docker](https://img.shields.io/badge/docker-ready-blue)](https://github.com/Membrive92/gtaa-ai-validator/blob/main/Dockerfile)
 
-> **📌 TRABAJO DE FIN DE MÁSTER - EN DESARROLLO INCREMENTAL**
+> **📌 TRABAJO DE FIN DE MÁSTER - DESARROLLO COMPLETO | PRUEBAS UAT**
 >
 > Autor: Jose Antonio Membrive Guillen
 > Año: 2025-2026
@@ -48,7 +48,7 @@
 | ↳ **✅ 10.7** | Refactor quality_checker + Reportes Allure-style + HTML redesign | **COMPLETO** | **07/02/2026** |
 | ↳ **✅ 10.8** | Refactor SOLID/DRY: shared utils, BaseChecker, LLM Protocol, CLI decomp | **COMPLETO** | **07/02/2026** |
 | ↳ **✅ 10.9** | Auditoría QA: +92 tests, -11 redundantes, aserciones reforzadas, zero-coverage cubierto | **COMPLETO** | **08/02/2026** |
-| ↳ **✅ 10.10** | Auditoría de documentación: 28 hallazgos corregidos (6 críticos, 12 altos, 10 medios) | **COMPLETO** | **08/02/2026** |
+| ↳ **✅ 10.10** | Auditoría de documentación: 51 hallazgos corregidos (16 críticos, 15 altos, 16 medios, 4 bajos) | **COMPLETO** | **08/02/2026** |
 | **🔄 UAT** | **Pruebas de aceptación con proyectos reales Java** | **EN CURSO** | — |
 
 ### 📊 Funcionalidades Implementadas vs Planeadas
@@ -204,23 +204,53 @@ pytest>=7.0                       # Framework de testing
 
 ### Arquitectura del sistema
 ```
-┌─────────────────────────────────────────┐
-│         INPUT: Proyecto a analizar       │
-└─────────────────┬───────────────────────┘
-                  ↓
-      ┌───────────┴──────────┐
-      ↓                      ↓
-┌──────────────┐    ┌──────────────────┐
-│   ESTÁTICO   │    │   SEMÁNTICO      │
-│  AST + Regex │    │  LLM (Gemini)    │
-│  5 Checkers  │    │  ✅ Fase 5       │
-└──────┬───────┘    └────────┬─────────┘
-       └──────────┬───────────┘
-                  ↓
-         ┌────────────────┐
-         │    SCORING     │
-         │   + REPORTS    │
-         └────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│  INPUT: proyecto/ + opciones CLI (--ai, --verbose, --html...)│
+└──────────────────────────┬───────────────────────────────────┘
+                           ↓
+┌──────────────────────────────────────────────────────────────┐
+│  1. ANÁLISIS ESTÁTICO — StaticAnalyzer (siempre)             │
+│                                                              │
+│  Parsers multilenguaje:                                      │
+│  ┌────────┐ ┌────────────┐ ┌────────────┐ ┌──────────────┐  │
+│  │ Python │ │   Java     │ │  JS / TS   │ │   C# / BDD   │  │
+│  │  (ast) │ │(tree-sitter│ │(tree-sitter│ │(tree-sitter/ │  │
+│  │        │ │ lang-pack) │ │ lang-pack) │ │ regex .feat) │  │
+│  └───┬────┘ └─────┬──────┘ └─────┬──────┘ └──────┬───────┘  │
+│      └────────────┼──────────────┼────────────────┘          │
+│                   ↓              ↓                            │
+│            ParseResult unificado                             │
+│                   ↓                                          │
+│  FileClassifier → file_type: "ui"|"api"|"page_object"|...   │
+│                   ↓                                          │
+│  5 Checkers (language-agnostic):                             │
+│  Definition · Structure · Adaptation · Quality · BDD         │
+│                   ↓                                          │
+│  Report { violations[], score = 100 - penalties }            │
+└──────────────────────────┬───────────────────────────────────┘
+                           ↓
+┌──────────────────────────────────────────────────────────────┐
+│  2. ANÁLISIS SEMÁNTICO — SemanticAnalyzer (solo con --ai)    │
+│                                                              │
+│  create_llm_client() → APILLMClient (Gemini) | MockLLMClient│
+│                         ↓ fallback auto si 429               │
+│  Fase A: Detectar nuevas violaciones semánticas              │
+│  Fase B: Enriquecer violaciones existentes con sugerencias   │
+│                   ↓                                          │
+│  Report enriquecido (score recalculado)                      │
+└──────────────────────────┬───────────────────────────────────┘
+                           ↓
+┌──────────────────────────────────────────────────────────────┐
+│  3. OUTPUT                                                   │
+│                                                              │
+│  ┌──────────────┐  ┌──────────────┐  ┌───────────────────┐  │
+│  │ CLI (stdout) │  │ JsonReporter │  │   HtmlReporter    │  │
+│  │ click.echo() │  │  → .json     │  │  → .html (SVG,    │  │
+│  │ (siempre)    │  │              │  │    dashboard)     │  │
+│  └──────────────┘  └──────────────┘  └───────────────────┘  │
+│                                                              │
+│  Exit code 1 si hay violaciones CRITICAL                     │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -231,7 +261,20 @@ pytest>=7.0                       # Framework de testing
 - Python 3.10 o superior (requerido por tree-sitter)
 - pip (gestor de paquetes de Python)
 
-### Instalación
+### Instalación desde paquete Python (sin clonar)
+
+```bash
+# Instalar directamente desde GitHub (recomendado para usuarios)
+pip install "gtaa-ai-validator[all] @ git+https://github.com/Membrive92/gtaa-ai-validator.git"
+
+# Solo core (sin LLM ni multi-lang parsing)
+pip install "gtaa-ai-validator @ git+https://github.com/Membrive92/gtaa-ai-validator.git"
+
+# Después de instalar, usar como comando CLI:
+gtaa-validator /path/to/your/test-project --verbose
+```
+
+### Instalación desde código fuente (para desarrollo)
 
 ```bash
 # Clonar repositorio
@@ -240,7 +283,8 @@ cd gtaa-ai-validator
 
 # Crear entorno virtual (recomendado)
 python -m venv venv
-source venv/bin/activate  # En Windows: venv\Scripts\activate
+source venv/bin/activate       # Linux/macOS
+venv\Scripts\activate          # Windows
 
 # Instalar con todas las dependencias (recomendado)
 pip install -e ".[all]"
@@ -305,25 +349,67 @@ jobs:
 
 ### ✅ Funcionalidad ACTUAL (Fase 10 Completa)
 
-**Funcionalidad disponible en la versión actual:**
+**Hay dos formas de ejecutar el validador**, dependiendo de cómo se instaló:
+
+| Método de instalación | Comando de ejecución | Requisito de directorio |
+|---|---|---|
+| `pip install` desde GitHub | `gtaa-validator` (comando CLI global) | Desde cualquier directorio |
+| `git clone` + `pip install -e .` | `python -m gtaa_validator` o `gtaa-validator` | `python -m` **debe ejecutarse desde la raíz del proyecto** (`gtaa-ai-validator/`) |
+
+#### Método 1: Comando CLI instalado (`gtaa-validator`)
+
+Si instalaste el paquete con `pip install` (ya sea desde GitHub o con `pip install -e .`), el comando `gtaa-validator` está disponible globalmente en tu entorno:
 
 ```bash
-# Análisis estático multilenguaje (Python, Java, JS/TS, C#)
-# Genera reportes automáticamente en gtaa-reports/ (Allure-style)
-python -m gtaa_validator /path/to/your/test-project
+# Análisis básico de un proyecto
+gtaa-validator /ruta/a/tu/proyecto-de-tests
 
-# Modo verbose para ver detalles de cada violación
-python -m gtaa_validator /path/to/project --verbose
+# Con modo verbose (detalle de cada violación detectada)
+gtaa-validator /ruta/a/tu/proyecto --verbose
 
+# Con análisis semántico AI (requiere GEMINI_API_KEY en .env)
+gtaa-validator /ruta/a/tu/proyecto --ai --verbose
+```
+
+#### Método 2: Ejecución como módulo Python (`python -m`)
+
+> **⚠️ Importante:** Este método requiere ejecutarse **desde la raíz del repositorio** (el directorio `gtaa-ai-validator/`, donde está `pyproject.toml`). Si ejecutas `python -m gtaa_validator` desde otro directorio, obtendrás el error `No module named gtaa_validator`.
+
+```bash
+# Asegúrate de estar en la raíz del proyecto
+cd gtaa-ai-validator
+
+# Verificar que estás en el directorio correcto
+ls pyproject.toml  # Debe existir
+
+# Activar entorno virtual (si usas uno)
+source venv/bin/activate  # En Windows: venv\Scripts\activate
+
+# Análisis básico
+python -m gtaa_validator /ruta/a/tu/proyecto-de-tests
+
+# Con modo verbose
+python -m gtaa_validator /ruta/a/tu/proyecto --verbose
+```
+
+#### Opciones disponibles
+
+```bash
 # Análisis semántico AI (requiere GEMINI_API_KEY en .env)
-python -m gtaa_validator /path/to/project --ai --verbose
+python -m gtaa_validator /ruta/al/proyecto --ai --verbose
 
-# Análisis AI con límite de llamadas (fallback automático a mock)
-python -m gtaa_validator /path/to/project --ai --max-llm-calls 5
+# Análisis AI con límite de llamadas (fallback automático a mock si se agota)
+python -m gtaa_validator /ruta/al/proyecto --ai --max-llm-calls 5
 
-# Configuración por proyecto (.gtaa.yaml)
-python -m gtaa_validator /path/to/project --config /path/.gtaa.yaml
+# Configuración personalizada por proyecto (.gtaa.yaml)
+python -m gtaa_validator /ruta/al/proyecto --config /ruta/.gtaa.yaml
+```
 
+#### Reportes (generación automática estilo Allure)
+
+Por defecto, cada análisis genera reportes JSON y HTML en `gtaa-reports/`:
+
+```bash
 # Reportes automáticos (por defecto en gtaa-reports/)
 python -m gtaa_validator examples/bad_project                          # → gtaa-reports/gtaa_report_bad_project_2026-02-07.json/.html
 python -m gtaa_validator examples/bad_project --output-dir mis-reportes # → mis-reportes/gtaa_report_bad_project_2026-02-07.json/.html
@@ -333,24 +419,34 @@ python -m gtaa_validator examples/bad_project --no-report              # Sin rep
 python -m gtaa_validator examples/bad_project --html report.html
 python -m gtaa_validator examples/bad_project --json report.json
 python -m gtaa_validator examples/bad_project --ai --html report.html --json report.json --verbose
+```
 
-# Probar con ejemplos incluidos (Python, Java, JS, C#)
-python -m gtaa_validator examples/bad_project --verbose
-python -m gtaa_validator examples/good_project
+#### Probar con los ejemplos incluidos
+
+El repositorio incluye proyectos de ejemplo en `examples/` para probar cada lenguaje soportado:
+
+```bash
+# Proyectos de ejemplo sintéticos (Python, Java, JS, C#)
+python -m gtaa_validator examples/bad_project --verbose      # Proyecto con ~45 violaciones intencionadas
+python -m gtaa_validator examples/good_project               # Proyecto bien estructurado (score ~95)
 python -m gtaa_validator examples/python_live_project --verbose
 python -m gtaa_validator examples/java_project --verbose
 python -m gtaa_validator examples/js_project --verbose
 python -m gtaa_validator examples/csharp_project --verbose
 
-# Proyectos Java reales (validación empírica)
+# Proyectos Java reales (validación empírica con repositorios open-source)
 python -m gtaa_validator examples/Automation-Guide-Selenium-Java-main --verbose
 python -m gtaa_validator examples/Automation-Guide-Rest-Assured-Java-master --verbose
+```
 
-# Ejecutar tests
-pytest tests/                                        # Todos (761 tests)
-pytest tests/unit/                                   # Solo unitarios
-pytest tests/integration/                            # Solo integración
-pytest tests/ --cov=gtaa_validator --cov-report=term  # Con cobertura
+#### Ejecutar tests del proyecto
+
+```bash
+python -m pytest tests/                                        # Todos (761 tests)
+python -m pytest tests/unit/                                   # Solo unitarios
+python -m pytest tests/integration/                            # Solo integración
+python -m pytest tests/unit/test_security.py                   # Solo seguridad (SEC-01 a SEC-09)
+python -m pytest tests/ --cov=gtaa_validator --cov-report=term  # Con cobertura
 ```
 
 **Capacidades implementadas:**
@@ -815,7 +911,7 @@ gtaa-ai-validator/
     ├── PHASE10_FLOW_DIAGRAMS.md        # Diagramas Fase 10 (optimización LLM)
     ├── SECURITY_AUDIT_REPORT.md        # Auditoría de seguridad (9 hallazgos, SEC-01 a SEC-09)
     ├── TEST_AUDIT_REPORT.md            # Auditoría QA de tests (670→761 tests)
-    └── DOC_AUDIT_REPORT.md             # Auditoría de documentación (28 hallazgos)
+    └── DOC_AUDIT_REPORT.md             # Auditoría de documentación (51 hallazgos)
 ```
 
 > **Nota sobre `docs/`**: La documentación técnica se distribuye en múltiples documentos independientes, uno por cada fase del proyecto y uno para las decisiones arquitectónicas. Esta separación responde a un criterio de **transparencia y trazabilidad**: cada documento refleja el estado del proyecto en el momento de su elaboración, permitiendo seguir la evolución del diseño y las decisiones técnicas a lo largo del desarrollo. El índice general se encuentra en [`docs/README.md`](docs/README.md).
@@ -943,7 +1039,7 @@ Puntuación = max(0, 100 - suma de penalizaciones)
   - ✅ 10.7: Refactor quality_checker + reportes Allure-style + HTML redesign
   - ✅ 10.8: Refactor SOLID/DRY codebase completo (5 commits independientes)
   - ✅ 10.9: Auditoría QA de tests (+92 tests nuevos, -11 redundantes, 761 total)
-  - ✅ 10.10: Auditoría de documentación (28 hallazgos corregidos)
+  - ✅ 10.10: Auditoría de documentación (51 hallazgos corregidos)
 - 🔄 UAT: Pruebas de aceptación con proyectos reales Java - **EN CURSO**
 
 ---
@@ -980,7 +1076,7 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 - **[Diagramas de Flujo - Fase 10](docs/PHASE10_FLOW_DIAGRAMS.md)** ✅ — Optimización LLM, factory, fallback, rate limit, tracking
 - **[Auditoría de Seguridad](docs/SECURITY_AUDIT_REPORT.md)** ✅ — 9 hallazgos (OWASP), buenas prácticas, matriz de riesgo
 - **[Auditoría QA de Tests](docs/TEST_AUDIT_REPORT.md)** ✅ — Auditoría white-box, 670→761 tests, zero-coverage cubierto
-- **[Auditoría de Documentación](docs/DOC_AUDIT_REPORT.md)** ✅ — 28 hallazgos corregidos (6 críticos, 12 altos, 10 medios)
+- **[Auditoría de Documentación](docs/DOC_AUDIT_REPORT.md)** ✅ — 51 hallazgos corregidos (16 críticos, 15 altos, 16 medios, 4 bajos)
 - **[Índice de documentación](docs/README.md)** ✅
 
 ---
@@ -1299,7 +1395,7 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 ### Versión 0.10.10 - Fase 10.10 (8 Febrero 2026) ✅
 
 **Implementado:**
-- ✅ Auditoría exhaustiva de documentación: 28 hallazgos (6 críticos, 12 altos, 10 medios)
+- ✅ Auditoría exhaustiva de documentación: 51 hallazgos (16 críticos, 15 altos, 16 medios, 4 bajos)
 - ✅ Corrección de errores factuales: fórmula de scoring, tipos BDD inexistentes, parser mal identificado
 - ✅ Actualización de datos post Fase 10.9: test count, ADR count, badges, fechas
 - ✅ Estandarización de informes de auditoría: `*_AUDIT_REPORT.md`

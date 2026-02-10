@@ -693,7 +693,7 @@ Este diagrama muestra cómo interactúan las diferentes clases del sistema.
 │  StaticAnalyzer     │
 │                     │
 │  + analyze()        │
-│  + _discover_files()│
+│  + _discover_python_files()│
 │  + _check_file()    │
 └──────┬──────────────┘
        │

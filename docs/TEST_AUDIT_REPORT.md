@@ -10,8 +10,8 @@
 
 | Métrica | Valor |
 |---------|-------|
-| Archivos de test | 32 |
-| Tests totales | 670 (pytest --co) |
+| Archivos de test (pre-auditoría) | 28 |
+| Tests totales (pre-auditoría) | 670 (pytest --co) |
 | Tests a eliminar | 11 (redundantes/muertos) |
 | Funciones con zero cobertura | 8 (críticas) |
 | Tests a añadir | ~86+ (priorizados) |
@@ -19,36 +19,37 @@
 | Fixtures duplicadas | 6 |
 | Helpers duplicados | 3 (misma función en 3 ficheros) |
 
-### Distribución actual por fichero
+### Distribución por fichero (post-implementación — 761 tests, 29 ficheros)
 
 | Fichero | Tests |
 |---------|-------|
-| `tests/unit/test_classifier.py` | 85 |
-| `tests/unit/test_quality_checker.py` | 61 |
-| `tests/unit/test_definition_checker.py` | 54 |
-| `tests/unit/test_python_parser.py` | 54 |
-| `tests/unit/test_js_checker.py` | 52 |
+| `tests/unit/test_classifier.py` | 82 |
+| `tests/unit/test_models.py` | 53 |
+| `tests/unit/test_js_checker.py` | 51 |
+| `tests/unit/test_python_parser.py` | 50 |
+| `tests/unit/test_base_checker.py` | 43 |
+| `tests/unit/test_quality_checker.py` | 40 |
 | `tests/unit/test_csharp_checker.py` | 37 |
-| `tests/unit/test_llm_client.py` | 36 |
+| `tests/unit/test_llm_client.py` | 35 |
 | `tests/unit/test_security.py` | 34 |
-| `tests/unit/test_models.py` | 32 |
+| `tests/unit/test_bdd_checker.py` | 31 |
 | `tests/unit/test_java_checker.py` | 30 |
-| `tests/unit/test_bdd_checker.py` | 28 |
-| `tests/unit/test_cli.py` | 25 |
+| `tests/unit/test_definition_checker.py` | 30 |
 | `tests/unit/test_adaptation_checker.py` | 25 |
-| `tests/unit/test_api_client.py` | 19 |
-| `tests/unit/test_semantic_analyzer.py` | 19 |
-| `tests/unit/test_html_reporter.py` | 18 |
-| `tests/unit/test_llm_factory.py` | 16 |
-| `tests/unit/test_gherkin_parser.py` | 15 |
+| `tests/unit/test_cli.py` | 24 |
+| `tests/unit/test_api_client.py` | 22 |
+| `tests/unit/test_html_reporter.py` | 21 |
+| `tests/unit/test_semantic_analyzer.py` | 18 |
+| `tests/unit/test_gherkin_parser.py` | 18 |
+| `tests/unit/test_llm_protocol.py` | 14 |
+| `tests/unit/test_llm_factory.py` | 14 |
 | `tests/unit/test_structure_checker.py` | 11 |
-| `tests/unit/test_prompts.py` | 10 |
+| `tests/unit/test_json_reporter.py` | 11 |
+| `tests/unit/test_file_utils.py` | 11 |
 | `tests/unit/test_config.py` | 10 |
-| `tests/unit/test_json_reporter.py` | 9 |
 | `tests/unit/test_logging_config.py` | 9 |
-| `tests/unit/test_base_checker.py` | 6 |
-| `tests/unit/test_file_utils.py` | 6 |
-| `tests/integration/test_static_analyzer.py` | 18 |
+| `tests/unit/test_prompts.py` | 8 |
+| `tests/integration/test_static_analyzer.py` | 19 |
 | `tests/integration/test_semantic_integration.py` | 6 |
 | `tests/integration/test_reporters.py` | 4 |
 

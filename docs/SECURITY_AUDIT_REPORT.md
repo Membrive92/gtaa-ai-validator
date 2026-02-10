@@ -562,7 +562,7 @@ auditoría-remediación-verificación.
 | `gtaa_validator/__main__.py`                   | SEC-08 |
 | `tests/unit/test_models.py`                    | (adaptación de test para SEC-03) |
 
-**Verificación**: 416 tests pasando tras la remediación (0 fallos).
+**Verificación**: 416 tests pasando tras la remediación (0 fallos). *Nota: Tras las Fases 10.5-10.9, el total actual es 761 tests.*
 
 ---
 

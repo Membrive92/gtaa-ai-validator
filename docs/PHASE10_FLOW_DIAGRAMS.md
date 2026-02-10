@@ -2,7 +2,7 @@
 
 ## Resumen General
 
-La Fase 10 se divide en nueve sub-fases documentadas:
+La Fase 10 se divide en diez sub-fases documentadas:
 
 - **Fase 10.1**: Optimización de la capa LLM (fallback, factory, tracking)
 - **Fase 10.2**: Sistema de logging profesional + métricas de rendimiento en reportes
@@ -13,6 +13,7 @@ La Fase 10 se divide en nueve sub-fases documentadas:
 - **Fase 10.7**: Refactor quality_checker + Reportes Allure-style + HTML redesign
 - **Fase 10.8**: Refactor SOLID/DRY del codebase completo
 - **Fase 10.9**: Auditoría QA de tests (+92 tests, -11 redundantes, 761 total)
+- **Fase 10.10**: Auditoría de documentación (51 hallazgos corregidos)
 
 ### Fase 10.1
 
@@ -1537,6 +1538,8 @@ gtaa_validator/
 | `ec834fb` | docs | Actualizar README con Fase 10.8 |
 
 Tests totales: 672 → 669 (3 legacy eliminados, todos pasan).
+
+> **Nota**: Tras la Fase 10.9 (auditoría QA), el total pasó a **761 tests**. Ver [TEST_AUDIT_REPORT.md](TEST_AUDIT_REPORT.md) para el detalle.
 
 ---
 
