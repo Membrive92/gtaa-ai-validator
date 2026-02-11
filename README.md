@@ -12,18 +12,18 @@
 [![CI](https://github.com/Membrive92/gtaa-ai-validator/actions/workflows/ci.yml/badge.svg)](https://github.com/Membrive92/gtaa-ai-validator/actions/workflows/ci.yml)
 [![Docker](https://img.shields.io/badge/docker-ready-blue)](https://github.com/Membrive92/gtaa-ai-validator/blob/main/Dockerfile)
 
-> **📌 TRABAJO DE FIN DE MÁSTER - DESARROLLO Y UAT COMPLETOS**
+> **📌 TRABAJO DE FIN DE MÁSTER - DESARROLLO Y UAT COMPLETAS**
 >
 > Autor: Jose Antonio Membrive Guillen
 > Año: 2025-2026
-> **Estado:** Fase 10 Completa | UAT Completo | Pendiente: slides y memoria TFM | Última actualización: 10 Febrero 2026
+> **Estado:** Fase 10 Completa | UAT Completo | Última actualización: 11 Febrero 2026
 
 ---
 
 ## ⚠️ ESTADO DEL PROYECTO
 
 > **IMPORTANTE:** Este README describe la **visión completa** del proyecto TFM.
-> El desarrollo de las 10 fases y las **pruebas UAT** están **COMPLETOS**. Pendiente: elaboración de slides y memoria del TFM.
+> El desarrollo de las 10 fases y las **pruebas UAT** están **COMPLETAS**.
 
 ### 🚀 Estado de Implementación por Fases
 
@@ -1185,6 +1185,7 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 - **[Auditoría de Documentación](docs/DOC_AUDIT_REPORT.md)** ✅ — 51 hallazgos corregidos (16 críticos, 15 altos, 16 medios, 4 bajos)
 - **[Informe UAT](docs/UAT_TESTING_REPORT.md)** ✅ — 5 métodos despliegue, 3 proyectos empresariales, 7 hallazgos funcionales
 - **[Índice de documentación](docs/README.md)** ✅
+- **[Presentación TFM (slides)](gTAA_AI_Validator_TFM_Jose_Antonio_Membrive_Guillen.pptx)** ✅ — 15 slides: problema, solución, arquitectura, demo, conclusiones
 
 ---
 

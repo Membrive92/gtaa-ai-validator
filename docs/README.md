@@ -763,4 +763,20 @@ Este directorio se actualizará con:
 - Guías de uso avanzadas
 - Ejemplos adicionales
 
-**Última actualización**: 10 Febrero 2026 (Desarrollo y UAT Completos — Pendiente: slides y memoria TFM)
+### [Presentación TFM (slides)](../gTAA_AI_Validator_TFM_Jose_Antonio_Membrive_Guillen.pptx)
+
+Presentación PowerPoint del Trabajo de Fin de Máster (15 slides).
+
+**Contenido**:
+- Problema y motivación: ausencia de herramientas de validación gTAA
+- Solución: sistema híbrido AST + LLM
+- Arquitectura gTAA (ISTQB CT-TAE) y stack tecnológico
+- 23 tipos de violaciones (17 estáticas + 6 semánticas)
+- Soporte multilenguaje (Python, Java, JS/TS, C#)
+- Reportes y sistema de puntuación
+- Metodología de desarrollo incremental (10 fases)
+- Testing y calidad (761 tests, 93% cobertura)
+- Despliegue: CLI, Docker, GitHub Action
+- Demo de ejecución y conclusiones
+
+**Última actualización**: 11 Febrero 2026 (Desarrollo, UAT y Presentación Completos)
