@@ -683,6 +683,18 @@ Auditoría de documentación del proyecto (Fase 10.10).
 - Inconsistencias menores: naming, conteos, fechas
 - Sexta pasada: auditoría cruzada de los propios informes de auditoría/UAT
 
+### [UAT_TESTING_REPORT.md](UAT_TESTING_REPORT.md)
+
+Informe de pruebas de aceptación (UAT) del proyecto.
+
+**Contenido**:
+- 5 métodos de despliegue verificados (pip editable, pip clean venv, pip remoto, Docker, GitHub Action)
+- Validación con 6 proyectos sintéticos + 2 open-source Java + 3 empresariales reales
+- 7 hallazgos funcionales: UAT-01 a UAT-04, UAT-06, UAT-07 (resueltos) + UAT-05 (limitación conocida)
+- Detalle de violaciones por tipo de proyecto (bad_project: 58 violaciones, 12 tipos)
+- Resumen de auditoría de documentación (51 hallazgos, todos corregidos)
+- Validación empresarial: Selenium multi-módulo Java, Playwright JS/TS, Appium Java desktop
+
 ---
 
 ---
@@ -751,4 +763,4 @@ Este directorio se actualizará con:
 - Guías de uso avanzadas
 - Ejemplos adicionales
 
-**Última actualización**: 8 Febrero 2026 (Fase 10 Completa — UAT en curso)
+**Última actualización**: 10 Febrero 2026 (Desarrollo y UAT Completos — Pendiente: slides y memoria TFM)

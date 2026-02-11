@@ -23,14 +23,14 @@ def project_root():
 
 @pytest.fixture
 def bad_project_path(project_root):
-    """Path to examples/bad_project."""
-    return project_root / "examples" / "bad_project"
+    """Path to gtaa_validator/examples/bad_project."""
+    return project_root / "gtaa_validator" / "examples" / "bad_project"
 
 
 @pytest.fixture
 def good_project_path(project_root):
-    """Path to examples/good_project."""
-    return project_root / "examples" / "good_project"
+    """Path to gtaa_validator/examples/good_project."""
+    return project_root / "gtaa_validator" / "examples" / "good_project"
 
 
 # ---------------------------------------------------------------------------

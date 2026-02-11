@@ -4,26 +4,26 @@
 
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Estado](https://img.shields.io/badge/estado-UAT-orange)](https://github.com/Membrive92/gtaa-ai-validator)
-[![Fase](https://img.shields.io/badge/fase-UAT-orange)](https://github.com/Membrive92/gtaa-ai-validator)
-[![Progreso](https://img.shields.io/badge/progreso-100%25%20dev-green)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Estado](https://img.shields.io/badge/estado-UAT%20completo-brightgreen)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Fase](https://img.shields.io/badge/fase-entrega-brightgreen)](https://github.com/Membrive92/gtaa-ai-validator)
+[![Progreso](https://img.shields.io/badge/progreso-100%25-brightgreen)](https://github.com/Membrive92/gtaa-ai-validator)
 [![Coverage](https://img.shields.io/badge/coverage-93%25-brightgreen)](https://github.com/Membrive92/gtaa-ai-validator)
 [![Tests](https://img.shields.io/badge/tests-761-brightgreen)](https://github.com/Membrive92/gtaa-ai-validator)
 [![CI](https://github.com/Membrive92/gtaa-ai-validator/actions/workflows/ci.yml/badge.svg)](https://github.com/Membrive92/gtaa-ai-validator/actions/workflows/ci.yml)
 [![Docker](https://img.shields.io/badge/docker-ready-blue)](https://github.com/Membrive92/gtaa-ai-validator/blob/main/Dockerfile)
 
-> **📌 TRABAJO DE FIN DE MÁSTER - DESARROLLO COMPLETO | PRUEBAS UAT**
+> **📌 TRABAJO DE FIN DE MÁSTER - DESARROLLO Y UAT COMPLETOS**
 >
 > Autor: Jose Antonio Membrive Guillen
 > Año: 2025-2026
-> **Estado:** Fase 10 Completa | Pruebas UAT en curso | Última actualización: 8 Febrero 2026
+> **Estado:** Fase 10 Completa | UAT Completo | Pendiente: slides y memoria TFM | Última actualización: 10 Febrero 2026
 
 ---
 
 ## ⚠️ ESTADO DEL PROYECTO
 
 > **IMPORTANTE:** Este README describe la **visión completa** del proyecto TFM.
-> El desarrollo de las 10 fases está **COMPLETO**. Actualmente en fase de **pruebas UAT** con proyectos reales.
+> El desarrollo de las 10 fases y las **pruebas UAT** están **COMPLETOS**. Pendiente: elaboración de slides y memoria del TFM.
 
 ### 🚀 Estado de Implementación por Fases
 
@@ -49,7 +49,7 @@
 | ↳ **✅ 10.8** | Refactor SOLID/DRY: shared utils, BaseChecker, LLM Protocol, CLI decomp | **COMPLETO** | **07/02/2026** |
 | ↳ **✅ 10.9** | Auditoría QA: +92 tests, -11 redundantes, aserciones reforzadas, zero-coverage cubierto | **COMPLETO** | **08/02/2026** |
 | ↳ **✅ 10.10** | Auditoría de documentación: 51 hallazgos corregidos (16 críticos, 15 altos, 16 medios, 4 bajos) | **COMPLETO** | **08/02/2026** |
-| **🔄 UAT** | **Pruebas de aceptación con proyectos reales Java** | **EN CURSO** | — |
+| **✅ UAT** | **Pruebas de aceptación: 5 métodos despliegue + 3 proyectos empresariales reales** | **COMPLETO** | **10/02/2026** |
 
 ### 📊 Funcionalidades Implementadas vs Planeadas
 
@@ -75,9 +75,9 @@
 | ✅ Logging profesional + métricas | Implementado | Fase 10.2 — logging stdlib, AnalysisMetrics, --log-file |
 | ✅ Optimizaciones de proyecto | Implementado | Fase 10.3 — pyproject.toml, dead code, tests CLI, LSP |
 | ✅ Auditorías (seguridad, tests, docs) | Implementado | Fase 10.4/10.9/10.10 — 3 auditorías completas |
-| 🔄 Pruebas UAT con proyectos reales | En curso | 2 proyectos Java reales del autor |
+| ✅ Pruebas UAT con proyectos reales | Completo | 5 métodos despliegue + 3 proyectos empresariales reales |
 
-**Leyenda:** ✅ Implementado | 🔄 En curso
+**Leyenda:** ✅ Implementado
 
 ---
 
@@ -261,17 +261,70 @@ pytest>=7.0                       # Framework de testing
 - Python 3.10 o superior (requerido por tree-sitter)
 - pip (gestor de paquetes de Python)
 
-### Instalación desde paquete Python (sin clonar)
+### Quick Start: probar sin clonar el repositorio
+
+La forma mas rapida de probar el validador. Instala directamente desde GitHub e incluye 5 proyectos de ejemplo listos para analizar.
+
+**Paso 1** — Solo Windows: habilitar rutas largas en git
 
 ```bash
-# Instalar directamente desde GitHub (recomendado para usuarios)
-pip install "gtaa-ai-validator[all] @ git+https://github.com/Membrive92/gtaa-ai-validator.git"
+git config --global core.longpaths true
+```
 
+> Si omites este paso en Windows, `pip install` puede fallar con `Filename too long` porque algunos archivos del repositorio superan el limite de 260 caracteres.
+
+**Paso 2** — Instalar el paquete con todas las dependencias
+
+```bash
+pip install "gtaa-ai-validator[all] @ git+https://github.com/Membrive92/gtaa-ai-validator.git"
+```
+
+**Paso 3** — Obtener la ruta a los proyectos de ejemplo
+
+```bash
+python -m gtaa_validator --examples-path
+```
+
+Esto mostrara algo como:
+
+```
+Proyectos de ejemplo incluidos en: C:\Users\tu_usuario\...\gtaa_validator\examples
+
+  bad_project/
+  csharp_project/
+  good_project/
+  java_project/
+  js_project/
+
+Uso:
+  python -m gtaa_validator C:\Users\tu_usuario\...\gtaa_validator\examples\bad_project --verbose
+```
+
+**Paso 4** — Copiar y ejecutar el comando de ejemplo que aparece en la salida anterior. Esto analizara el proyecto "malo" (~58 violaciones detectadas, score bajo):
+
+```bash
+python -m gtaa_validator <ruta_del_paso_3>/bad_project --verbose
+```
+
+**Paso 5** — Probar con el proyecto "bueno" (0 violaciones, score 100/100):
+
+```bash
+python -m gtaa_validator <ruta_del_paso_3>/good_project --verbose
+```
+
+**Paso 6** — Analizar tu propio proyecto de tests:
+
+```bash
+python -m gtaa_validator /ruta/a/tu/proyecto-de-tests --verbose
+```
+
+> **Nota:** Si prefieres usar el comando corto `gtaa-validator` en vez de `python -m gtaa_validator`, asegurate de que el directorio de Scripts de Python este en tu PATH. pip muestra un warning con la ruta exacta durante la instalacion.
+
+### Instalacion desde paquete Python (opciones adicionales)
+
+```bash
 # Solo core (sin LLM ni multi-lang parsing)
 pip install "gtaa-ai-validator @ git+https://github.com/Membrive92/gtaa-ai-validator.git"
-
-# Después de instalar, usar como comando CLI:
-gtaa-validator /path/to/your/test-project --verbose
 ```
 
 ### Instalación desde código fuente (para desarrollo)
@@ -299,21 +352,49 @@ pip install -e ".[parsers]"  # Añade tree-sitter (Java, JS/TS, C#)
 
 ### Docker
 
+> **Requisito:** Debes ejecutar todos los comandos desde la raiz del repositorio clonado,
+> donde se encuentra el `Dockerfile`.
+
+**1. Clonar el repositorio y construir la imagen:**
+
 ```bash
-# Construir imagen
+git clone https://github.com/Membrive92/gtaa-ai-validator.git
+cd gtaa-ai-validator
 docker build -t gtaa-validator .
+```
 
-# Analizar un proyecto local
-docker run -v ./mi-proyecto:/project gtaa-validator
+**2. Analizar un proyecto:**
 
-# Con opciones
-docker run -v ./mi-proyecto:/project gtaa-validator . --verbose
+El validador analiza el directorio montado en `/project` dentro del contenedor.
+Usa `-v` para montar tu proyecto local:
 
-# Con análisis AI (pasar API key)
-docker run -e GEMINI_API_KEY=tu_key -v ./mi-proyecto:/project gtaa-validator . --ai
+```bash
+# Linux / Mac
+docker run -v "$(pwd)/examples/bad_project":/project gtaa-validator
 
-# Generar reportes (se escriben en el volumen montado)
-docker run -v ./mi-proyecto:/project gtaa-validator . --json /project/report.json --html /project/report.html
+# Windows PowerShell (ruta absoluta)
+docker run -v "C:\ruta\a\tu\proyecto:/project" gtaa-validator
+```
+
+**3. Opciones disponibles:**
+
+```bash
+# Modo verbose (ver violaciones detalladas)
+docker run -v "C:\ruta\a\tu\proyecto:/project" gtaa-validator . --verbose
+
+# Con analisis semantico AI (requiere API key de Gemini)
+docker run -e GEMINI_API_KEY=tu_key -v "C:\ruta\a\tu\proyecto:/project" gtaa-validator . --ai
+
+# Generar reportes JSON y HTML (se guardan en el volumen montado)
+docker run -v "C:\ruta\a\tu\proyecto:/project" gtaa-validator . --json /project/report.json --html /project/report.html
+```
+
+**4. Probar con los ejemplos incluidos:**
+
+```bash
+# Desde la raiz del repositorio clonado
+docker run -v "$(pwd)/examples/bad_project":/project gtaa-validator . --verbose
+docker run -v "$(pwd)/examples/good_project":/project gtaa-validator
 ```
 
 ### GitHub Action
@@ -344,6 +425,24 @@ jobs:
           echo "::error::gTAA score (${{ steps.gtaa.outputs.score }}) is below threshold (75)"
           exit 1
 ```
+
+### Configuración del análisis AI (opcional)
+
+El análisis semántico con LLM (flag `--ai`) requiere una API key de **Google Gemini**. Sin ella, el validador funciona perfectamente con análisis estático (17 tipos de violación); el flag `--ai` añade 6 tipos de violación semántica adicionales.
+
+```bash
+# 1. Copiar el template de configuración
+cp .env.example .env
+
+# 2. Editar .env y añadir tu API key de Gemini
+#    Obtener gratis en: https://aistudio.google.com/api-keys
+GEMINI_API_KEY=tu_api_key_aqui
+
+# 3. Ejecutar con análisis AI
+gtaa-validator /ruta/a/tu/proyecto --ai --verbose
+```
+
+> **Nota**: Si no se configura la API key o si Gemini devuelve error 429 (rate limit), el sistema usa automáticamente `MockLLMClient` (heurísticas deterministas) sin interrumpir el análisis. El tier gratuito de Gemini (~15 req/min) es suficiente para la mayoría de proyectos.
 
 ---
 
@@ -411,14 +510,14 @@ Por defecto, cada análisis genera reportes JSON y HTML en `gtaa-reports/`:
 
 ```bash
 # Reportes automáticos (por defecto en gtaa-reports/)
-python -m gtaa_validator examples/bad_project                          # → gtaa-reports/gtaa_report_bad_project_2026-02-07.json/.html
-python -m gtaa_validator examples/bad_project --output-dir mis-reportes # → mis-reportes/gtaa_report_bad_project_2026-02-07.json/.html
-python -m gtaa_validator examples/bad_project --no-report              # Sin reportes
+python -m gtaa_validator gtaa_validator/examples/bad_project                          # → gtaa-reports/gtaa_report_bad_project_2026-02-07.json/.html
+python -m gtaa_validator gtaa_validator/examples/bad_project --output-dir mis-reportes # → mis-reportes/gtaa_report_bad_project_2026-02-07.json/.html
+python -m gtaa_validator gtaa_validator/examples/bad_project --no-report              # Sin reportes
 
 # Exportar reportes a rutas explícitas (desactiva auto-generación)
-python -m gtaa_validator examples/bad_project --html report.html
-python -m gtaa_validator examples/bad_project --json report.json
-python -m gtaa_validator examples/bad_project --ai --html report.html --json report.json --verbose
+python -m gtaa_validator gtaa_validator/examples/bad_project --html report.html
+python -m gtaa_validator gtaa_validator/examples/bad_project --json report.json
+python -m gtaa_validator gtaa_validator/examples/bad_project --ai --html report.html --json report.json --verbose
 ```
 
 #### Probar con los ejemplos incluidos
@@ -427,12 +526,12 @@ El repositorio incluye proyectos de ejemplo en `examples/` para probar cada leng
 
 ```bash
 # Proyectos de ejemplo sintéticos (Python, Java, JS, C#)
-python -m gtaa_validator examples/bad_project --verbose      # Proyecto con ~45 violaciones intencionadas
-python -m gtaa_validator examples/good_project               # Proyecto bien estructurado (score ~95)
+python -m gtaa_validator gtaa_validator/examples/bad_project --verbose      # Proyecto con ~45 violaciones intencionadas
+python -m gtaa_validator gtaa_validator/examples/good_project               # Proyecto bien estructurado (score ~95)
 python -m gtaa_validator examples/python_live_project --verbose
-python -m gtaa_validator examples/java_project --verbose
-python -m gtaa_validator examples/js_project --verbose
-python -m gtaa_validator examples/csharp_project --verbose
+python -m gtaa_validator gtaa_validator/examples/java_project --verbose
+python -m gtaa_validator gtaa_validator/examples/js_project --verbose
+python -m gtaa_validator gtaa_validator/examples/csharp_project --verbose
 
 # Proyectos Java reales (validación empírica con repositorios open-source)
 python -m gtaa_validator examples/Automation-Guide-Selenium-Java-main --verbose
@@ -480,7 +579,7 @@ python -m pytest tests/ --cov=gtaa_validator --cov-report=term  # Con cobertura
 **Ejemplo de salida (con --ai):**
 ```
 === gTAA AI Validator ===
-Analizando proyecto: examples/bad_project
+Analizando proyecto: gtaa_validator/examples/bad_project
 
 Ejecutando análisis estático...
 Usando Gemini Flash API para análisis semántico...
@@ -558,13 +657,13 @@ examples/
 
 ```bash
 # Analizar proyecto con violaciones (score esperado: 0/100)
-python -m gtaa_validator examples/bad_project --verbose
+python -m gtaa_validator gtaa_validator/examples/bad_project --verbose
 
 # Analizar proyecto realista Playwright (78 violaciones)
 python -m gtaa_validator examples/python_live_project --verbose
 
 # Analizar proyecto correcto (score esperado: 100/100)
-python -m gtaa_validator examples/good_project
+python -m gtaa_validator gtaa_validator/examples/good_project
 
 # Analizar proyectos Java reales
 python -m gtaa_validator examples/Automation-Guide-Selenium-Java-main --verbose
@@ -820,6 +919,8 @@ gtaa-ai-validator/
 │   ├── models.py                       # Modelos de datos (Violation, Report)
 │   ├── file_classifier.py             # Clasificador API/UI (Fase 7)
 │   ├── config.py                      # ProjectConfig + .gtaa.yaml (Fase 7)
+│   ├── file_utils.py                  # read_file_safe + utilidades de ficheros (Fase 10.5)
+│   ├── logging_config.py              # Configuración de logging centralizada
 │   │
 │   ├── parsers/                        # 📝 Parsers multilenguaje (Fase 8-9)
 │   │   ├── __init__.py                 # Exporta parsers y get_parser_for_file()
@@ -844,6 +945,14 @@ gtaa-ai-validator/
 │   ├── reporters/                      # 📊 Generadores de reportes
 │   │   ├── json_reporter.py            # Reporte JSON estructurado
 │   │   └── html_reporter.py            # Dashboard HTML autocontenido (SVG)
+│   │
+│   ├── examples/                       # 📝 Proyectos de ejemplo (incluidos en pip install)
+│   │   ├── __init__.py                 # Helper: get_examples_path()
+│   │   ├── bad_project/                # Proyecto Python con ~58 violaciones
+│   │   ├── good_project/               # Proyecto Python gTAA correcto (score 100)
+│   │   ├── java_project/               # Proyecto Java con violaciones (Fase 9)
+│   │   ├── js_project/                 # Proyecto JS/TS con violaciones (Fase 9)
+│   │   └── csharp_project/             # Proyecto C# con violaciones (Fase 9)
 │   │
 │   └── checkers/                       # ✅ Detectores de violaciones
 │       ├── base.py                     # Clase base abstracta + métodos compartidos (Fase 10.8)
@@ -881,16 +990,12 @@ gtaa-ai-validator/
 │   │   └── test_security.py         # Tests de regresión de seguridad (SEC-01 a SEC-09)
 │   └── integration/                    # Tests de integración
 │       ├── test_static_analyzer.py    # Pipeline completo
-│       └── test_reporters.py          # Análisis → JSON/HTML
+│       ├── test_reporters.py          # Análisis → JSON/HTML
+│       └── test_semantic_integration.py # SemanticAnalyzer integración (Fase 10.9)
 │
-├── examples/                           # 📝 Proyectos de ejemplo
+├── examples/                           # 📝 Proyectos de ejemplo grandes (solo desarrollo/UAT)
 │   ├── README.md                       # Documentación de violaciones
-│   ├── bad_project/                    # Proyecto Python con ~45 violaciones
-│   ├── good_project/                   # Proyecto Python gTAA correcto (score 100)
 │   ├── python_live_project/            # Proyecto realista Playwright (78 violaciones)
-│   ├── java_project/                   # Proyecto Java con violaciones (Fase 9)
-│   ├── js_project/                     # Proyecto JS/TS con violaciones (Fase 9)
-│   ├── csharp_project/                 # Proyecto C# con violaciones (Fase 9)
 │   ├── Automation-Guide-Selenium-Java-main/     # Proyecto REAL: Selenium + POM (55/100)
 │   └── Automation-Guide-Rest-Assured-Java-master/ # Proyecto REAL: Rest Assured API (0/100)
 │
@@ -911,7 +1016,8 @@ gtaa-ai-validator/
     ├── PHASE10_FLOW_DIAGRAMS.md        # Diagramas Fase 10 (optimización LLM)
     ├── SECURITY_AUDIT_REPORT.md        # Auditoría de seguridad (9 hallazgos, SEC-01 a SEC-09)
     ├── TEST_AUDIT_REPORT.md            # Auditoría QA de tests (670→761 tests)
-    └── DOC_AUDIT_REPORT.md             # Auditoría de documentación (51 hallazgos)
+    ├── DOC_AUDIT_REPORT.md             # Auditoría de documentación (51 hallazgos)
+    └── UAT_TESTING_REPORT.md           # Informe UAT: 7 hallazgos funcionales
 ```
 
 > **Nota sobre `docs/`**: La documentación técnica se distribuye en múltiples documentos independientes, uno por cada fase del proyecto y uno para las decisiones arquitectónicas. Esta separación responde a un criterio de **transparencia y trazabilidad**: cada documento refleja el estado del proyecto en el momento de su elaboración, permitiendo seguir la evolución del diseño y las decisiones técnicas a lo largo del desarrollo. El índice general se encuentra en [`docs/README.md`](docs/README.md).
@@ -1040,7 +1146,7 @@ Puntuación = max(0, 100 - suma de penalizaciones)
   - ✅ 10.8: Refactor SOLID/DRY codebase completo (5 commits independientes)
   - ✅ 10.9: Auditoría QA de tests (+92 tests nuevos, -11 redundantes, 761 total)
   - ✅ 10.10: Auditoría de documentación (51 hallazgos corregidos)
-- 🔄 UAT: Pruebas de aceptación con proyectos reales Java - **EN CURSO**
+- ✅ UAT: Pruebas de aceptación completas — 7 hallazgos funcionales (6 resueltos + 1 limitación conocida), 3 proyectos empresariales reales
 
 ---
 
@@ -1077,6 +1183,7 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 - **[Auditoría de Seguridad](docs/SECURITY_AUDIT_REPORT.md)** ✅ — 9 hallazgos (OWASP), buenas prácticas, matriz de riesgo
 - **[Auditoría QA de Tests](docs/TEST_AUDIT_REPORT.md)** ✅ — Auditoría white-box, 670→761 tests, zero-coverage cubierto
 - **[Auditoría de Documentación](docs/DOC_AUDIT_REPORT.md)** ✅ — 51 hallazgos corregidos (16 críticos, 15 altos, 16 medios, 4 bajos)
+- **[Informe UAT](docs/UAT_TESTING_REPORT.md)** ✅ — 5 métodos despliegue, 3 proyectos empresariales, 7 hallazgos funcionales
 - **[Índice de documentación](docs/README.md)** ✅
 
 ---
@@ -1202,7 +1309,7 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 - ✅ Prompts LLM ampliados con contexto de clasificación y auto-wait
 - ✅ CLI: opción --config para especificar .gtaa.yaml manualmente
 - ✅ PyYAML>=6.0 como dependencia
-- ✅ Ejemplo API test en examples/bad_project/tests/api/
+- ✅ Ejemplo API test en gtaa_validator/examples/bad_project/tests/api/
 - ✅ 40 tests nuevos (23 classifier + 8 config + 4 definition_checker + 5 otros)
 - ✅ Documentación: PHASE7_FLOW_DIAGRAMS.md + ADR 22-27
 
@@ -1403,18 +1510,22 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 
 ---
 
-### Versión 1.0.0 - UAT (En curso) 🔄
+### Versión 1.0.0 - UAT (10 Febrero 2026) ✅
 
-**Pruebas de aceptación con proyectos reales:**
-- 🔄 Validación con Automation-Guide-Selenium-Java (UI + API mixto, 38 archivos)
-- 🔄 Validación con Automation-Guide-Rest-Assured-Java (API puro, 68 archivos)
-- Evaluación de falsos positivos/negativos en código real
-- Documentación de resultados UAT
+**Pruebas de aceptación completadas:**
+- ✅ 5 métodos de despliegue verificados (pip editable, pip clean venv, pip remoto, Docker, GitHub Action)
+- ✅ 6 proyectos sintéticos + 2 proyectos open-source Java (Selenium, Rest Assured)
+- ✅ 3 proyectos empresariales reales (Selenium multi-módulo Java, Playwright JS/TS, Appium Java desktop)
+- ✅ 7 hallazgos funcionales: 6 resueltos (UAT-01 a UAT-04, UAT-06, UAT-07) + 1 limitación conocida (UAT-05)
+- ✅ 51 hallazgos de documentación corregidos (6 pasadas de auditoría)
+- ✅ Documentación: [UAT_TESTING_REPORT.md](docs/UAT_TESTING_REPORT.md)
+
+**Limitación conocida (UAT-05):** Proyectos Maven multi-módulo con capa de adaptación en módulo padre generan falsos positivos — requiere resolución POM para análisis cross-módulo (mejora futura)
 
 ---
 
 <div align="center">
 
-**Estado del proyecto:** Fase 10 Completa | UAT en curso | 23 violaciones | 4 lenguajes (Python, Java, JS/TS, C#) | 761 tests | 93% cobertura
+**Estado del proyecto:** Desarrollo y UAT Completos | Pendiente: slides y memoria TFM | 23 violaciones | 4 lenguajes (Python, Java, JS/TS, C#) | 761 tests | 93% cobertura
 
 </div>

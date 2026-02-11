@@ -17,19 +17,19 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from dotenv import load_dotenv
-
-# Cargar .env desde el directorio del paquete, NO desde CWD del proyecto analizado (SEC-08)
-_package_dir = Path(__file__).resolve().parent.parent
-load_dotenv(_package_dir / ".env")
-# Tambien cargar desde home del usuario como fallback
-load_dotenv(Path.home() / ".env")
+try:
+    from dotenv import load_dotenv
+    # Cargar .env desde el directorio del paquete, NO desde CWD del proyecto analizado (SEC-08)
+    _package_dir = Path(__file__).resolve().parent.parent
+    load_dotenv(_package_dir / ".env")
+    # Tambien cargar desde home del usuario como fallback
+    load_dotenv(Path.home() / ".env")
+except ImportError:
+    pass  # python-dotenv es opcional (incluido en extras [ai])
 
 from gtaa_validator.analyzers.static_analyzer import StaticAnalyzer
 from gtaa_validator.reporters.json_reporter import JsonReporter
 from gtaa_validator.reporters.html_reporter import HtmlReporter
-from gtaa_validator.analyzers.semantic_analyzer import SemanticAnalyzer
-from gtaa_validator.llm.factory import create_llm_client
 from gtaa_validator.config import load_config
 from gtaa_validator.logging_config import setup_logging
 from gtaa_validator.models import AnalysisMetrics, get_score_label
@@ -50,6 +50,9 @@ def _run_semantic_analysis(
     project_path: Path, report, provider: str, verbose: bool, max_llm_calls: int
 ) -> tuple:
     """Ejecuta análisis semántico AI y retorna (report, semantic_analyzer, elapsed_seconds)."""
+    from gtaa_validator.analyzers.semantic_analyzer import SemanticAnalyzer
+    from gtaa_validator.llm.factory import create_llm_client
+
     llm_client = create_llm_client(provider=provider)
     provider_name = type(llm_client).__name__
     click.echo(f"Iniciando análisis semántico con {provider_name}...")
@@ -188,7 +191,7 @@ def _display_llm_summary(report, semantic) -> None:
 
 
 @click.command()
-@click.argument('project_path', nargs=-1, required=True)
+@click.argument('project_path', nargs=-1, required=False)
 @click.option('--verbose', '-v', is_flag=True, help='Activar salida detallada')
 @click.option('--json', 'json_path', type=click.Path(), default=None, help='Exportar reporte JSON al fichero indicado')
 @click.option('--html', 'html_path', type=click.Path(), default=None, help='Exportar reporte HTML al fichero indicado')
@@ -205,7 +208,9 @@ def _display_llm_summary(report, semantic) -> None:
               help='Directorio de salida para reportes (default: gtaa-reports/)')
 @click.option('--no-report', is_flag=True,
               help='Desactivar generación automática de reportes')
-def main(project_path: tuple, verbose: bool, json_path: str, html_path: str, ai: bool, provider: str, config_path: str, max_llm_calls: int, log_file: str, output_dir: str, no_report: bool):
+@click.option('--examples-path', 'show_examples', is_flag=True,
+              help='Mostrar la ruta a los proyectos de ejemplo incluidos y salir')
+def main(project_path: tuple, verbose: bool, json_path: str, html_path: str, ai: bool, provider: str, config_path: str, max_llm_calls: int, log_file: str, output_dir: str, no_report: bool, show_examples: bool):
     """
     Valida el cumplimiento de la arquitectura gTAA en un proyecto de test automation.
 
@@ -215,6 +220,26 @@ def main(project_path: tuple, verbose: bool, json_path: str, html_path: str, ai:
         python -m gtaa_validator ./mi-proyecto-selenium
         python -m gtaa_validator ./mi-proyecto-selenium --verbose
     """
+    # --examples-path: mostrar ruta a ejemplos y salir
+    if show_examples:
+        from gtaa_validator.examples import get_examples_path
+        examples_dir = get_examples_path()
+        click.echo(f"Proyectos de ejemplo incluidos en: {examples_dir}")
+        click.echo()
+        for d in sorted(examples_dir.iterdir()):
+            if d.is_dir() and not d.name.startswith("_"):
+                click.echo(f"  {d.name}/")
+        click.echo()
+        click.echo("Uso:")
+        click.echo(f"  python -m gtaa_validator {examples_dir / 'bad_project'} --verbose")
+        return
+
+    # Validar que se proporcionó un path
+    if not project_path:
+        click.echo("ERROR: Se requiere PROJECT_PATH. Usa --help para ver opciones.", err=True)
+        click.echo("       Usa --examples-path para ver los proyectos de ejemplo incluidos.", err=True)
+        sys.exit(1)
+
     # Setup
     if verbose and not log_file:
         log_file = "logs/gtaa_debug.log"

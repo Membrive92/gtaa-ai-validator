@@ -23,31 +23,37 @@ jobs:
         include:
           # bad_project: violaciones esperadas, probar AI con mock
           - project: bad_project
+            project_path: "examples/bad_project"
             ai: "true"
             provider: "mock"
             expect_violations: true
           # good_project: score alto, sin violaciones críticas
           - project: good_project
+            project_path: "examples/good_project"
             ai: "false"
             provider: ""
             expect_violations: false
           # python_live_project: proyecto Python real, puede tener violaciones
           - project: python_live_project
+            project_path: "examples/python_live_project"
             ai: "false"
             provider: ""
             expect_violations: true
           # java_project: multi-lang Java
           - project: java_project
+            project_path: "examples/java_project"
             ai: "false"
             provider: ""
             expect_violations: true
           # js_project: multi-lang JavaScript/TypeScript
           - project: js_project
+            project_path: "examples/js_project"
             ai: "false"
             provider: ""
             expect_violations: true
           # csharp_project: multi-lang C#
           - project: csharp_project
+            project_path: "examples/csharp_project"
             ai: "false"
             provider: ""
             expect_violations: true
@@ -60,7 +66,7 @@ jobs:
         uses: ./
         continue-on-error: true  # Proyectos con CRITICAL violations → exit 1
         with:
-          project_path: "examples/${{ matrix.project }}"
+          project_path: "${{ matrix.project_path }}"
           verbose: "true"
           ai: ${{ matrix.ai }}
           provider: ${{ matrix.provider }}

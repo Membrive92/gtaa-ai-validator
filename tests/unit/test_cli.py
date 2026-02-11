@@ -26,7 +26,7 @@ class TestCLI:
         # Use examples/bad_project as test fixture
         self.bad_project = os.path.join(
             os.path.dirname(__file__), os.pardir, os.pardir,
-            "examples", "bad_project"
+            "gtaa_validator", "examples", "bad_project"
         )
 
     def test_basic_run(self):
@@ -112,7 +112,7 @@ class TestCLIScoreLabels:
         self.runner = CliRunner()
         self.bad_project = os.path.join(
             os.path.dirname(__file__), os.pardir, os.pardir,
-            "examples", "bad_project"
+            "gtaa_validator", "examples", "bad_project"
         )
 
     def _make_report(self, score, violations=None, project_path=None):
@@ -165,7 +165,7 @@ class TestCLIExitCodes:
         self.runner = CliRunner()
         self.bad_project = os.path.join(
             os.path.dirname(__file__), os.pardir, os.pardir,
-            "examples", "bad_project"
+            "gtaa_validator", "examples", "bad_project"
         )
 
     @patch("gtaa_validator.__main__.StaticAnalyzer")
@@ -221,7 +221,7 @@ class TestCLIVerboseOutput:
         self.runner = CliRunner()
         self.bad_project = os.path.join(
             os.path.dirname(__file__), os.pardir, os.pardir,
-            "examples", "bad_project"
+            "gtaa_validator", "examples", "bad_project"
         )
 
     @patch("gtaa_validator.__main__.StaticAnalyzer")
@@ -303,11 +303,11 @@ class TestCLIAIBranch:
         self.runner = CliRunner()
         self.bad_project = os.path.join(
             os.path.dirname(__file__), os.pardir, os.pardir,
-            "examples", "bad_project"
+            "gtaa_validator", "examples", "bad_project"
         )
 
-    @patch("gtaa_validator.__main__.SemanticAnalyzer")
-    @patch("gtaa_validator.__main__.create_llm_client")
+    @patch("gtaa_validator.analyzers.semantic_analyzer.SemanticAnalyzer")
+    @patch("gtaa_validator.llm.factory.create_llm_client")
     @patch("gtaa_validator.__main__.StaticAnalyzer")
     def test_ai_flag_invokes_semantic_analyzer(
         self, mock_static_cls, mock_create_llm, mock_semantic_cls
@@ -335,8 +335,8 @@ class TestCLIAIBranch:
         mock_create_llm.assert_called_once()
         mock_semantic_cls.assert_called_once()
 
-    @patch("gtaa_validator.__main__.SemanticAnalyzer")
-    @patch("gtaa_validator.__main__.create_llm_client")
+    @patch("gtaa_validator.analyzers.semantic_analyzer.SemanticAnalyzer")
+    @patch("gtaa_validator.llm.factory.create_llm_client")
     @patch("gtaa_validator.__main__.StaticAnalyzer")
     def test_ai_with_token_usage(
         self, mock_static_cls, mock_create_llm, mock_semantic_cls
@@ -362,8 +362,8 @@ class TestCLIAIBranch:
         assert "Consumo de Tokens" in result.output
         assert "1,500" in result.output or "1500" in result.output
 
-    @patch("gtaa_validator.__main__.SemanticAnalyzer")
-    @patch("gtaa_validator.__main__.create_llm_client")
+    @patch("gtaa_validator.analyzers.semantic_analyzer.SemanticAnalyzer")
+    @patch("gtaa_validator.llm.factory.create_llm_client")
     @patch("gtaa_validator.__main__.StaticAnalyzer")
     def test_ai_with_fallback_info(
         self, mock_static_cls, mock_create_llm, mock_semantic_cls
@@ -400,7 +400,7 @@ class TestAutoReports:
         self.runner = CliRunner()
         self.bad_project = os.path.join(
             os.path.dirname(__file__), os.pardir, os.pardir,
-            "examples", "bad_project"
+            "gtaa_validator", "examples", "bad_project"
         )
 
     def test_auto_generates_reports_by_default(self, tmp_path):

@@ -1,0 +1,18 @@
+# Configuración del proyecto para gTAA Validator
+# Este archivo es opcional. Sin él, se usan valores por defecto.
+
+# Tipos de violación a ignorar globalmente
+# Útil cuando el framework maneja algo automáticamente (ej. Playwright auto-waits)
+exclude_checks:
+  # - MISSING_WAIT_STRATEGY
+
+# Patrones glob de archivos a excluir del análisis
+ignore_paths:
+  # - "tests/legacy/**"
+  # - "tests/smoke/**"
+
+# Patrones glob para forzar clasificación como API test
+# (complementa la detección automática por heurísticas)
+api_test_patterns:
+  - "**/tests/api/**"
+  # - "**/test_api_*.py"

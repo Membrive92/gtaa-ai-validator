@@ -9,16 +9,17 @@
 
 ## 1. Resumen Ejecutivo
 
-Se validaron **3 métodos de despliegue** con **6 proyectos de ejemplo** en 4 lenguajes (Python, Java, JavaScript/TypeScript, C#) y **3 proyectos empresariales reales** (Selenium multi-módulo Java, Playwright, Appium Java). Todos los métodos producen resultados consistentes y correctos. La validación empresarial identificó 2 hallazgos adicionales: un bug en rutas con espacios (corregido) y una limitación conocida en proyectos Maven multi-módulo.
+Se validaron **5 métodos de despliegue** con **6 proyectos de ejemplo** en 4 lenguajes (Python, Java, JavaScript/TypeScript, C#) y **3 proyectos empresariales reales** (Selenium multi-módulo Java, Playwright, Appium Java). Todos los métodos producen resultados consistentes y correctos. Se identificaron 7 hallazgos funcionales (6 resueltos + 1 limitación conocida).
 
 | Método | Estado | Proyectos probados |
 |--------|--------|--------------------|
 | pip install editable (`-e ".[all]"`) | PASS | 6/6 |
 | pip install clean venv (`".[all]"`) | PASS | 2/2 |
+| pip install remoto (`git+https://...`) | PASS | 2/2 (tras fix UAT-06, UAT-07) |
 | Docker (`docker build` + `docker run`) | PASS | 6/6 |
 | GitHub Action (`workflow_dispatch`) | PASS | 3/3 (UAT) + 6/6 (smoke) |
 
-**Resultado global: PASS** (4/4 métodos verificados)
+**Resultado global: PASS** (5/5 métodos verificados)
 
 ---
 
@@ -223,6 +224,75 @@ Validación profunda con 5 pasos de verificación por proyecto:
 | 3 | Artifact upload 409 Conflict por nombre fijo en `action.yml` | GitHub Action | ALTA | RESUELTO — `upload_reports: "false"` en workflows |
 | 4 | Rutas con espacios en el nombre del proyecto fallan | CLI (enterprise) | ALTA | RESUELTO — `nargs=-1` + `" ".join()` en Click |
 | 5 | Proyectos Maven multi-módulo generan falsos positivos en capa de adaptación | CLI (enterprise) | MEDIA | LIMITACIÓN CONOCIDA — requiere resolución POM |
+| 6 | `pip install` desde GitHub falla en Windows con `Filename too long` | pip (remoto) | MEDIA | RESUELTO — Documentado workaround `core.longpaths` |
+| 7 | Ejemplos no disponibles tras `pip install` (solo existen en el repo fuente) | pip (remoto) | ALTA | RESUELTO — Ejemplos movidos al paquete + `--examples-path` |
+
+### 6.1. Hallazgo UAT-06: `pip install` desde GitHub falla en Windows con `Filename too long`
+
+**Método:** `pip install "gtaa-ai-validator[all] @ git+https://github.com/..."`
+
+**Síntoma:** La instalación remota desde GitHub falla en Windows con múltiples errores `Filename too long`:
+
+```
+error: unable to create file examples/Automation-Guide-Selenium-Java-main/src/test/java/...
+fatal: unable to checkout working tree
+```
+
+**Causa raíz:** El repositorio contiene proyectos Java de ejemplo con rutas de hasta 163 caracteres (e.g. `examples/Automation-Guide-Selenium-Java-main/src/test/java/com/example/.../LoginPageTest.java`). `pip install` desde GitHub ejecuta internamente un `git clone` en un directorio temporal (`C:\Users\...\AppData\Local\Temp\pip-install-...`), cuya ruta base suma ~100 caracteres. La combinación supera el límite de 260 caracteres de Windows (MAX_PATH), provocando el fallo del checkout.
+
+**Severidad:** MEDIA — Solo afecta a Windows. Linux/macOS no tienen esta limitación.
+
+**Fix:** Documentado en README como primer paso del Quick Start:
+
+```bash
+git config --global core.longpaths true
+```
+
+**Estado:** RESUELTO — Workaround documentado en README.
+
+### 6.2. Hallazgo UAT-07: Ejemplos no disponibles tras `pip install`
+
+**Método:** `pip install "gtaa-ai-validator[all] @ git+https://github.com/..."`
+
+**Síntoma:** Tras instalar el paquete, ejecutar `gtaa-validator examples/bad_project` falla con "no es un directorio válido". La carpeta `examples/` no existe en el entorno del usuario porque `pip install` solo distribuye el paquete Python, no directorios del repositorio fuera del paquete.
+
+**Causa raíz:** Los proyectos de ejemplo estaban en `examples/` (directorio raíz del repositorio), que no se incluye en la distribución del paquete Python. Solo `gtaa_validator/` (el paquete) se instala con pip.
+
+**Severidad:** ALTA — Un usuario que instale vía pip no puede ejecutar el validador sin tener un proyecto propio de test automation, lo que impide probar la herramienta inmediatamente.
+
+**Fix aplicado (3 cambios):**
+
+1. **Reestructuración**: Los 5 proyectos de ejemplo pequeños (`bad_project`, `good_project`, `java_project`, `js_project`, `csharp_project`) se movieron de `examples/` a `gtaa_validator/examples/`, dentro del paquete Python. Los 3 proyectos grandes de referencia (`Automation-Guide-*`, `python_live_project`) permanecen en `examples/` raíz (solo disponibles al clonar el repo).
+
+2. **`pyproject.toml`**: Añadido `[tool.setuptools.package-data]` para incluir los archivos no-Python (`.java`, `.js`, `.ts`, `.cs`, `.feature`, `.yaml`, etc.) en la distribución.
+
+3. **CLI `--examples-path`**: Nuevo flag que muestra la ruta a los ejemplos instalados y un comando de ejemplo listo para copiar y ejecutar:
+
+```
+$ gtaa-validator --examples-path
+Proyectos de ejemplo incluidos en: C:\Users\...\gtaa_validator\examples
+
+  bad_project/
+  csharp_project/
+  good_project/
+  java_project/
+  js_project/
+
+Uso:
+  gtaa-validator C:\Users\...\gtaa_validator\examples\bad_project --verbose
+```
+
+**Ficheros modificados:**
+- `gtaa_validator/examples/__init__.py` (nuevo) — helpers para localizar ejemplos
+- `gtaa_validator/__main__.py` — flag `--examples-path`, `project_path` opcional
+- `pyproject.toml` — `package-data`, `coverage.omit`
+- `tests/conftest.py` — rutas de fixtures actualizadas
+- `tests/unit/test_cli.py` — rutas de tests actualizadas
+- `README.md` — Quick Start con flujo guiado paso a paso
+
+**Verificación:** 761 tests pasando (0 fallos) tras la reestructuración.
+
+**Estado:** RESUELTO — Ejemplos incluidos en el paquete, Quick Start documentado en README.
 
 ---
 
@@ -500,12 +570,13 @@ Esta funcionalidad queda fuera del alcance del TFM actual y se documenta como me
 
 ## 10. Conclusión
 
-Los **4 métodos de despliegue** han sido verificados exitosamente:
+Los **5 métodos de despliegue** han sido verificados exitosamente:
 
 1. **pip install editable** — Funcional en los 6 proyectos, reportes JSON/HTML correctos, AI mock operativo
 2. **pip install clean venv** — Funcional con `[all]` extras, resultados consistentes
-3. **Docker** — Build multistage funcional, resultados 100% consistentes con pip
-4. **GitHub Action** — 3 proyectos reales validados (UAT) + 6 proyectos smoke test, artifacts subidos correctamente
+3. **pip install remoto** — Funcional desde GitHub tras workaround Windows (`core.longpaths`) y reestructuración de ejemplos
+4. **Docker** — Build multistage funcional, resultados 100% consistentes con pip
+5. **GitHub Action** — 3 proyectos reales validados (UAT) + 6 proyectos smoke test, artifacts subidos correctamente
 
 Se encontraron **3 hallazgos funcionales** durante el UAT de despliegue (1 bajo, 1 crítico, 1 alto), todos resueltos. Adicionalmente, el **análisis estático de documentación** detectó 51 hallazgos (16 CRITICAL, 15 HIGH, 16 MEDIUM, 4 LOW) todos corregidos — incluyendo 8 alucinaciones/errores graves del modelo LLM (tipos BDD inexistentes, parser mal identificado, valores file_type inventados, TextReporter inexistente, diagrama de arquitectura engañoso, método `_discover_files` fabricado, firma checker.check() incorrecta, variable `POOR_PATTERNS_JAVA` fabricada).
 
@@ -513,10 +584,14 @@ La **validación con 3 proyectos empresariales reales** (Selenium multi-módulo 
 - **UAT-04** (ALTA, RESUELTO): Rutas con espacios fallaban por la configuración de Click — corregido con `nargs=-1` + reconstrucción del path
 - **UAT-05** (MEDIA, LIMITACIÓN CONOCIDA): Proyectos Maven multi-módulo con capa de adaptación en módulo padre generan falsos positivos — requiere resolución POM para análisis cross-módulo, documentado como mejora futura
 
-En total se documentan **5 hallazgos funcionales** (4 resueltos + 1 limitación conocida) y **51 hallazgos de documentación** (todos corregidos).
+La **validación del flujo `pip install` desde GitHub** (instalación remota sin clonar) añadió **2 hallazgos adicionales**:
+- **UAT-06** (MEDIA, RESUELTO): Windows `Filename too long` por rutas Java de 163+ caracteres combinadas con el directorio temporal de pip (~100 chars) superando MAX_PATH (260) — documentado workaround `git config --global core.longpaths true`
+- **UAT-07** (ALTA, RESUELTO): Los proyectos de ejemplo no se incluían en el paquete distribuido (estaban en `examples/` raíz, fuera de `gtaa_validator/`) — movidos a `gtaa_validator/examples/`, añadido `--examples-path` al CLI, documentado Quick Start guiado en README
+
+En total se documentan **7 hallazgos funcionales** (6 resueltos + 1 limitación conocida) y **51 hallazgos de documentación** (todos corregidos).
 
 El validador detecta correctamente violaciones en los 4 lenguajes soportados (Python, Java, JS/TS, C#) y los 5 checkers (Definition, Structure, Adaptation, Quality, BDD) funcionan según lo esperado en todos los entornos de despliegue y en proyectos empresariales reales.
 
 ---
 
-*Informe generado el 8 de Febrero de 2026, actualizado el 10 de Febrero de 2026 — gTAA AI Validator v0.10.4 (Fase 10.9)*
+*Informe generado el 8 de Febrero de 2026, actualizado el 10 de Febrero de 2026 — gTAA AI Validator v0.10.4 (Fase 10.10)*

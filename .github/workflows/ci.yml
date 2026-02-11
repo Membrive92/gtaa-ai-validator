@@ -35,8 +35,8 @@ jobs:
 
       - name: Run validator on example projects
         run: |
-          gtaa-validator examples/bad_project --json report_bad.json
-          gtaa-validator examples/good_project --json report_good.json
+          gtaa-validator gtaa_validator/examples/bad_project --json report_bad.json
+          gtaa-validator gtaa_validator/examples/good_project --json report_good.json
 
       - name: Verify package build
         if: matrix.python-version == '3.12'

@@ -56,7 +56,10 @@ Homepage = "https://github.com/Membrive92/gtaa-ai-validator"
 version = {attr = "gtaa_validator.__version__"}
 
 [tool.setuptools.packages.find]
-exclude = ["tests*", "examples*", "docs*"]
+exclude = ["tests*", "docs*", "examples*"]
+
+[tool.setuptools.package-data]
+"gtaa_validator.examples" = ["**/*.py", "**/*.java", "**/*.js", "**/*.ts", "**/*.cs", "**/*.feature", "**/*.yaml", "**/*.yml", "**/*.json", "**/*.html", "**/*.cfg", "**/*.txt", "**/*.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -66,7 +69,7 @@ markers = [
 
 [tool.coverage.run]
 source = ["gtaa_validator"]
-omit = ["tests/*", "examples/*"]
+omit = ["tests/*", "gtaa_validator/examples/*"]
 
 [tool.coverage.report]
 show_missing = true

@@ -17,19 +17,21 @@ Los proyectos de ejemplo sirven para:
 
 ```
 examples/
-├── README.md                  # Este archivo
-├── bad_project/               # Proyecto con ~35 violaciones gTAA
-│   ├── test_login.py          # Tests con violaciones Selenium
-│   ├── test_search.py         # Tests con violaciones Playwright
-│   ├── test_data_issues.py    # Datos hardcoded, nombres genéricos, función larga
-│   └── pages/
-│       └── checkout_page.py   # Page Object con asserts, imports prohibidos, lógica
-└── good_project/              # Proyecto que sigue arquitectura gTAA correctamente
-    ├── tests/
-    │   └── test_login.py
-    └── pages/
-        └── login_page.py
+├── README.md                                   # Este archivo
+├── bad_project/                                # Python — ~45 violaciones gTAA
+├── good_project/                               # Python — 0 violaciones (referencia)
+├── java_project/                               # Java — Selenium + Cucumber
+├── js_project/                                 # JavaScript/TypeScript — Playwright + Cypress
+├── csharp_project/                             # C# — NUnit + SpecFlow
+├── python_live_project/                        # Python — Proyecto real Playwright
+├── Automation-Guide-Selenium-Java-main/        # Java — Proyecto real Selenium (UAT)
+└── Automation-Guide-Rest-Assured-Java-master/  # Java — Proyecto real REST Assured (UAT)
 ```
+
+> **Nota:** Los 5 proyectos pequeños (`bad_project`, `good_project`, `java_project`,
+> `js_project`, `csharp_project`) también están incluidos dentro del paquete Python
+> en `gtaa_validator/examples/` para que estén disponibles vía `pip install`.
+> Se puede acceder a ellos con: `python -m gtaa_validator --examples-path`
 
 ---
 
@@ -367,13 +369,23 @@ Con estos ejemplos se pueden calcular:
 - **Exactitud de línea**: ¿Las líneas reportadas son exactas?
 - **Tiempo de análisis**: ¿Cuánto tarda en analizar 2 archivos?
 
-### Trabajo futuro (Fase 5)
+---
 
-En la Fase 5 se añadirán más proyectos de ejemplo:
-- Proyectos más grandes (10+ archivos)
-- Otros tipos de violaciones (HIGH, MEDIUM, LOW)
-- Proyectos reales de GitHub
-- Casos edge/corner cases
+## Proyectos multi-lenguaje
+
+Además de los proyectos Python (`bad_project`, `good_project`), se incluyen ejemplos en otros lenguajes:
+
+| Proyecto | Lenguaje | Framework | Violaciones esperadas |
+|----------|----------|-----------|----------------------|
+| `java_project` | Java | Selenium + Cucumber (BDD) | Sí |
+| `js_project` | JavaScript/TypeScript | Playwright + Cypress | Sí |
+| `csharp_project` | C# | NUnit + SpecFlow (BDD) | Sí |
+
+```bash
+python -m gtaa_validator examples/java_project --verbose
+python -m gtaa_validator examples/js_project --verbose
+python -m gtaa_validator examples/csharp_project --verbose
+```
 
 ---
 
