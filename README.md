@@ -44,7 +44,7 @@
 | ↳ **✅ 10.3** | Optimizaciones de proyecto (packaging, dead code, tests, LSP) | **COMPLETO** | **06/02/2026** |
 | ↳ **✅ 10.4** | Despliegue: Docker + GitHub Actions CI + reusable action | **COMPLETO** | **06/02/2026** |
 | ↳ **✅ 10.5** | Cobertura de código: 84% a 93% (667 tests) | **COMPLETO** | **06/02/2026** |
-| ↳ **✅ 10.6** | Tests de regresión de seguridad (34 tests, SEC-01 a SEC-09) | **COMPLETO** | **06/02/2026** |
+| ↳ **✅ 10.6** | Tests de regresión de seguridad (46 tests, SEC-01 a SEC-09) | **COMPLETO** | **06/02/2026** |
 | ↳ **✅ 10.7** | Refactor quality_checker + Reportes Allure-style + HTML redesign | **COMPLETO** | **07/02/2026** |
 | ↳ **✅ 10.8** | Refactor SOLID/DRY: shared utils, BaseChecker, LLM Protocol, CLI decomp | **COMPLETO** | **07/02/2026** |
 | ↳ **✅ 10.9** | Auditoría QA: +92 tests, -11 redundantes, aserciones reforzadas, zero-coverage cubierto | **COMPLETO** | **08/02/2026** |
@@ -300,7 +300,7 @@ Uso:
   python -m gtaa_validator C:\Users\tu_usuario\...\gtaa_validator\examples\bad_project --verbose
 ```
 
-**Paso 4** — Copiar y ejecutar el comando de ejemplo que aparece en la salida anterior. Esto analizara el proyecto "malo" (~58 violaciones detectadas, score bajo):
+**Paso 4** — Copiar y ejecutar el comando de ejemplo que aparece en la salida anterior. Esto analizara el proyecto "malo" (58 violaciones detectadas, score bajo):
 
 ```bash
 python -m gtaa_validator <ruta_del_paso_3>/bad_project --verbose
@@ -439,7 +439,7 @@ cp .env.example .env
 GEMINI_API_KEY=tu_api_key_aqui
 
 # 3. Ejecutar con análisis AI
-gtaa-validator /ruta/a/tu/proyecto --ai --verbose
+python -m gtaa_validator /ruta/a/tu/proyecto --ai --verbose
 ```
 
 > **Nota**: Si no se configura la API key o si Gemini devuelve error 429 (rate limit), el sistema usa automáticamente `MockLLMClient` (heurísticas deterministas) sin interrumpir el análisis. El tier gratuito de Gemini (~15 req/min) es suficiente para la mayoría de proyectos.
@@ -510,14 +510,14 @@ Por defecto, cada análisis genera reportes JSON y HTML en `gtaa-reports/`:
 
 ```bash
 # Reportes automáticos (por defecto en gtaa-reports/)
-python -m gtaa_validator gtaa_validator/examples/bad_project                          # → gtaa-reports/gtaa_report_bad_project_2026-02-07.json/.html
-python -m gtaa_validator gtaa_validator/examples/bad_project --output-dir mis-reportes # → mis-reportes/gtaa_report_bad_project_2026-02-07.json/.html
-python -m gtaa_validator gtaa_validator/examples/bad_project --no-report              # Sin reportes
+python -m gtaa_validator examples/bad_project                          # → gtaa-reports/gtaa_report_bad_project_2026-02-07.json/.html
+python -m gtaa_validator examples/bad_project --output-dir mis-reportes # → mis-reportes/gtaa_report_bad_project_2026-02-07.json/.html
+python -m gtaa_validator examples/bad_project --no-report              # Sin reportes
 
 # Exportar reportes a rutas explícitas (desactiva auto-generación)
-python -m gtaa_validator gtaa_validator/examples/bad_project --html report.html
-python -m gtaa_validator gtaa_validator/examples/bad_project --json report.json
-python -m gtaa_validator gtaa_validator/examples/bad_project --ai --html report.html --json report.json --verbose
+python -m gtaa_validator examples/bad_project --html report.html
+python -m gtaa_validator examples/bad_project --json report.json
+python -m gtaa_validator examples/bad_project --ai --html report.html --json report.json --verbose
 ```
 
 #### Probar con los ejemplos incluidos
@@ -526,12 +526,12 @@ El repositorio incluye proyectos de ejemplo en `examples/` para probar cada leng
 
 ```bash
 # Proyectos de ejemplo sintéticos (Python, Java, JS, C#)
-python -m gtaa_validator gtaa_validator/examples/bad_project --verbose      # Proyecto con ~45 violaciones intencionadas
-python -m gtaa_validator gtaa_validator/examples/good_project               # Proyecto bien estructurado (score ~95)
+python -m gtaa_validator examples/bad_project --verbose      # Proyecto con 58 violaciones intencionadas
+python -m gtaa_validator examples/good_project               # Proyecto bien estructurado (score 100)
 python -m gtaa_validator examples/python_live_project --verbose
-python -m gtaa_validator gtaa_validator/examples/java_project --verbose
-python -m gtaa_validator gtaa_validator/examples/js_project --verbose
-python -m gtaa_validator gtaa_validator/examples/csharp_project --verbose
+python -m gtaa_validator examples/java_project --verbose
+python -m gtaa_validator examples/js_project --verbose
+python -m gtaa_validator examples/csharp_project --verbose
 
 # Proyectos Java reales (validación empírica con repositorios open-source)
 python -m gtaa_validator examples/Automation-Guide-Selenium-Java-main --verbose
@@ -579,7 +579,7 @@ python -m pytest tests/ --cov=gtaa_validator --cov-report=term  # Con cobertura
 **Ejemplo de salida (con --ai):**
 ```
 === gTAA AI Validator ===
-Analizando proyecto: gtaa_validator/examples/bad_project
+Analizando proyecto: examples/bad_project
 
 Ejecutando análisis estático...
 Usando Gemini Flash API para análisis semántico...
@@ -588,14 +588,14 @@ Usando Gemini Flash API para análisis semántico...
 RESULTADOS DEL ANÁLISIS
 ============================================================
 
-Archivos analizados: 6
-Violaciones totales: 59
+Archivos analizados: 13
+Violaciones totales: 70
 
 Violaciones por severidad:
-  CRÍTICA: 16
-  ALTA:    19
-  MEDIA:   22
-  BAJA:    2
+  CRÍTICA: 22
+  ALTA:    32
+  MEDIA:   13
+  BAJA:    3
 
 Puntuación de cumplimiento: 0.0/100
 Estado: PROBLEMAS CRÍTICOS
@@ -616,7 +616,7 @@ El proyecto incluye ejemplos completamente documentados en el directorio [exampl
 ```
 examples/
 ├── README.md                  # Documentación detallada de cada ejemplo
-├── bad_project/               # Proyecto Python con ~45 violaciones (todos los tipos)
+├── bad_project/               # Proyecto Python con 58 violaciones (todos los tipos)
 │   ├── test_login.py          # 8 violaciones (Selenium directo)
 │   ├── test_search.py         # 7 violaciones (Playwright directo)
 │   ├── test_data_issues.py    # Datos hardcoded, nombres genéricos, función larga
@@ -625,6 +625,8 @@ examples/
 │   ├── steps/                 # Step definitions con violaciones
 │   │   ├── login_steps.py     # Browser calls directos
 │   │   └── search_steps.py    # Step pattern duplicado
+│   ├── tests/api/             # Tests de API con violaciones
+│   │   └── test_users_api.py  # Datos hardcoded, configuración hardcoded
 │   └── pages/
 │       └── checkout_page.py   # POM con asserts, imports prohibidos, lógica
 ├── python_live_project/       # Proyecto realista Playwright con Page Objects (78 violaciones)
@@ -638,6 +640,9 @@ examples/
 │   │   └── test_login.py      # Tests usando Page Objects
 │   └── pages/
 │       └── login_page.py      # Page Object que encapsula Selenium
+├── java_project/              # Proyecto Java con Selenium + Cucumber (BDD)
+├── js_project/                # Proyecto JS/TS con Playwright + Cypress
+├── csharp_project/            # Proyecto C# con NUnit + SpecFlow (BDD)
 ├── Automation-Guide-Selenium-Java-main/   # ✅ Proyecto REAL Java + Selenium (UI + API mixto)
 │   ├── pages/                 # Page Objects (HomePage, CartPage, CheckoutPage...)
 │   ├── tests/                 # Tests E2E (login, cart, checkout, search, navigation)
@@ -656,14 +661,14 @@ examples/
 ### Uso rápido
 
 ```bash
-# Analizar proyecto con violaciones (score esperado: 0/100)
-python -m gtaa_validator gtaa_validator/examples/bad_project --verbose
+# Analizar proyecto con violaciones (58 violaciones, score: 0/100)
+python -m gtaa_validator examples/bad_project --verbose
 
 # Analizar proyecto realista Playwright (78 violaciones)
 python -m gtaa_validator examples/python_live_project --verbose
 
-# Analizar proyecto correcto (score esperado: 100/100)
-python -m gtaa_validator gtaa_validator/examples/good_project
+# Analizar proyecto correcto (0 violaciones, score: 100/100)
+python -m gtaa_validator examples/good_project
 
 # Analizar proyectos Java reales
 python -m gtaa_validator examples/Automation-Guide-Selenium-Java-main --verbose
@@ -710,7 +715,7 @@ Para las **pruebas de aceptación (UAT)** del TFM, se incluyen **2 proyectos rea
 |----------|------|----------|-------------|-------|-----------|
 | Selenium-Java (UI+API) | Mixto | 38 | 8 | 55/100 | POM correcto detectado, solo datos hardcoded |
 | Rest-Assured-Java (API) | API puro | 68 | 49 | 0/100 | Código didáctico con malas prácticas detectado |
-| bad_project (Python) | Sintético | 6 | ~45 | 0/100 | Todas las violaciones esperadas detectadas |
+| bad_project (Python) | Sintético | 13 | 58 | 0/100 | Todas las violaciones esperadas detectadas |
 | python_live_project | Realista | ~20 | 78 | 0/100 | Proyecto Playwright con violaciones reales |
 | good_project (Python) | Sintético | 2 | 0 | 100/100 | Arquitectura gTAA correcta verificada |
 
@@ -1310,7 +1315,7 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 - ✅ Prompts LLM ampliados con contexto de clasificación y auto-wait
 - ✅ CLI: opción --config para especificar .gtaa.yaml manualmente
 - ✅ PyYAML>=6.0 como dependencia
-- ✅ Ejemplo API test en gtaa_validator/examples/bad_project/tests/api/
+- ✅ Ejemplo API test en examples/bad_project/tests/api/
 - ✅ 40 tests nuevos (23 classifier + 8 config + 4 definition_checker + 5 otros)
 - ✅ Documentación: PHASE7_FLOW_DIAGRAMS.md + ADR 22-27
 
@@ -1527,6 +1532,6 @@ Este proyecto está bajo la licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 
 <div align="center">
 
-**Estado del proyecto:** Desarrollo y UAT Completos | Pendiente: slides y memoria TFM | 23 violaciones | 4 lenguajes (Python, Java, JS/TS, C#) | 761 tests | 93% cobertura
+**Estado del proyecto:** Desarrollo y UAT Completos | 23 violaciones | 4 lenguajes (Python, Java, JS/TS, C#) | 761 tests | 93% cobertura
 
 </div>
